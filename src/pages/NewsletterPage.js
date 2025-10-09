@@ -10,11 +10,11 @@ import {
   MapPin,
   Users,
   Camera,
-  Edit,
-  Trash2,
+  // Edit,
+  // Trash2,
   Eye,
   Send,
-  Settings
+  // Settings
 } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PhotoUpload from '../components/PhotoUpload'
@@ -276,8 +276,8 @@ const NewsletterPage = () => {
 
         {/* Create Event Modal */}
         {showCreateEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto modal-content">
               <h2 className="text-xl font-semibold mb-4">Create New Event</h2>
               <form onSubmit={handleCreateEvent} className="space-y-4">
                 <div>
@@ -358,8 +358,8 @@ const NewsletterPage = () => {
 
         {/* Photo Upload Modal */}
         {showPhotoUpload && selectedEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
+            <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto modal-content">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">
                   Add Photos to {selectedEvent.title}
@@ -390,8 +390,8 @@ const NewsletterPage = () => {
 
         {/* Newsletter Preview Modal */}
         {showPreview && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto modal-content">
               <div className="flex items-center justify-between p-6 border-b">
                 <h2 className="text-xl font-semibold">Newsletter Preview</h2>
                 <button

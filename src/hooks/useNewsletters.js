@@ -206,7 +206,7 @@ export const useNewsletters = (groupId) => {
 
   useEffect(() => {
     fetchNewsletters()
-  }, [groupId])
+  }, [fetchNewsletters, groupId])
 
   return {
     newsletters,

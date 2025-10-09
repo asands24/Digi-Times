@@ -8,7 +8,7 @@ import {
   Plus,
   LogOut,
   Settings,
-  Calendar,
+  // Calendar,
   Camera,
   UserPlus,
   Copy,
@@ -20,7 +20,7 @@ import toast from 'react-hot-toast'
 const DashboardPage = () => {
   const { user, profile, signOut } = useAuth()
   const { groups, loading: groupsLoading, createGroup } = useGroups()
-  const { joinGroupWithInvite, generateInviteCode } = useInvite()
+  const { joinGroupWithInvite } = useInvite()
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showJoinGroup, setShowJoinGroup] = useState(false)
   const [groupName, setGroupName] = useState('')
@@ -139,7 +139,7 @@ const DashboardPage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group) => (
-              <div key={group.id} className="card hover:shadow-lg transition-shadow">
+              <div key={group.id} className="card hover:shadow-lg transition-shadow hover-lift gesture-smooth">
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-semibold text-gray-900">{group.name}</h3>
                   <span className={`px-2 py-1 text-xs rounded-full ${
@@ -181,8 +181,8 @@ const DashboardPage = () => {
 
         {/* Create Group Modal */}
         {showCreateGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 modal-content">
               <h2 className="text-xl font-semibold mb-4">Create New Group</h2>
               <form onSubmit={handleCreateGroup} className="space-y-4">
                 <div>
@@ -225,8 +225,8 @@ const DashboardPage = () => {
 
         {/* Join Group Modal */}
         {showJoinGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 modal-content">
               <h2 className="text-xl font-semibold mb-4">Join Group</h2>
               <form onSubmit={handleJoinGroup} className="space-y-4">
                 <div>

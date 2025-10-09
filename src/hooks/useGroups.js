@@ -180,7 +180,7 @@ export const useGroups = () => {
 
   useEffect(() => {
     fetchGroups()
-  }, [user])
+  }, [fetchGroups, user])
 
   return {
     groups,

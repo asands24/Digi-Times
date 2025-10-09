@@ -20,7 +20,7 @@ export const useInvite = () => {
         return { error: groupError }
       }
 
-      const { data: existingMember, error: memberCheckError } = await supabase
+      const { data: existingMember } = await supabase
         .from('group_members')
         .select('id')
         .eq('group_id', group.id)

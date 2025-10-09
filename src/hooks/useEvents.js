@@ -220,7 +220,7 @@ export const useEvents = (newsletterId) => {
 
   useEffect(() => {
     fetchEvents()
-  }, [newsletterId])
+  }, [fetchEvents, newsletterId])
 
   return {
     events,

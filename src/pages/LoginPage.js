@@ -5,7 +5,7 @@ import { Camera, Mail, Users } from 'lucide-react'
 
 const LoginPage = () => {
   const { signInWithMagicLink, loading } = useAuth()
-  const { joinGroupWithInvite, loading: inviteLoading } = useInvite()
+  const { loading: inviteLoading } = useInvite()
   const [email, setEmail] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [showInviteForm, setShowInviteForm] = useState(false)

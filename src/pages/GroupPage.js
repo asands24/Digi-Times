@@ -138,7 +138,7 @@ const GroupPage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {newsletters.map((newsletter) => (
-              <div key={newsletter.id} className="card hover:shadow-lg transition-shadow">
+              <div key={newsletter.id} className="card hover:shadow-lg transition-shadow hover-lift gesture-smooth">
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-semibold text-gray-900">{newsletter.title}</h3>
                   <div className="flex gap-1">
@@ -197,8 +197,8 @@ const GroupPage = () => {
 
         {/* Create Newsletter Modal */}
         {showCreateNewsletter && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto modal-content">
               <h2 className="text-xl font-semibold mb-4">Create New Newsletter</h2>
               <form onSubmit={handleCreateNewsletter} className="space-y-4">
                 <div>

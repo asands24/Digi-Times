@@ -95,9 +95,9 @@ const PhotoUpload = ({ eventId, onUploadComplete, multiple = true }) => {
     <div className="space-y-4">
       {/* Upload Area */}
       <div
-        className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+        className={`relative border-2 border-dashed rounded-lg p-6 text-center drag-zone ${
           dragActive
-            ? 'border-blue-400 bg-blue-50'
+            ? 'border-blue-400 bg-blue-50 drag-active'
             : 'border-gray-300 hover:border-gray-400'
         }`}
         onDragEnter={handleDrag}
@@ -174,7 +174,7 @@ const PhotoUpload = ({ eventId, onUploadComplete, multiple = true }) => {
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                className="flex items-center justify-between bg-gray-50 rounded-lg p-3 hover-lift gesture-smooth"
               >
                 <div className="flex items-center gap-3">
                   <ImageIcon className="w-5 h-5 text-gray-400" />
@@ -189,7 +189,7 @@ const PhotoUpload = ({ eventId, onUploadComplete, multiple = true }) => {
                 </div>
                 <button
                   onClick={() => removeFile(index)}
-                  className="text-gray-400 hover:text-red-600 transition-colors"
+                  className="text-gray-400 hover:text-red-600 gesture-smooth hover-scale"
                   disabled={uploading}
                 >
                   <X className="w-4 h-4" />
