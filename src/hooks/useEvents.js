@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
@@ -8,7 +8,7 @@ export const useEvents = (newsletterId) => {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     if (!newsletterId) return
 
     try {
@@ -53,7 +53,7 @@ export const useEvents = (newsletterId) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [newsletterId])
 
   const createEvent = async (eventData) => {
     if (!user || !newsletterId) return { error: new Error('Missing required data') }
@@ -220,7 +220,7 @@ export const useEvents = (newsletterId) => {
 
   useEffect(() => {
     fetchEvents()
-  }, [fetchEvents, newsletterId])
+  }, [fetchEvents])
 
   return {
     events,

@@ -15,6 +15,7 @@ import {
   ExternalLink
 } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
+import TemplatesShowcase from '../components/TemplatesShowcase'
 import toast from 'react-hot-toast'
 
 const DashboardPage = () => {
@@ -64,36 +65,90 @@ const DashboardPage = () => {
     await signOut()
   }
 
+  const handleSelectTemplate = (template) => {
+    setGroupName(template.name)
+    setGroupDescription(template.description)
+    setShowCreateGroup(true)
+    toast.success(`Template "${template.name}" loaded! Feel free to customize.`)
+  }
+
   if (groupsLoading) {
     return <LoadingSpinner message="Loading your groups..." />
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Camera className="w-8 h-8 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">
-                Photo Newsletter
-              </h1>
+    <div className="min-h-screen page-transition" style={{ backgroundColor: 'var(--paper-cream)' }}>
+      {/* Newspaper Masthead Header */}
+      <header style={{
+        backgroundColor: 'var(--paper-white)',
+        borderBottom: '4px double var(--ink-black)',
+        boxShadow: '0 2px 0 rgba(0,0,0,0.1)'
+      }}>
+        <div className="container mx-auto py-6">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: '1px solid var(--border-gray)' }}>
+            <div style={{
+              fontSize: '0.75rem',
+              fontFamily: 'var(--font-sans)',
+              color: 'var(--text-secondary)',
+              letterSpacing: '0.05em'
+            }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                Welcome, {profile?.display_name || user?.email}
+            <div className="flex items-center gap-3">
+              <span style={{
+                fontSize: '0.75rem',
+                fontFamily: 'var(--font-sans)',
+                color: 'var(--text-secondary)',
+                letterSpacing: '0.05em'
+              }}>
+                {profile?.display_name || user?.email}
               </span>
-              <button className="text-gray-600 hover:text-gray-900">
-                <Settings className="w-5 h-5" />
+              <button
+                style={{ color: 'var(--ink-gray)' }}
+                className="hover:opacity-70 transition-opacity"
+              >
+                <Settings className="w-4 h-4" />
               </button>
               <button
                 onClick={handleSignOut}
-                className="text-gray-600 hover:text-gray-900"
+                style={{ color: 'var(--ink-gray)' }}
+                className="hover:opacity-70 transition-opacity"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+
+          {/* Masthead */}
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Camera style={{ width: '2rem', height: '2rem', color: 'var(--accent-gold)' }} />
+            </div>
+            <h1 style={{
+              fontFamily: 'var(--font-headline)',
+              fontSize: 'clamp(2rem, 8vw, 3.5rem)',
+              fontWeight: 900,
+              color: 'var(--ink-black)',
+              letterSpacing: '0.02em',
+              marginBottom: '0.5rem',
+              textTransform: 'uppercase',
+              lineHeight: 1
+            }}>
+              DigiTimes
+            </h1>
+            <div style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.875rem',
+              color: 'var(--text-secondary)',
+              letterSpacing: '0.15em',
+              fontStyle: 'italic',
+              borderTop: '1px solid var(--border-gray)',
+              borderBottom: '1px solid var(--border-gray)',
+              padding: '0.5rem 0',
+              marginTop: '1rem'
+            }}>
+              "Your Family Stories, Beautifully Preserved"
             </div>
           </div>
         </div>
@@ -118,48 +173,150 @@ const DashboardPage = () => {
           </button>
         </div>
 
+        {/* Show Templates prominently when no groups */}
+        {groups.length === 0 && (
+          <>
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '3rem',
+              padding: '2rem 1rem',
+              backgroundColor: 'var(--paper-white)',
+              border: '3px double var(--ink-black)',
+              boxShadow: '4px 4px 0 rgba(0,0,0,0.1)'
+            }}>
+              <Users style={{ width: '3rem', height: '3rem', color: 'var(--accent-gold)' }} className="mx-auto mb-3" />
+              <h3 style={{
+                fontFamily: 'var(--font-headline)',
+                fontSize: '1.75rem',
+                fontWeight: 700,
+                color: 'var(--ink-black)',
+                marginBottom: '0.5rem'
+              }}>
+                Welcome to DigiTimes!
+              </h3>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '1rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '1rem',
+                maxWidth: '600px',
+                margin: '0 auto'
+              }}>
+                Start by creating your first group or browse our template gallery for inspiration
+              </p>
+            </div>
+            <TemplatesShowcase onSelectTemplate={handleSelectTemplate} />
+          </>
+        )}
+
+        {/* Show Templates as collapsible section when user has groups */}
+        {groups.length > 0 && (
+          <details style={{ marginBottom: '2rem' }}>
+            <summary style={{
+              fontFamily: 'var(--font-headline)',
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              color: 'var(--ink-black)',
+              cursor: 'pointer',
+              padding: '1rem',
+              backgroundColor: 'var(--paper-white)',
+              border: '2px solid var(--ink-black)',
+              listStyle: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease'
+            }}>
+              <span style={{ color: 'var(--accent-gold)' }}>▶</span>
+              Browse Template Gallery for New Ideas
+            </summary>
+            <div style={{ marginTop: '2rem' }}>
+              <TemplatesShowcase onSelectTemplate={handleSelectTemplate} />
+            </div>
+          </details>
+        )}
+
+        {/* Groups Section Header */}
+        {groups.length > 0 && (
+          <h2 style={{
+            fontFamily: 'var(--font-headline)',
+            fontSize: '2rem',
+            fontWeight: 900,
+            color: 'var(--ink-black)',
+            textTransform: 'uppercase',
+            borderBottom: '3px double var(--ink-black)',
+            paddingBottom: '0.5rem',
+            marginBottom: '1.5rem',
+            letterSpacing: '0.05em'
+          }}>
+            Your Groups
+          </h2>
+        )}
+
         {/* Groups Grid */}
-        {groups.length === 0 ? (
-          <div className="text-center py-12">
-            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-900 mb-2">
-              No groups yet
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Create your first group or join an existing one to start sharing photos.
-            </p>
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              className="btn btn-primary"
-            >
-              <Plus className="w-4 h-4" />
-              Create Your First Group
-            </button>
-          </div>
-        ) : (
+        {groups.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.map((group) => (
-              <div key={group.id} className="card hover:shadow-lg transition-shadow hover-lift gesture-smooth">
+            {groups.map((group, index) => (
+              <div
+                key={group.id}
+                className={`card hover-lift gesture-smooth animate-slide-up animate-delay-${Math.min(index, 3)}`}
+              >
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900">{group.name}</h3>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    group.memberRole === 'admin'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <h3 style={{
+                    fontFamily: 'var(--font-headline)',
+                    fontSize: '1.25rem',
+                    fontWeight: 700,
+                    color: 'var(--ink-black)'
+                  }}>
+                    {group.name}
+                  </h3>
+                  <span style={{
+                    padding: '0.25rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-sans)',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    border: '2px solid var(--ink-black)',
+                    backgroundColor: group.memberRole === 'admin' ? 'var(--accent-gold)' : 'var(--paper-cream)',
+                    color: group.memberRole === 'admin' ? 'var(--ink-black)' : 'var(--text-secondary)'
+                  }}>
                     {group.memberRole}
                   </span>
                 </div>
 
                 {group.description && (
-                  <p className="text-gray-600 text-sm mb-4">{group.description}</p>
+                  <p style={{
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.875rem',
+                    marginBottom: '1rem',
+                    fontStyle: 'italic'
+                  }}>
+                    {group.description}
+                  </p>
                 )}
 
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                  <span>Invite code: {group.invite_code}</span>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem',
+                  backgroundColor: 'var(--paper-cream)',
+                  border: '1px solid var(--border-gray)',
+                  marginBottom: '1rem'
+                }}>
+                  <span style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    letterSpacing: '0.1em'
+                  }}>
+                    CODE: {group.invite_code}
+                  </span>
                   <button
                     onClick={() => copyInviteCode(group.invite_code)}
-                    className="text-blue-600 hover:text-blue-700"
+                    style={{ color: 'var(--ink-black)' }}
+                    className="hover:opacity-70 transition-opacity"
                   >
                     <Copy className="w-4 h-4" />
                   </button>
@@ -182,8 +339,20 @@ const DashboardPage = () => {
         {/* Create Group Modal */}
         {showCreateGroup && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 modal-content">
-              <h2 className="text-xl font-semibold mb-4">Create New Group</h2>
+            <div className="bg-white max-w-md w-full p-6 modal-content">
+              <h2 style={{
+                fontFamily: 'var(--font-headline)',
+                fontSize: '1.75rem',
+                fontWeight: 900,
+                color: 'var(--ink-black)',
+                textTransform: 'uppercase',
+                borderBottom: '3px double var(--ink-black)',
+                paddingBottom: '0.75rem',
+                marginBottom: '1.5rem',
+                letterSpacing: '0.05em'
+              }}>
+                Create New Group
+              </h2>
               <form onSubmit={handleCreateGroup} className="space-y-4">
                 <div>
                   <label className="label">Group Name</label>
@@ -226,8 +395,20 @@ const DashboardPage = () => {
         {/* Join Group Modal */}
         {showJoinGroup && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-overlay">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 modal-content">
-              <h2 className="text-xl font-semibold mb-4">Join Group</h2>
+            <div className="bg-white max-w-md w-full p-6 modal-content">
+              <h2 style={{
+                fontFamily: 'var(--font-headline)',
+                fontSize: '1.75rem',
+                fontWeight: 900,
+                color: 'var(--ink-black)',
+                textTransform: 'uppercase',
+                borderBottom: '3px double var(--ink-black)',
+                paddingBottom: '0.75rem',
+                marginBottom: '1.5rem',
+                letterSpacing: '0.05em'
+              }}>
+                Join Group
+              </h2>
               <form onSubmit={handleJoinGroup} className="space-y-4">
                 <div>
                   <label className="label">Invite Code</label>

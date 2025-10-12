@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
@@ -7,12 +7,32 @@ export const useGroups = () => {
   const { user } = useAuth()
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(false)
+  const useMockAuth = process.env.REACT_APP_USE_MOCK_AUTH === 'true'
 
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     if (!user) return
 
     try {
       setLoading(true)
+
+      // Return mock data if mock auth is enabled
+      if (useMockAuth) {
+        const mockGroups = [
+          {
+            id: 'mock-group-1',
+            name: 'Demo Family Group',
+            description: 'A sample group for testing',
+            invite_code: 'DEMO1234',
+            owner_id: 'mock-user-id',
+            created_at: new Date().toISOString(),
+            memberRole: 'admin',
+            joinedAt: new Date().toISOString()
+          }
+        ]
+        setGroups(mockGroups)
+        setLoading(false)
+        return
+      }
       const { data, error } = await supabase
         .from('group_members')
         .select(`
@@ -24,7 +44,7 @@ export const useGroups = () => {
             name,
             description,
             invite_code,
-            created_by,
+            owner_id,
             created_at
           )
         `)
@@ -49,7 +69,7 @@ export const useGroups = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, useMockAuth])
 
   const createGroup = async (groupData) => {
     if (!user) return { error: new Error('Not authenticated') }
@@ -64,7 +84,7 @@ export const useGroups = () => {
         .insert({
           ...groupData,
           invite_code: inviteCode,
-          created_by: user.id
+          owner_id: user.id
         })
         .select()
         .single()
@@ -180,7 +200,7 @@ export const useGroups = () => {
 
   useEffect(() => {
     fetchGroups()
-  }, [fetchGroups, user])
+  }, [fetchGroups])
 
   return {
     groups,

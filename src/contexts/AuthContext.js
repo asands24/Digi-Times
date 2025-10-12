@@ -16,79 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Temporary: Auto-login with mock user to bypass database issues
-    console.log('Using mock authentication to bypass database error')
-    const mockUser = {
-      id: 'mock-user-id',
-      email: 'demo@example.com'
-    }
-    const mockProfile = {
-      id: 'mock-user-id',
-      email: 'demo@example.com',
-      display_name: 'Demo User',
-      avatar_url: null
-    }
-
-    setUser(mockUser)
-    setProfile(mockProfile)
-    setLoading(false)
-
-    // Original code commented out to bypass database
-    /*
-    const getSession = async () => {
-      try {
-        console.log('Getting session...')
-        const { data: { session } } = await supabase.auth.getSession()
-        console.log('Session:', session)
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          // Temporarily skip profile fetching to bypass database error
-          setProfile({
-            id: session.user.id,
-            email: session.user.email,
-            display_name: session.user.email,
-            avatar_url: null
-          })
-          // await fetchProfile(session.user.id)
-        }
-      } catch (error) {
-        console.error('Error getting session:', error)
-        toast.error('Error loading session')
-      } finally {
-        console.log('Setting loading to false')
-        setLoading(false)
-      }
-    }
-
-    getSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          // Temporarily skip profile fetching to bypass database error
-          setProfile({
-            id: session.user.id,
-            email: session.user.email,
-            display_name: session.user.email,
-            avatar_url: null
-          })
-          // await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
-        }
-
-        setLoading(false)
-      }
-    )
-
-    return () => subscription.unsubscribe()
-    */
-  }, [])
+  const [useMockAuth] = useState(process.env.REACT_APP_USE_MOCK_AUTH === 'true')
 
   const fetchProfile = async (userId) => {
     try {
@@ -136,6 +64,68 @@ export const AuthProvider = ({ children }) => {
       console.error('Error creating profile:', error)
     }
   }
+
+  useEffect(() => {
+    const getSession = async () => {
+      try {
+        // Use mock auth if enabled
+        if (useMockAuth) {
+          const mockUser = {
+            id: 'mock-user-id',
+            email: 'demo@example.com',
+            user_metadata: {}
+          }
+          const mockProfile = {
+            id: 'mock-user-id',
+            email: 'demo@example.com',
+            display_name: 'Demo User',
+            avatar_url: null
+          }
+          setUser(mockUser)
+          setProfile(mockProfile)
+          setLoading(false)
+          console.log('Mock auth enabled - using demo user')
+          return
+        }
+
+        const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        }
+      } catch (error) {
+        console.error('Error getting session:', error)
+        toast.error('Error loading session')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    getSession()
+
+    // Skip auth state listener if using mock auth
+    if (useMockAuth) {
+      return
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        } else {
+          setProfile(null)
+        }
+
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const signInWithMagicLink = async (email) => {
     try {

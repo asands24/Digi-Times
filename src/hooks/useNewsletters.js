@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
@@ -8,7 +8,7 @@ export const useNewsletters = (groupId) => {
   const [newsletters, setNewsletters] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const fetchNewsletters = async () => {
+  const fetchNewsletters = useCallback(async () => {
     if (!groupId) return
 
     try {
@@ -46,7 +46,7 @@ export const useNewsletters = (groupId) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [groupId])
 
   const createNewsletter = async (newsletterData) => {
     if (!user || !groupId) return { error: new Error('Missing required data') }
@@ -206,7 +206,7 @@ export const useNewsletters = (groupId) => {
 
   useEffect(() => {
     fetchNewsletters()
-  }, [fetchNewsletters, groupId])
+  }, [fetchNewsletters])
 
   return {
     newsletters,
