@@ -61,6 +61,34 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### 5. Deploy to Production
 Follow the deployment guide in [DEPLOYMENT.md](./DEPLOYMENT.md)
 
+## Container Setup
+
+### Development (Docker Compose)
+1. Copy `.env.example` to `.env.local` and populate Supabase credentials.
+2. Start the dev server in a container:
+   ```bash
+   docker compose up --build
+   ```
+3. Visit [http://localhost:3000](http://localhost:3000). Edits to local files trigger hot reload because the project directory is bind-mounted into the container.
+
+Stop the container with `docker compose down`.
+
+### Production Image
+1. Build the optimized static bundle:
+   ```bash
+   docker build \
+     --build-arg REACT_APP_SUPABASE_URL=<your-url> \
+     --build-arg REACT_APP_SUPABASE_ANON_KEY=<your-anon-key> \
+     -t photo-newsletter-app:latest .
+   ```
+2. Run the nginx container that serves the build output:
+   ```bash
+   docker run -p 8080:80 photo-newsletter-app:latest
+   ```
+3. Open [http://localhost:8080](http://localhost:8080) to verify the production build.
+
+The Docker image bakes the SPA-friendly nginx config at `docker/nginx.conf`, so client-side routing continues to work when refreshing deep links.
+
 ## Project Structure
 
 ```

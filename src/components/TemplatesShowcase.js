@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { groupTemplates, getTemplatesByCategory } from '../data/templates'
+import { groupTemplates } from '../data/templates'
+import { getPhotosByCategory } from '../data/stockPhotos'
 import { Sparkles, ChevronRight } from 'lucide-react'
 
 const TemplatesShowcase = ({ onSelectTemplate }) => {
@@ -93,9 +94,50 @@ const TemplatesShowcase = ({ onSelectTemplate }) => {
             className={`card gesture-smooth animate-slide-up animate-delay-${Math.min(index % 3, 3)}`}
             style={{
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              overflow: 'hidden'
             }}
           >
+            {/* Sample Photo Header */}
+            {template.sampleImage && (
+              <div style={{
+                width: '100%',
+                height: '200px',
+                marginBottom: '1rem',
+                position: 'relative',
+                overflow: 'hidden',
+                border: '2px solid var(--border-gray)',
+                borderRadius: '4px'
+              }}>
+                <img
+                  src={template.sampleImage}
+                  alt={template.name}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: '0.5rem',
+                  right: '0.5rem',
+                  fontSize: '2rem',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  borderRadius: '50%',
+                  width: '3rem',
+                  height: '3rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid var(--ink-black)',
+                  boxShadow: '2px 2px 0 rgba(0,0,0,0.2)'
+                }}>
+                  {template.icon}
+                </div>
+              </div>
+            )}
+
             {/* Template Header */}
             <div style={{
               display: 'flex',
@@ -105,12 +147,14 @@ const TemplatesShowcase = ({ onSelectTemplate }) => {
               paddingBottom: '1rem',
               borderBottom: '2px solid var(--border-gray)'
             }}>
-              <div style={{
-                fontSize: '2.5rem',
-                lineHeight: 1
-              }}>
-                {template.icon}
-              </div>
+              {!template.sampleImage && (
+                <div style={{
+                  fontSize: '2.5rem',
+                  lineHeight: 1
+                }}>
+                  {template.icon}
+                </div>
+              )}
               <div style={{ flex: 1 }}>
                 <h3 style={{
                   fontFamily: 'var(--font-headline)',
@@ -168,12 +212,57 @@ const TemplatesShowcase = ({ onSelectTemplate }) => {
               </p>
             </div>
 
-            {/* Suggested Events */}
+            {/* Suggested Events & Sample Photos */}
             {expandedTemplate === template.id ? (
               <div style={{
                 marginBottom: '1rem',
                 animation: 'fadeIn 0.3s ease-out'
               }}>
+                {/* Sample Photo Gallery */}
+                {template.photoCategory && (() => {
+                  const categoryPhotos = getPhotosByCategory(template.photoCategory)
+                  return (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <h4 style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: 'var(--ink-black)',
+                        marginBottom: '0.5rem'
+                      }}>
+                        Sample Photos:
+                      </h4>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '0.5rem',
+                        marginBottom: '1rem'
+                      }}>
+                        {categoryPhotos.slice(0, 3).map((photo) => (
+                          <div key={photo.id} style={{
+                            aspectRatio: '1',
+                            border: '2px solid var(--border-gray)',
+                            overflow: 'hidden',
+                            borderRadius: '4px'
+                          }}>
+                            <img
+                              src={photo.thumbnail}
+                              alt={photo.alt}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 <h4 style={{
                   fontFamily: 'var(--font-sans)',
                   fontSize: '0.75rem',

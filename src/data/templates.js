@@ -2,10 +2,14 @@
 export const groupTemplates = [
   {
     id: 'family-memories',
+    title: 'Family Memories',
     name: 'Family Memories',
-    description: 'Share special moments with your loved ones throughout the year',
+    description:
+      'Share special moments with your loved ones throughout the year',
     icon: '👨‍👩‍👧‍👦',
     category: 'Family',
+    photoCategory: 'family',
+    sampleImage: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&q=80',
     suggestedEvents: [
       'Birthday Celebrations',
       'Holiday Gatherings',
@@ -16,10 +20,13 @@ export const groupTemplates = [
   },
   {
     id: 'wedding-chronicles',
+    title: 'Wedding Chronicles',
     name: 'Wedding Chronicles',
     description: 'Document your wedding journey from engagement to honeymoon',
     icon: '💍',
     category: 'Special Events',
+    photoCategory: 'wedding',
+    sampleImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&q=80',
     suggestedEvents: [
       'Engagement Photos',
       'Bridal Shower',
@@ -31,10 +38,13 @@ export const groupTemplates = [
   },
   {
     id: 'baby-first-year',
-    name: 'Baby\'s First Year',
+    title: "Baby's First Year",
+    name: "Baby's First Year",
     description: 'Chronicle every precious milestone of your little one\'s first year',
     icon: '👶',
     category: 'Milestones',
+    photoCategory: 'baby',
+    sampleImage: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&q=80',
     suggestedEvents: [
       'Coming Home',
       'Monthly Milestones',
@@ -46,10 +56,13 @@ export const groupTemplates = [
   },
   {
     id: 'travel-adventures',
+    title: 'Travel Adventures',
     name: 'Travel Adventures',
     description: 'Create a visual diary of your journeys around the world',
     icon: '✈️',
     category: 'Travel',
+    photoCategory: 'travel',
+    sampleImage: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&q=80',
     suggestedEvents: [
       'Trip Planning',
       'Day-by-Day Highlights',
@@ -61,10 +74,13 @@ export const groupTemplates = [
   },
   {
     id: 'school-year',
+    title: 'School Year Memories',
     name: 'School Year Memories',
     description: 'Capture every moment from first day to graduation',
     icon: '🎒',
     category: 'Education',
+    photoCategory: 'education',
+    sampleImage: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=400&q=80',
     suggestedEvents: [
       'First Day of School',
       'School Events & Field Trips',
@@ -76,10 +92,13 @@ export const groupTemplates = [
   },
   {
     id: 'pet-chronicles',
+    title: 'Pet Chronicles',
     name: 'Pet Chronicles',
     description: 'Document the adorable moments with your furry family members',
     icon: '🐾',
     category: 'Pets',
+    photoCategory: 'pets',
+    sampleImage: 'https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?w=400&q=80',
     suggestedEvents: [
       'Adoption Day',
       'Training Progress',
@@ -91,10 +110,13 @@ export const groupTemplates = [
   },
   {
     id: 'garden-seasons',
+    title: 'Garden Through Seasons',
     name: 'Garden Through Seasons',
     description: 'Track your garden\'s transformation throughout the year',
     icon: '🌱',
     category: 'Hobbies',
+    photoCategory: 'garden',
+    sampleImage: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=80',
     suggestedEvents: [
       'Spring Planting',
       'Garden Progress',
@@ -106,10 +128,13 @@ export const groupTemplates = [
   },
   {
     id: 'home-renovation',
+    title: 'Home Renovation Journey',
     name: 'Home Renovation Journey',
     description: 'Document your home transformation from start to finish',
     icon: '🏠',
     category: 'Projects',
+    photoCategory: 'renovation',
+    sampleImage: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=400&q=80',
     suggestedEvents: [
       'Before Photos',
       'Demolition Day',

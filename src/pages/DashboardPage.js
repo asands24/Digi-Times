@@ -16,6 +16,8 @@ import {
 } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import TemplatesShowcase from '../components/TemplatesShowcase'
+import TemplateGuide from '../components/TemplateGuide'
+import { getRandomPhotos } from '../data/stockPhotos'
 import toast from 'react-hot-toast'
 
 const DashboardPage = () => {
@@ -24,9 +26,13 @@ const DashboardPage = () => {
   const { joinGroupWithInvite } = useInvite()
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showJoinGroup, setShowJoinGroup] = useState(false)
+  const [showTemplateGuide, setShowTemplateGuide] = useState(false)
   const [groupName, setGroupName] = useState('')
   const [groupDescription, setGroupDescription] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+
+  // Get sample photos for visual interest
+  const samplePhotos = getRandomPhotos(3)
 
   const handleCreateGroup = async (e) => {
     e.preventDefault()
@@ -156,7 +162,12 @@ const DashboardPage = () => {
 
       <main className="container mx-auto py-8">
         {/* Quick Actions */}
-        <div className="flex gap-4 mb-8">
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          marginBottom: '2rem',
+          flexWrap: 'wrap'
+        }}>
           <button
             onClick={() => setShowCreateGroup(true)}
             className="btn btn-primary"
@@ -171,7 +182,90 @@ const DashboardPage = () => {
             <UserPlus className="w-4 h-4" />
             Join Group
           </button>
+          <button
+            onClick={() => setShowTemplateGuide(true)}
+            className="btn"
+            style={{
+              border: '2px solid var(--accent-gold)',
+              backgroundColor: 'var(--paper-cream)',
+              color: 'var(--ink-black)'
+            }}
+          >
+            <Users className="w-4 h-4" />
+            Find Template
+          </button>
         </div>
+
+        {/* Sample Photos Banner for New Users */}
+        {groups.length === 0 && (
+          <div style={{
+            marginBottom: '2rem',
+            padding: '1.5rem',
+            backgroundColor: 'var(--paper-white)',
+            border: '2px solid var(--border-gray)',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.5rem',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ flex: '1', minWidth: '250px' }}>
+              <h3 style={{
+                fontFamily: 'var(--font-headline)',
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                color: 'var(--ink-black)',
+                marginBottom: '0.5rem'
+              }}>
+                Not sure where to start?
+              </h3>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.875rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '1rem'
+              }}>
+                Try our template wizard to find the perfect group setup for your needs!
+              </p>
+              <button
+                onClick={() => setShowTemplateGuide(true)}
+                className="btn btn-sm"
+                style={{
+                  border: '2px solid var(--accent-gold)',
+                  backgroundColor: 'var(--accent-gold)',
+                  color: 'var(--ink-black)'
+                }}
+              >
+                Get Started →
+              </button>
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: '0.5rem'
+            }}>
+              {samplePhotos.map((photo) => (
+                <div key={photo.id} style={{
+                  width: '100px',
+                  height: '100px',
+                  border: '2px solid var(--ink-black)',
+                  boxShadow: '3px 3px 0 rgba(0,0,0,0.2)',
+                  overflow: 'hidden',
+                  borderRadius: '4px'
+                }}>
+                  <img
+                    src={photo.thumbnail}
+                    alt={photo.alt}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Show Templates prominently when no groups */}
         {groups.length === 0 && (
@@ -256,12 +350,54 @@ const DashboardPage = () => {
         {/* Groups Grid */}
         {groups.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.map((group, index) => (
-              <div
-                key={group.id}
-                className={`card hover-lift gesture-smooth animate-slide-up animate-delay-${Math.min(index, 3)}`}
-              >
-                <div className="flex items-start justify-between mb-3">
+            {groups.map((group, index) => {
+              // Get a random photo for this group's visual
+              const groupPhoto = samplePhotos[index % samplePhotos.length]
+
+              return (
+                <div
+                  key={group.id}
+                  className={`card hover-lift gesture-smooth animate-slide-up animate-delay-${Math.min(index, 3)}`}
+                  style={{ overflow: 'hidden' }}
+                >
+                  {/* Group Photo Header */}
+                  <div style={{
+                    width: '100%',
+                    height: '120px',
+                    marginBottom: '1rem',
+                    overflow: 'hidden',
+                    border: '2px solid var(--border-gray)',
+                    borderRadius: '4px',
+                    position: 'relative'
+                  }}>
+                    <img
+                      src={groupPhoto.thumbnail}
+                      alt=""
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        filter: 'brightness(0.7)'
+                      }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(0,0,0,0.3)'
+                    }}>
+                      <Users style={{
+                        width: '3rem',
+                        height: '3rem',
+                        color: 'white',
+                        filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.5))'
+                      }} />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start justify-between mb-3">
                   <h3 style={{
                     fontFamily: 'var(--font-headline)',
                     fontSize: '1.25rem',
@@ -332,7 +468,8 @@ const DashboardPage = () => {
                   </Link>
                 </div>
               </div>
-            ))}
+            )
+            })}
           </div>
         )}
 
@@ -436,6 +573,17 @@ const DashboardPage = () => {
               </form>
             </div>
           </div>
+        )}
+
+        {/* Template Guide Modal */}
+        {showTemplateGuide && (
+          <TemplateGuide
+            onSelectTemplate={(template) => {
+              handleSelectTemplate(template)
+              setShowTemplateGuide(false)
+            }}
+            onClose={() => setShowTemplateGuide(false)}
+          />
         )}
       </main>
     </div>

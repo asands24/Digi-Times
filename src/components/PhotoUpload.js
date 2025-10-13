@@ -9,6 +9,7 @@ const PhotoUpload = ({ eventId, onUploadComplete, multiple = true }) => {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [validationErrors, setValidationErrors] = useState([])
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
 
   const handleFiles = (files) => {
     const fileArray = Array.from(files)
@@ -114,6 +115,16 @@ const PhotoUpload = ({ eventId, onUploadComplete, multiple = true }) => {
           className="hidden"
         />
 
+        {/* Camera input for mobile devices */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
         <div className="space-y-4">
           <div className="flex justify-center">
             <Upload className="w-12 h-12 text-gray-400" />
@@ -126,15 +137,26 @@ const PhotoUpload = ({ eventId, onUploadComplete, multiple = true }) => {
             <p className="text-sm text-gray-600 mb-4">
               Drag and drop your photos here, or click to select files
             </p>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="btn btn-secondary"
-              disabled={uploading}
-            >
-              <ImageIcon className="w-4 h-4" />
-              Choose Photos
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="btn btn-primary"
+                disabled={uploading}
+              >
+                <Upload className="w-4 h-4" />
+                Take Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="btn btn-secondary"
+                disabled={uploading}
+              >
+                <ImageIcon className="w-4 h-4" />
+                Choose from Library
+              </button>
+            </div>
           </div>
 
           <p className="text-xs text-gray-500">
