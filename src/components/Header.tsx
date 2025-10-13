@@ -1,4 +1,4 @@
-import { Camera, LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, User } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -16,16 +16,11 @@ export function Header() {
           Monday, October 13, 2025
         </div>
 
-        <div className="editorial-header__logo">
-          <div className="editorial-header__mark">
-            <Camera size={20} strokeWidth={1.75} />
-          </div>
-          <div className="editorial-header__title">
-            <span className="editorial-header__name">DIGITIMES</span>
-            <span className="editorial-header__tagline">
-              Your Family Stories, Beautifully Preserved
-            </span>
-          </div>
+        <div className="editorial-header__logo" role="banner">
+          <span className="editorial-header__name">DIGITIMES</span>
+          <span className="editorial-header__tagline">
+            Your Family Stories, Beautifully Preserved
+          </span>
         </div>
 
         <DropdownMenu>
