@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
   type Dispatch,
   type FormEvent,
@@ -15,6 +16,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import toast from 'react-hot-toast';
 
 interface CreateGroupDialogProps {
   open: boolean;
@@ -27,6 +29,38 @@ interface CreateGroupPayload {
   description: string;
 }
 
+const SHELL_KEYS = [
+  'digiTimesShell',
+  'digitimesShell',
+  'DigiTimesShell',
+  'appShell',
+  'applicationShell',
+] as const;
+
+function findShellHandler(target: Record<string, unknown>) {
+  for (const key of SHELL_KEYS) {
+    const candidate = target[key] as
+      | { createGroup?: (input: CreateGroupPayload) => Promise<unknown> | unknown }
+      | undefined;
+
+    if (candidate && typeof candidate.createGroup === 'function') {
+      return candidate.createGroup.bind(candidate) as (
+        input: CreateGroupPayload
+      ) => Promise<unknown> | unknown;
+    }
+  }
+
+  const directCreate = target.createGroup as
+    | ((input: CreateGroupPayload) => Promise<unknown> | unknown)
+    | undefined;
+
+  if (typeof directCreate === 'function') {
+    return directCreate;
+  }
+
+  return undefined;
+}
+
 export function CreateGroupDialog({
   open,
   onOpenChange,
@@ -36,6 +70,21 @@ export function CreateGroupDialog({
   const [groupDescription, setGroupDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (onCreateGroup || typeof window === 'undefined') {
+      return;
+    }
+
+    const handler = findShellHandler(window as unknown as Record<string, unknown>);
+
+    if (!handler && process.env.NODE_ENV !== 'production') {
+      console.warn(
+        'CreateGroupDialog could not find a host shell handler. ' +
+          'Expose window.digiTimesShell.createGroup to enable group creation.'
+      );
+    }
+  }, [onCreateGroup]);
 
   const handleClose = () => {
     onOpenChange(false);
@@ -56,40 +105,22 @@ export function CreateGroupDialog({
     }
 
     const globalTarget = window as unknown as Record<string, unknown>;
-    const candidateKeys = [
-      'digiTimesShell',
-      'digitimesShell',
-      'DigiTimesShell',
-      'appShell',
-      'applicationShell',
-    ];
+    const handler = findShellHandler(globalTarget);
 
-    for (const key of candidateKeys) {
-      const candidate = globalTarget[key] as
-        | { createGroup?: (input: CreateGroupPayload) => Promise<unknown> | unknown }
-        | undefined;
-      if (candidate && typeof candidate.createGroup === 'function') {
-        await candidate.createGroup(payload);
-        return;
-      }
-    }
-
-    const directCreate = globalTarget['createGroup'] as
-      | ((input: CreateGroupPayload) => Promise<unknown> | unknown)
-      | undefined;
-    if (typeof directCreate === 'function') {
-      await directCreate(payload);
+    if (handler) {
+      await handler(payload);
       return;
     }
 
+    const bridgeEvent = {
+      type: 'digitimes:create-group',
+      payload,
+    };
+
+    window.dispatchEvent(new CustomEvent('digitimes:create-group', { detail: bridgeEvent }));
+
     if (window.parent && window.parent !== window) {
-      window.parent.postMessage(
-        {
-          type: 'digitimes:create-group',
-          payload,
-        },
-        '*'
-      );
+      window.parent.postMessage(bridgeEvent, '*');
       return;
     }
 
@@ -111,6 +142,7 @@ export function CreateGroupDialog({
 
     try {
       await forwardToShell({ name, description });
+      toast.success('Group created successfully!');
       handleClose();
     } catch (error) {
       console.error('Failed to create group via host shell', error);
