@@ -1,224 +1,45 @@
-# Photo Newsletter App
+# DigiTimes Front Page Studio
 
-A collaborative photo sharing platform that lets friends create beautiful newsletters together. Built with React and Supabase.
+Craft rich newspaper-style coverage from your everyday photos in minutes. Upload an image, jot down the angle you want to highlight, and DigiTimes generates a headline, story, dateline, and pull quote worthy of the front page.
 
-## Features
+## Highlights
 
-### Core Features
-- **Friend Groups**: Create or join invitation-only groups
-- **Photo Upload**: Upload photos from camera roll with drag & drop
-- **Newsletter Creation**: Solo or collaborative newsletter building
-- **Event Management**: Organize photos by events with details (date, location, description, attendees)
-- **Multiple Layouts**: Choose from 6 different newsletter layouts
-- **Event Categories**: Organize events by type (social, travel, food, celebration, sports, cultural)
-
-### Newsletter Layouts
-1. **Grid**: Clean photo grid with event details
-2. **Timeline**: Chronological timeline view
-3. **Magazine**: Professional magazine-style layout
-4. **Polaroid**: Nostalgic polaroid photo arrangement
-5. **Minimal**: Clean, minimalist design
-6. **Scrapbook**: Fun scrapbook-style layout
-
-### Authentication
-- **Magic Link**: Secure passwordless authentication
-- **Invitation-Only**: Groups require invite codes
-- **User Profiles**: Display names and avatars
-
-## Tech Stack
-
-- **Frontend**: React 18, React Router, Lucide Icons
-- **Backend**: Supabase (Database, Auth, Storage)
-- **Styling**: CSS with utility classes
-- **Hosting**: Netlify
-- **File Handling**: Image compression and validation
+- **Photo-to-Story Pipeline** – Drop in one or many images and receive fully written feature articles tuned to your prompt.
+- **Editorial Tone Blends** – Smart heuristics adjust tone for celebrations, adventures, community events, or quiet spotlights.
+- **Local Story Archive** – Save generated features with their images, edit the copy later, and keep a timestamped history.
+- **Print & Export Ready** – Open a print-perfect layout or export the full archive as JSON for safekeeping.
+- **Offline Friendly** – All generation and storage happen locally; no Supabase credentials are required for the newsroom workflow.
 
 ## Quick Start
 
-### 1. Clone Repository
 ```bash
-git clone <your-repo-url>
-cd photo-newsletter-app
 npm install
-```
-
-### 2. Setup Supabase
-Follow the complete setup guide in [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
-
-### 3. Configure Environment
-```bash
-cp .env.example .env
-# Add your Supabase credentials to .env
-```
-
-### 4. Run Development Server
-```bash
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open http://localhost:3000 to launch the studio.
 
-### 5. Deploy to Production
-Follow the deployment guide in [DEPLOYMENT.md](./DEPLOYMENT.md)
+## Using the Studio
 
-## Container Setup
+1. **Set the Angle** – Enter an optional “story idea” prompt. We reuse it for new uploads and inspiration.
+2. **Add Photos** – Drag & drop images (JPG/PNG/WebP) or click the upload area.
+3. **Shape Each Story** – Adjust the prompt per photo if needed and generate the article.
+4. **Archive the Winners** – Save finished pieces to the Edition Archive where they persist in local storage.
+5. **Polish & Publish** – Edit saved copy, open a print-ready view, or export the archive for sharing.
 
-### Development (Docker Compose)
-1. Copy `.env.example` to `.env.local` and populate Supabase credentials.
-2. Start the dev server in a container:
-   ```bash
-   docker compose up --build
-   ```
-3. Visit [http://localhost:3000](http://localhost:3000). Edits to local files trigger hot reload because the project directory is bind-mounted into the container.
+## Scripts
 
-Stop the container with `docker compose down`.
+- `npm start` – Run the development server with hot reload.
+- `npm run build` – Create a production build of the single-page app.
+- `npm test` – Execute Jest in watch mode.
 
-### Production Image
-1. Build the optimized static bundle:
-   ```bash
-   docker build \
-     --build-arg REACT_APP_SUPABASE_URL=<your-url> \
-     --build-arg REACT_APP_SUPABASE_ANON_KEY=<your-anon-key> \
-     -t photo-newsletter-app:latest .
-   ```
-2. Run the nginx container that serves the build output:
-   ```bash
-   docker run -p 8080:80 photo-newsletter-app:latest
-   ```
-3. Open [http://localhost:8080](http://localhost:8080) to verify the production build.
+## Tech Stack
 
-The Docker image bakes the SPA-friendly nginx config at `docker/nginx.conf`, so client-side routing continues to work when refreshing deep links.
+- **React 18 + TypeScript** – Core UI and state management.
+- **Lucide Icons** – Newsroom-inspired iconography.
+- **React Hot Toast** – Inline notifications with editorial styling.
+- **Custom Styling** – Tailored newspaper aesthetic in `src/index.css`.
 
-## Project Structure
+## Supabase Note
 
-```
-src/
-├── components/          # Reusable UI components
-│   ├── AuthCallback.js  # Handle auth redirects
-│   ├── LoadingSpinner.js
-│   ├── NewsletterPreview.js  # Layout previews
-│   └── PhotoUpload.js   # File upload component
-├── contexts/            # React contexts
-│   └── AuthContext.js   # Authentication state
-├── hooks/               # Custom React hooks
-│   ├── useAuth.js       # Authentication operations
-│   ├── useEvents.js     # Event CRUD operations
-│   ├── useGroups.js     # Group management
-│   ├── useInvite.js     # Invitation handling
-│   ├── useNewsletters.js # Newsletter operations
-│   └── usePhotos.js     # Photo upload/management
-├── lib/
-│   └── supabase.js      # Supabase client configuration
-├── pages/               # Main application pages
-│   ├── DashboardPage.js # Groups overview
-│   ├── GroupPage.js     # Group newsletters view
-│   ├── LoginPage.js     # Authentication
-│   └── NewsletterPage.js # Newsletter editor
-├── utils/
-│   └── imageUtils.js    # Image processing utilities
-└── App.js               # Main app component
-```
-
-## Database Schema
-
-### Tables
-- **profiles**: User information (extends auth.users)
-- **friend_groups**: Group information with invite codes
-- **group_members**: Many-to-many group membership
-- **newsletters**: Newsletter metadata and settings
-- **events**: Event details within newsletters
-- **event_attendees**: Event attendance tracking
-- **photos**: Photo metadata and storage paths
-- **newsletter_collaborators**: Collaboration permissions
-
-### Storage
-- **photos bucket**: Secure photo storage with RLS policies
-
-## Key Features Explained
-
-### Magic Link Authentication
-Users sign in via email magic links. No passwords required. New users are automatically added to the profiles table.
-
-### Invitation System
-Groups use 8-character invite codes. Users can join by entering the code during sign-in or after authentication.
-
-### Photo Management
-- Client-side validation and compression
-- Secure upload to Supabase Storage
-- Automatic thumbnail generation
-- File size limits (10MB per photo)
-
-### Newsletter Layouts
-Six distinct layout engines provide different visual styles:
-- Grid: Structured photo grids
-- Timeline: Chronological event flow
-- Magazine: Editorial-style layouts
-- Polaroid: Casual, rotated photo arrangements
-- Minimal: Clean, typography-focused
-- Scrapbook: Playful, decorated layouts
-
-### Row Level Security
-All database operations use RLS policies ensuring users can only access their groups' data.
-
-## Development
-
-### Available Scripts
-```bash
-npm start          # Development server
-npm run build      # Production build
-npm test           # Run tests
-npm run eject      # Eject from Create React App
-```
-
-### Code Style
-- Use functional components with hooks
-- Implement proper error handling
-- Follow existing naming conventions
-- Add loading states for async operations
-
-### Adding Features
-1. Create hooks for data operations
-2. Build reusable components
-3. Add proper error handling
-4. Update RLS policies if needed
-5. Test thoroughly before deployment
-
-## Security
-
-- **RLS Policies**: All data access controlled by Row Level Security
-- **File Validation**: Client and server-side file type/size validation
-- **Authentication**: Secure magic link authentication
-- **Environment Variables**: Sensitive data stored in environment variables
-- **CORS**: Properly configured for production domains
-
-## Performance
-
-- **Image Optimization**: Automatic compression and resizing
-- **Code Splitting**: React lazy loading for optimal bundle sizes
-- **Caching**: Proper cache headers for static assets
-- **Database Indexes**: Optimized queries with proper indexing
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
-
-## Support
-
-For issues and questions:
-1. Check the troubleshooting sections in setup guides
-2. Review Supabase documentation
-3. Create an issue in the repository
-
-## Acknowledgments
-
-- Built with [Supabase](https://supabase.com)
-- Icons by [Lucide](https://lucide.dev)
-- Hosted on [Netlify](https://netlify.com)
+Legacy Supabase hooks remain (for the original collaborative roadmap) but sit behind configuration guards. If you plan to revive the backend experience, add `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` to `.env.local` and re-enable the associated hooks/pages.

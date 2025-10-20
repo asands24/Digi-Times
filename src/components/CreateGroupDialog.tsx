@@ -16,6 +16,7 @@ import {
 } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { createGroupViaSupabase } from '../lib/createGroupFallback';
 import toast from 'react-hot-toast';
 
 interface CreateGroupDialogProps {
@@ -27,6 +28,21 @@ interface CreateGroupDialogProps {
 interface CreateGroupPayload {
   name: string;
   description: string;
+}
+
+type HostShell = {
+  createGroup?: (input: CreateGroupPayload) => Promise<unknown> | unknown;
+};
+
+declare global {
+  interface Window {
+    digiTimesShell?: HostShell;
+    digitimesShell?: HostShell;
+    DigiTimesShell?: HostShell;
+    appShell?: HostShell;
+    applicationShell?: HostShell;
+    createGroup?: HostShell['createGroup'];
+  }
 }
 
 const SHELL_KEYS = [
@@ -61,6 +77,21 @@ function findShellHandler(target: Record<string, unknown>) {
   return undefined;
 }
 
+async function createGroupThroughHostOrFallback(payload: CreateGroupPayload) {
+  if (typeof window === 'undefined') {
+    throw new Error('Create group API is not available in this environment.');
+  }
+
+  const handler = findShellHandler(window as unknown as Record<string, unknown>);
+
+  if (handler) {
+    return handler(payload);
+  }
+
+  console.warn('[DigiTimes] No host createGroup bridge detected. Using Supabase fallback.');
+  return createGroupViaSupabase(payload);
+}
+
 export function CreateGroupDialog({
   open,
   onOpenChange,
@@ -81,7 +112,7 @@ export function CreateGroupDialog({
     if (!handler && process.env.NODE_ENV !== 'production') {
       console.warn(
         'CreateGroupDialog could not find a host shell handler. ' +
-          'Expose window.digiTimesShell.createGroup to enable group creation.'
+          'Expose window.digiTimesShell.createGroup to enable bridge-based group creation.'
       );
     }
   }, [onCreateGroup]);
@@ -95,36 +126,24 @@ export function CreateGroupDialog({
   };
 
   const forwardToShell = async (payload: CreateGroupPayload) => {
-    if (onCreateGroup) {
-      await onCreateGroup(payload);
-      return;
+    const group = onCreateGroup
+      ? await onCreateGroup(payload)
+      : await createGroupThroughHostOrFallback(payload);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('digitimes:create-group', { detail: { group } }));
+
+      try {
+        window.parent?.postMessage?.(
+          { type: 'digitimes:create-group', payload: { group } },
+          '*'
+        );
+      } catch {
+        // Ignore postMessage failures caused by sandboxed hosts.
+      }
     }
 
-    if (typeof window === 'undefined') {
-      throw new Error('Create group API is not available in this environment.');
-    }
-
-    const globalTarget = window as unknown as Record<string, unknown>;
-    const handler = findShellHandler(globalTarget);
-
-    if (handler) {
-      await handler(payload);
-      return;
-    }
-
-    const bridgeEvent = {
-      type: 'digitimes:create-group',
-      payload,
-    };
-
-    window.dispatchEvent(new CustomEvent('digitimes:create-group', { detail: bridgeEvent }));
-
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage(bridgeEvent, '*');
-      return;
-    }
-
-    throw new Error('Create group API has not been provided by the host shell yet.');
+    return group;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

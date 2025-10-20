@@ -64,11 +64,22 @@ CREATE POLICY "Users can insert own profile"
 
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 
--- Allow authenticated users to view group_members
--- This prevents infinite recursion by not checking group_members within itself
-CREATE POLICY "Authenticated users can view group members"
+CREATE POLICY "Users can view their own memberships"
   ON group_members FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Group owners can view group members"
+  ON group_members FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM friend_groups
+      WHERE friend_groups.id = group_members.group_id
+      AND auth.uid() = COALESCE(
+        (row_to_json(friend_groups)->>'owner_id')::uuid,
+        (row_to_json(friend_groups)->>'created_by')::uuid
+      )
+    )
+  );
 
 CREATE POLICY "Users can join groups"
   ON group_members FOR INSERT
@@ -77,18 +88,24 @@ CREATE POLICY "Users can join groups"
     OR EXISTS (
       SELECT 1 FROM friend_groups
       WHERE friend_groups.id = group_members.group_id
-      AND friend_groups.owner_id = auth.uid()
+      AND auth.uid() = COALESCE(
+        (row_to_json(friend_groups)->>'owner_id')::uuid,
+        (row_to_json(friend_groups)->>'created_by')::uuid
+      )
     )
   );
 
-CREATE POLICY "Users can leave groups or admins can remove"
+CREATE POLICY "Users can leave groups or owners can remove members"
   ON group_members FOR DELETE
   USING (
     auth.uid() = user_id
     OR EXISTS (
       SELECT 1 FROM friend_groups
       WHERE friend_groups.id = group_members.group_id
-      AND friend_groups.owner_id = auth.uid()
+      AND auth.uid() = COALESCE(
+        (row_to_json(friend_groups)->>'owner_id')::uuid,
+        (row_to_json(friend_groups)->>'created_by')::uuid
+      )
     )
   );
 
@@ -110,15 +127,30 @@ CREATE POLICY "Users can view groups they are members of"
 
 CREATE POLICY "Authenticated users can create groups"
   ON friend_groups FOR INSERT
-  WITH CHECK (auth.uid() = owner_id);
+  WITH CHECK (
+    auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  );
 
 CREATE POLICY "Group owners can update their groups"
   ON friend_groups FOR UPDATE
-  USING (auth.uid() = owner_id);
+  USING (
+    auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  );
 
 CREATE POLICY "Group owners can delete their groups"
   ON friend_groups FOR DELETE
-  USING (auth.uid() = owner_id);
+  USING (
+    auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  );
 
 -- =============================================
 -- NEWSLETTERS TABLE POLICIES

@@ -9,11 +9,18 @@ import {
 } from './ui/dropdown-menu';
 
 export function Header() {
+  const formattedDate = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date());
+
   return (
     <header className="editorial-header">
       <div className="editorial-header__inner">
         <div className="editorial-header__date">
-          Monday, October 13, 2025
+          {formattedDate}
         </div>
 
         <div className="editorial-header__logo" role="banner">

@@ -4,6 +4,10 @@
 -- Remove ALL existing policies that have recursion issues
 DROP POLICY IF EXISTS "Users can view group members of their groups" ON group_members;
 DROP POLICY IF EXISTS "Group admins can manage members" ON group_members;
+DROP POLICY IF EXISTS "Users can view their own memberships" ON group_members;
+DROP POLICY IF EXISTS "Group owners can view group members" ON group_members;
+DROP POLICY IF EXISTS "Users can join groups" ON group_members;
+DROP POLICY IF EXISTS "Users can leave groups or owners can remove members" ON group_members;
 DROP POLICY IF EXISTS "Users can view groups they belong to" ON friend_groups;
 DROP POLICY IF EXISTS "Group admins can update groups" ON friend_groups;
 

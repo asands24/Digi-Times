@@ -230,17 +230,41 @@ CREATE POLICY "Group admins can update groups" ON friend_groups FOR UPDATE USING
 );
 
 -- Group members policies
-CREATE POLICY "Users can view group members of their groups" ON group_members FOR SELECT USING (
-  group_id IN (SELECT group_id FROM group_members WHERE user_id = auth.uid())
+CREATE POLICY "Users can view their own memberships" ON group_members FOR SELECT USING (
+  auth.uid() = user_id
 );
-CREATE POLICY "Group admins can manage members" ON group_members FOR ALL USING (
-  group_id IN (
-    SELECT group_id FROM group_members
-    WHERE user_id = auth.uid() AND role = 'admin'
+CREATE POLICY "Group owners can view group members" ON group_members FOR SELECT USING (
+  -- Handles both newer owner_id column and legacy created_by column
+  EXISTS (
+    SELECT 1 FROM friend_groups
+    WHERE friend_groups.id = group_members.group_id
+    AND auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
   )
 );
-CREATE POLICY "Users can join groups with invite" ON group_members FOR INSERT WITH CHECK (
-  user_id = auth.uid()
+CREATE POLICY "Users can join groups" ON group_members FOR INSERT WITH CHECK (
+  auth.uid() = user_id
+  OR EXISTS (
+    SELECT 1 FROM friend_groups
+    WHERE friend_groups.id = group_members.group_id
+    AND auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  )
+);
+CREATE POLICY "Users can leave groups or owners can remove members" ON group_members FOR DELETE USING (
+  auth.uid() = user_id
+  OR EXISTS (
+    SELECT 1 FROM friend_groups
+    WHERE friend_groups.id = group_members.group_id
+    AND auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  )
 );
 
 -- Newsletters policies

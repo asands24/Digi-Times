@@ -49,19 +49,34 @@ CREATE POLICY "Users can view groups they are members of"
 DROP POLICY IF EXISTS "Authenticated users can create groups" ON friend_groups;
 CREATE POLICY "Authenticated users can create groups"
   ON friend_groups FOR INSERT
-  WITH CHECK (auth.uid() = owner_id);
+  WITH CHECK (
+    auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  );
 
 -- Group owners can update their groups
 DROP POLICY IF EXISTS "Group owners can update their groups" ON friend_groups;
 CREATE POLICY "Group owners can update their groups"
   ON friend_groups FOR UPDATE
-  USING (auth.uid() = owner_id);
+  USING (
+    auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  );
 
 -- Group owners can delete their groups
 DROP POLICY IF EXISTS "Group owners can delete their groups" ON friend_groups;
 CREATE POLICY "Group owners can delete their groups"
   ON friend_groups FOR DELETE
-  USING (auth.uid() = owner_id);
+  USING (
+    auth.uid() = COALESCE(
+      (row_to_json(friend_groups)->>'owner_id')::uuid,
+      (row_to_json(friend_groups)->>'created_by')::uuid
+    )
+  );
 
 -- =============================================
 -- GROUP_MEMBERS TABLE POLICIES
@@ -69,15 +84,24 @@ CREATE POLICY "Group owners can delete their groups"
 
 ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 
--- Users can view members of groups they belong to
+-- Users can view their own membership rows; owners can view all members
 DROP POLICY IF EXISTS "Users can view members of their groups" ON group_members;
-CREATE POLICY "Users can view members of their groups"
+DROP POLICY IF EXISTS "Users can view their own memberships" ON group_members;
+DROP POLICY IF EXISTS "Group owners can view group members" ON group_members;
+CREATE POLICY "Users can view their own memberships"
+  ON group_members FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Group owners can view group members"
   ON group_members FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM group_members gm
-      WHERE gm.group_id = group_members.group_id
-      AND gm.user_id = auth.uid()
+      SELECT 1 FROM friend_groups
+      WHERE friend_groups.id = group_members.group_id
+      AND auth.uid() = COALESCE(
+        (row_to_json(friend_groups)->>'owner_id')::uuid,
+        (row_to_json(friend_groups)->>'created_by')::uuid
+      )
     )
   );
 
@@ -90,21 +114,27 @@ CREATE POLICY "Users can join groups"
     OR EXISTS (
       SELECT 1 FROM friend_groups
       WHERE friend_groups.id = group_members.group_id
-      AND friend_groups.owner_id = auth.uid()
+      AND auth.uid() = COALESCE(
+        (row_to_json(friend_groups)->>'owner_id')::uuid,
+        (row_to_json(friend_groups)->>'created_by')::uuid
+      )
     )
   );
 
--- Users can leave groups or admins can remove members
+-- Users can leave groups or owners can remove members
 DROP POLICY IF EXISTS "Users can leave groups or admins can remove" ON group_members;
-CREATE POLICY "Users can leave groups or admins can remove"
+DROP POLICY IF EXISTS "Users can leave groups or owners can remove members" ON group_members;
+CREATE POLICY "Users can leave groups or owners can remove members"
   ON group_members FOR DELETE
   USING (
     auth.uid() = user_id
     OR EXISTS (
-      SELECT 1 FROM group_members gm
-      WHERE gm.group_id = group_members.group_id
-      AND gm.user_id = auth.uid()
-      AND gm.role = 'admin'
+      SELECT 1 FROM friend_groups
+      WHERE friend_groups.id = group_members.group_id
+      AND auth.uid() = COALESCE(
+        (row_to_json(friend_groups)->>'owner_id')::uuid,
+        (row_to_json(friend_groups)->>'created_by')::uuid
+      )
     )
   );
 
