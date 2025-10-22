@@ -132,6 +132,22 @@ CREATE INDEX IF NOT EXISTS idx_photos_event_id ON photos(event_id);
 CREATE INDEX IF NOT EXISTS idx_photos_uploaded_by ON photos(uploaded_by);
 
 -- =============================================
+-- STORY_ARCHIVES TABLE
+-- =============================================
+CREATE TABLE IF NOT EXISTS story_archives (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  prompt TEXT NOT NULL,
+  article JSONB NOT NULL,
+  photo_id UUID REFERENCES photos(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_story_archives_user_id ON story_archives(user_id);
+CREATE INDEX IF NOT EXISTS idx_story_archives_updated_at ON story_archives(updated_at);
+
+-- =============================================
 -- FUNCTIONS AND TRIGGERS
 -- =============================================
 
@@ -166,6 +182,12 @@ CREATE TRIGGER update_newsletters_updated_at
 DROP TRIGGER IF EXISTS update_events_updated_at ON events;
 CREATE TRIGGER update_events_updated_at
   BEFORE UPDATE ON events
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_story_archives_updated_at ON story_archives;
+CREATE TRIGGER update_story_archives_updated_at
+  BEFORE UPDATE ON story_archives
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 

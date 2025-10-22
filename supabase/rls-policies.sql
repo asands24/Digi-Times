@@ -402,3 +402,29 @@ CREATE POLICY "Users can delete their own photos"
       AND events.created_by = auth.uid()
     )
   );
+
+-- =============================================
+-- STORY_ARCHIVES TABLE POLICIES
+-- =============================================
+
+ALTER TABLE story_archives ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their stories" ON story_archives;
+CREATE POLICY "Users can view their stories"
+  ON story_archives FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert their stories" ON story_archives;
+CREATE POLICY "Users can insert their stories"
+  ON story_archives FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their stories" ON story_archives;
+CREATE POLICY "Users can update their stories"
+  ON story_archives FOR UPDATE
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete their stories" ON story_archives;
+CREATE POLICY "Users can delete their stories"
+  ON story_archives FOR DELETE
+  USING (auth.uid() = user_id);

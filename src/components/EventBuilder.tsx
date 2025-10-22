@@ -36,7 +36,7 @@ interface StoryEntry {
 }
 
 interface EventBuilderProps {
-  onStoryArchive?: (story: SaveStoryPayload) => void;
+  onStoryArchive?: (story: SaveStoryPayload) => Promise<unknown> | unknown;
 }
 
 const createId = () =>
@@ -236,7 +236,7 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
   );
 
   const archiveStory = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const entry = entries.find((item) => item.id === id);
       if (!entry || entry.status !== 'ready' || !entry.article) {
         toast.error('Generate the story before archiving.');
@@ -246,22 +246,19 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
       const payload: SaveStoryPayload = {
         prompt: entry.prompt,
         article: entry.article,
-        image: {
-          name: entry.file.name,
-          size: entry.file.size,
-          type: entry.file.type,
-          dataUrl: entry.imageDataUrl,
-        },
+        file: entry.file,
+        caption: null,
         createdAt: entry.createdAt.toISOString(),
       };
 
       try {
-        onStoryArchive?.(payload);
+        if (onStoryArchive) {
+          await onStoryArchive(payload);
+        }
         toast.success('Story archived in your edition.');
         removeEntry(entry.id);
       } catch (error) {
         console.error('Failed to archive story', error);
-        toast.error('We could not archive this story. Please try again.');
       }
     },
     [entries, onStoryArchive, removeEntry],

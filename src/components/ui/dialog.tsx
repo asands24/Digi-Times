@@ -15,25 +15,22 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
+  const previousFocusRef = React.useRef<HTMLElement | null>(null);
+
   React.useEffect(() => {
-    if (!open) {
-      return;
+    if (open) {
+      document.body.style.overflow = 'hidden';
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      return () => {
+        document.body.style.overflow = '';
+      };
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onOpenChange(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [open, onOpenChange]);
+    document.body.style.overflow = '';
+    previousFocusRef.current?.focus?.();
+    previousFocusRef.current = null;
+    return undefined;
+  }, [open]);
 
   return (
     <DialogContext.Provider value={{ open, setOpen: onOpenChange }}>
@@ -60,6 +57,54 @@ export const DialogContent = React.forwardRef<
   DialogContentProps
 >(({ className, children, ...props }, ref) => {
   const { open, setOpen } = useDialogContext('DialogContent');
+  const localRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!open || !localRef.current) {
+      return;
+    }
+
+    const container = localRef.current;
+    const focusableSelectors =
+      'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])';
+    const focusables = container.querySelectorAll<HTMLElement>(focusableSelectors);
+    const first = focusables[0] ?? null;
+    const last = focusables.length > 0 ? focusables[focusables.length - 1] : null;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Tab') {
+        if (focusables.length === 0) {
+          event.preventDefault();
+          container.focus();
+          return;
+        }
+
+        if (event.shiftKey) {
+          if (
+            document.activeElement === first ||
+            document.activeElement === container
+          ) {
+            event.preventDefault();
+            (last ?? first)?.focus();
+          }
+        } else if (document.activeElement === last) {
+          event.preventDefault();
+          (first ?? last)?.focus();
+        }
+      }
+
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    (first ?? container).focus();
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, setOpen]);
 
   if (!open) {
     return null;
@@ -73,14 +118,24 @@ export const DialogContent = React.forwardRef<
     event.stopPropagation();
   };
 
+  const assignRef = (node: HTMLDivElement | null) => {
+    localRef.current = node;
+    if (typeof ref === 'function') {
+      ref(node);
+    } else if (ref) {
+      (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    }
+  };
+
   return (
     <div className="dt-dialog__overlay" onClick={handleOverlayClick}>
       <div
-        ref={ref}
+        ref={assignRef}
         role="dialog"
         aria-modal="true"
         className={cn('dt-dialog__content', className)}
         onClick={handleContentClick}
+        tabIndex={-1}
         {...props}
       >
         {children}

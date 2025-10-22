@@ -1,4 +1,7 @@
 import { LogOut, Settings, User } from 'lucide-react';
+import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -7,14 +10,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { supabase } from '../lib/supabaseClient';
 
 export function Header() {
+  const navigate = useNavigate();
+
   const formattedDate = new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   }).format(new Date());
+
+  const handleNavigateSettings = useCallback(() => {
+    navigate('/settings');
+  }, [navigate]);
+
+  const handleSignOut = useCallback(async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error('Failed to log out. Please try again.');
+      return;
+    }
+    navigate('/login');
+  }, [navigate]);
 
   return (
     <header className="editorial-header">
@@ -43,12 +62,15 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleNavigateSettings}>
               <Settings size={16} strokeWidth={1.75} />
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="editorial-user__logout">
+            <DropdownMenuItem
+              className="editorial-user__logout"
+              onClick={handleSignOut}
+            >
               <LogOut size={16} strokeWidth={1.75} />
               <span>Log Out</span>
             </DropdownMenuItem>

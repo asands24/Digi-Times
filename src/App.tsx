@@ -35,8 +35,8 @@ export default function App() {
       <Header />
       <main className="editorial-main">
         <EventBuilder
-          onStoryArchive={(payload) => {
-            const story = saveStory(payload);
+          onStoryArchive={async (payload) => {
+            const story = await saveStory(payload);
             setPreviewId(story.id);
           }}
         />

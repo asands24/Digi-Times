@@ -11,12 +11,31 @@ interface StoryPreviewDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const createPrintMarkup = (story: StoryRecord) => `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>${story.article.headline}</title>
-    <style>
+export function StoryPreviewDialog({
+  story,
+  open,
+  onOpenChange,
+}: StoryPreviewDialogProps) {
+  const handlePrint = useCallback(() => {
+    if (!story) {
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Pop-up blocked. Allow pop-ups to print the page.');
+      return;
+    }
+
+    const doc = printWindow.document;
+    doc.open();
+    doc.write(
+      '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Print</title></head><body></body></html>',
+    );
+    doc.close();
+
+    const style = doc.createElement('style');
+    style.textContent = `
       body {
         font-family: 'Libre Baskerville', serif;
         margin: 0;
@@ -56,41 +75,69 @@ const createPrintMarkup = (story: StoryRecord) => `<!doctype html>
         line-height: 1.7;
         font-size: 1rem;
       }
-    </style>
-  </head>
-  <body>
-    <article>
-      <div class="meta">${story.article.dateline} • ${story.article.byline}</div>
-      <h1 class="headline">${story.article.headline}</h1>
-      <p class="subheadline">${story.article.subheadline}</p>
-      <img class="story-image" src="${story.image.dataUrl}" alt="${story.image.name}" />
-      <blockquote>${story.article.quote}</blockquote>
-      <div class="body">
-        ${story.article.body.map((paragraph) => `<p>${paragraph}</p>`).join('')}
-      </div>
-    </article>
-  </body>
-</html>`;
+    `;
+    doc.head.appendChild(style);
 
-export function StoryPreviewDialog({
-  story,
-  open,
-  onOpenChange,
-}: StoryPreviewDialogProps) {
-  const handlePrint = useCallback(() => {
-    if (!story) {
-      return;
+    const articleNode = doc.createElement('article');
+    const meta = doc.createElement('div');
+    meta.className = 'meta';
+    const metaParts = [story.article.dateline, story.article.byline].filter(
+      (value) => Boolean(value && value.trim()),
+    );
+    meta.textContent = metaParts.join(' • ');
+    if (meta.textContent) {
+      articleNode.appendChild(meta);
     }
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('Pop-up blocked. Allow pop-ups to print the page.');
-      return;
+    const title = doc.createElement('h1');
+    title.className = 'headline';
+    title.textContent = story.article.headline || 'Story';
+    articleNode.appendChild(title);
+
+    const subtitle = doc.createElement('p');
+    subtitle.className = 'subheadline';
+    subtitle.textContent = story.article.subheadline ?? '';
+    if (subtitle.textContent) {
+      articleNode.appendChild(subtitle);
     }
 
-    printWindow.document.open();
-    printWindow.document.write(createPrintMarkup(story));
-    printWindow.document.close();
+    const imageUrl = story.image?.publicUrl ?? '';
+    if (imageUrl && /^https?:\/\//i.test(imageUrl)) {
+      const img = doc.createElement('img');
+      img.className = 'story-image';
+      img.src = imageUrl;
+      img.alt =
+        story.image?.caption ??
+        story.article.headline ??
+        'Story photo';
+      articleNode.appendChild(img);
+    }
+
+    const quote = doc.createElement('blockquote');
+    quote.textContent = story.article.quote ?? '';
+    if (quote.textContent) {
+      articleNode.appendChild(quote);
+    }
+
+    const body = doc.createElement('div');
+    body.className = 'body';
+    const paragraphs = Array.isArray(story.article.body)
+      ? story.article.body
+      : [];
+    paragraphs.forEach((paragraph) => {
+      const trimmed = paragraph.trim();
+      if (!trimmed) {
+        return;
+      }
+      const p = doc.createElement('p');
+      p.textContent = trimmed;
+      body.appendChild(p);
+    });
+    if (body.childNodes.length > 0) {
+      articleNode.appendChild(body);
+    }
+
+    doc.body.appendChild(articleNode);
 
     window.setTimeout(() => {
       printWindow.focus();
@@ -135,7 +182,12 @@ export function StoryPreviewDialog({
         </DialogHeader>
 
         <article className="story-preview__article">
-          <img src={story.image.dataUrl} alt={story.image.name} />
+          {story.image ? (
+            <img
+              src={story.image.publicUrl}
+              alt={story.image.caption ?? story.article.headline}
+            />
+          ) : null}
           <div className="story-preview__meta">
             <span>{story.article.dateline}</span>
             <span>{story.article.byline}</span>

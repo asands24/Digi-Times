@@ -1,17 +1,19 @@
 import type { GeneratedArticle } from '../utils/storyGenerator';
 
 export interface StoryImage {
-  name: string;
-  type: string;
-  size: number;
-  dataUrl: string;
+  id: string;
+  fileName: string;
+  filePath: string;
+  publicUrl: string;
+  caption: string | null;
+  uploadedBy: string;
 }
 
 export interface StoryRecord {
   id: string;
   prompt: string;
   article: GeneratedArticle;
-  image: StoryImage;
+  image: StoryImage | null;
   createdAt: string;
   updatedAt: string;
 }

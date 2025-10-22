@@ -158,9 +158,71 @@ export const DropdownMenuContent = React.forwardRef<
   HTMLDivElement,
   DropdownMenuContentProps
 >(({ className, align = 'start', ...props }, ref) => {
-  const { open, contentRef } = useDropdownMenuContext(
+  const { open, setOpen, contentRef, triggerRef } = useDropdownMenuContext(
     'DropdownMenuContent'
   );
+
+  React.useEffect(() => {
+    if (!open || !contentRef.current) {
+      return;
+    }
+
+    const container = contentRef.current;
+    const queryItems = () =>
+      Array.from(
+        container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+      );
+
+    const focusItem = (item: HTMLButtonElement | undefined) => {
+      if (item) {
+        item.focus();
+      }
+    };
+
+    const items = queryItems();
+    if (items.length > 0) {
+      focusItem(items[0]);
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const currentItems = queryItems();
+      if (currentItems.length === 0) {
+        return;
+      }
+
+      const activeElement = document.activeElement as HTMLElement | null;
+      let index = currentItems.findIndex((item) => item === activeElement);
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        index = index >= 0 ? (index + 1) % currentItems.length : 0;
+        focusItem(currentItems[index]);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        index =
+          index >= 0
+            ? (index - 1 + currentItems.length) % currentItems.length
+            : currentItems.length - 1;
+        focusItem(currentItems[index]);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        focusItem(currentItems[0]);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        focusItem(currentItems[currentItems.length - 1]);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      container.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, setOpen, contentRef, triggerRef]);
 
   if (!open) {
     return null;
@@ -214,6 +276,7 @@ export const DropdownMenuItem = React.forwardRef<
       ref={ref}
       type="button"
       role="menuitem"
+      tabIndex={-1}
       className={cn('dt-dropdown__item', className)}
       onClick={handleClick}
       {...props}

@@ -82,7 +82,12 @@ export function StoryArchive({
           {sortedStories.map((story) => (
             <article key={story.id} className="story-archive__card">
               <div className="story-archive__image">
-                <img src={story.image.dataUrl} alt={story.image.name} />
+                {story.image ? (
+                  <img
+                    src={story.image.publicUrl}
+                    alt={story.image.caption ?? story.image.fileName}
+                  />
+                ) : null}
               </div>
               <div className="story-archive__content">
                 <header>

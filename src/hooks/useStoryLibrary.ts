@@ -1,140 +1,427 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { StoryRecord, StoryArchive } from '../types/story';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import { uploadPhotoToStorage } from '../lib/photos';
+import { supabase } from '../lib/supabaseClient';
+import type { StoryRecord } from '../types/story';
 import type { GeneratedArticle } from '../utils/storyGenerator';
 
-const STORAGE_KEY = 'digitimes::story-archive';
-const STORAGE_VERSION = 1;
+interface PhotoRow {
+  id: string;
+  file_path: string;
+  file_name: string;
+  caption: string | null;
+  uploaded_by: string;
+}
 
-const createArchive = (stories: StoryRecord[]): StoryArchive => ({
-  version: STORAGE_VERSION,
-  stories,
-});
+interface StoryArchiveRow {
+  id: string;
+  user_id: string;
+  prompt: string;
+  article: unknown;
+  created_at: string;
+  updated_at: string;
+  photo?: PhotoRow | null;
+}
 
-const generateStoryId = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
+const isGeneratedArticle = (value: unknown): value is GeneratedArticle => {
+  if (!value || typeof value !== 'object') {
+    return false;
   }
-  return `story-${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
+
+  const record = value as Partial<GeneratedArticle>;
+  return (
+    typeof record.headline === 'string' &&
+    typeof record.subheadline === 'string' &&
+    typeof record.byline === 'string' &&
+    typeof record.dateline === 'string' &&
+    Array.isArray(record.body) &&
+    record.body.every((entry) => typeof entry === 'string') &&
+    typeof record.quote === 'string' &&
+    Array.isArray(record.tags)
+  );
 };
 
-const loadArchive = (): StoryRecord[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
+const mapRowToStory = (row: StoryArchiveRow): StoryRecord => {
+  const article = isGeneratedArticle(row.article)
+    ? row.article
+    : {
+        headline: 'Untitled Story',
+        subheadline: '',
+        byline: '',
+        dateline: '',
+        body: [],
+        quote: '',
+        tags: [],
+      };
 
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
+  const photo = row.photo ?? null;
+  const publicUrl =
+    photo?.file_path
+      ? supabase.storage.from('photos').getPublicUrl(photo.file_path).data.publicUrl
+      : '';
 
-    const parsed = JSON.parse(raw) as StoryArchive;
-    if (!parsed || typeof parsed !== 'object') {
-      return [];
-    }
-
-    if (parsed.version !== STORAGE_VERSION || !Array.isArray(parsed.stories)) {
-      return [];
-    }
-
-    return parsed.stories.filter(
-      (story): story is StoryRecord =>
-        Boolean(
-          story &&
-            typeof story.id === 'string' &&
-            story.image &&
-            typeof story.image.dataUrl === 'string',
-        ),
-    );
-  } catch (error) {
-    console.warn('Failed to read story archive from storage:', error);
-    return [];
-  }
-};
-
-const persistArchive = (stories: StoryRecord[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    const archive = createArchive(stories);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(archive));
-  } catch (error) {
-    console.warn('Failed to persist story archive:', error);
-  }
+  return {
+    id: row.id,
+    prompt: row.prompt,
+    article,
+    image: photo
+      ? {
+          id: photo.id,
+          fileName: photo.file_name,
+          filePath: photo.file_path,
+          publicUrl,
+          caption: photo.caption ?? null,
+          uploadedBy: photo.uploaded_by,
+        }
+      : null,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
+  };
 };
 
 export interface SaveStoryPayload {
-  id?: string;
   prompt: string;
   article: GeneratedArticle;
-  image: StoryRecord['image'];
+  file: File;
+  caption?: string | null;
   createdAt?: string;
 }
 
 export const useStoryLibrary = () => {
-  const [stories, setStories] = useState<StoryRecord[]>(() => loadArchive());
+  const [stories, setStories] = useState<StoryRecord[]>([]);
+  const storiesRef = useRef<StoryRecord[]>([]);
 
   useEffect(() => {
-    persistArchive(stories);
+    storiesRef.current = stories;
   }, [stories]);
 
-  const saveStory = useCallback((payload: SaveStoryPayload) => {
-    const now = new Date().toISOString();
-    const story: StoryRecord = {
-      id: payload.id ?? generateStoryId(),
-      prompt: payload.prompt,
-      article: payload.article,
-      image: payload.image,
-      createdAt: payload.createdAt ?? now,
-      updatedAt: now,
-    };
-    setStories((prev) => {
-      const existingIndex = prev.findIndex((item) => item.id === story.id);
-      if (existingIndex >= 0) {
-        const next = [...prev];
-        next[existingIndex] = story;
-        return next;
-      }
-      return [...prev, story];
-    });
-    return story;
-  }, []);
+  const loadStories = useCallback(
+    async (userId: string, { silent } = { silent: false }) => {
+      const { data, error } = await supabase
+        .from('story_archives')
+        .select(
+          `
+            id,
+            user_id,
+            prompt,
+            article,
+            created_at,
+            updated_at,
+            photo:photos (
+              id,
+              file_path,
+              file_name,
+              caption,
+              uploaded_by
+            )
+          `,
+        )
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false });
 
-  const removeStory = useCallback((id: string) => {
-    setStories((prev) => prev.filter((story) => story.id !== id));
-  }, []);
-
-  const updateStory = useCallback(
-    (id: string, updater: (story: StoryRecord) => StoryRecord) => {
-      setStories((prev) => {
-        const index = prev.findIndex((story) => story.id === id);
-        if (index === -1) {
-          return prev;
+      if (error) {
+        if (!silent) {
+          toast.error('Failed to load stories.');
         }
+        throw error;
+      }
 
-        const updated = updater(prev[index]);
-        const next = [...prev];
-        next[index] = {
-          ...updated,
-          updatedAt: new Date().toISOString(),
-        };
-        return next;
-      });
+      const mapped = (data ?? []).map(mapRowToStory);
+      setStories(mapped);
+      return mapped;
     },
     [],
   );
 
-  const clearStories = useCallback(() => {
-    setStories([]);
+  useEffect(() => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        toast.error('Failed to load stories.');
+        return;
+      }
+
+      const user = data.user;
+      if (!user) {
+        setStories([]);
+        return;
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        await loadStories(user.id, { silent: true });
+      } catch {
+        // toast already handled
+      }
+    };
+
+    void bootstrap();
+
+    return () => {
+      cancelled = true;
+    },
+  );
+
+  const saveStory = useCallback(
+    async (payload: SaveStoryPayload) => {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        toast.error('Failed to save story.');
+        throw authError;
+      }
+
+      const user = authData.user;
+      if (!user) {
+        const error = new Error('You must be signed in to save stories.');
+        toast.error(error.message);
+        throw error;
+      }
+
+      let uploaded:
+        | {
+            file_path: string;
+            publicUrl: string;
+          }
+        | null = null;
+
+      try {
+        uploaded = await uploadPhotoToStorage(payload.file, user.id);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to upload photo';
+        if (message.includes('max 4MB')) {
+          toast.error('Photo is too large. Max 4MB.');
+        } else {
+          toast.error(message);
+        }
+        throw error;
+      }
+
+      if (!uploaded) {
+        const error = new Error('Failed to upload photo');
+        toast.error(error.message);
+        throw error;
+      }
+
+      let photoRecord: PhotoRow | null = null;
+
+      try {
+        const { data, error: insertError } = await supabase
+          .from('photos')
+          .insert({
+            file_path: uploaded.file_path,
+            file_name: payload.file.name,
+            caption: payload.caption ?? null,
+            uploaded_by: user.id,
+          })
+          .select('id, file_path, file_name, caption, uploaded_by')
+          .single();
+
+        if (insertError || !data) {
+          throw insertError ?? new Error('Failed to store photo metadata');
+        }
+
+        photoRecord = data as PhotoRow;
+      } catch (error) {
+        await supabase.storage.from('photos').remove([uploaded.file_path]);
+        const message =
+          error instanceof Error ? error.message : 'Failed to store photo metadata';
+        toast.error(message);
+        throw error;
+      }
+
+      try {
+        const timestamp = new Date().toISOString();
+        const { data, error: storyError } = await supabase
+          .from('story_archives')
+          .insert({
+            user_id: user.id,
+            prompt: payload.prompt,
+            article: payload.article,
+            photo_id: photoRecord?.id ?? null,
+            created_at: payload.createdAt ?? timestamp,
+            updated_at: timestamp,
+          })
+          .select(
+            `
+              id,
+              user_id,
+              prompt,
+              article,
+              created_at,
+              updated_at,
+              photo:photos (
+                id,
+                file_path,
+                file_name,
+                caption,
+                uploaded_by
+              )
+            `,
+          )
+          .single();
+
+        if (storyError || !data) {
+          throw storyError ?? new Error('Failed to save story');
+        }
+
+        const story = mapRowToStory(data as StoryArchiveRow);
+        setStories((prev) => [story, ...prev.filter((item) => item.id !== story.id)]);
+        return story;
+      } catch (error) {
+        if (photoRecord?.id) {
+          await supabase.from('photos').delete().eq('id', photoRecord.id);
+        }
+        await supabase.storage.from('photos').remove([uploaded.file_path]);
+        const message =
+          error instanceof Error ? error.message : 'Failed to save story';
+        toast.error(message);
+        throw error;
+      }
+    },
+    [],
+  );
+
+  const removeStory = useCallback(async (id: string) => {
+    const target = storiesRef.current.find((story) => story.id === id);
+    if (!target) {
+      toast.error('Story not found.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('story_archives').delete().eq('id', id);
+      if (error) {
+        throw error;
+      }
+
+      if (target.image) {
+        await supabase.from('photos').delete().eq('id', target.image.id);
+        await supabase.storage.from('photos').remove([target.image.filePath]);
+      }
+
+      setStories((prev) => prev.filter((story) => story.id !== id));
+      toast.success('Story removed from archive.');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to remove story';
+      toast.error(message);
+      throw error;
+    }
+  }, []);
+
+  const updateStory = useCallback(
+    async (id: string, updater: (story: StoryRecord) => StoryRecord) => {
+      const current = storiesRef.current.find((story) => story.id === id);
+      if (!current) {
+        toast.error('Story not found.');
+        return;
+      }
+
+      const updated = updater(current);
+      const nextUpdatedAt = new Date().toISOString();
+
+      try {
+        const { error } = await supabase
+          .from('story_archives')
+          .update({
+            prompt: updated.prompt,
+            article: updated.article,
+            updated_at: nextUpdatedAt,
+          })
+          .eq('id', id);
+
+        if (error) {
+          throw error;
+        }
+
+        setStories((prev) =>
+          prev.map((story) =>
+            story.id === id
+              ? {
+                  ...updated,
+                  image: updated.image ?? current.image,
+                  updatedAt: nextUpdatedAt,
+                }
+              : story,
+          ),
+        );
+        toast.success('Story updated.');
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to update story';
+        toast.error(message);
+        throw error;
+      }
+    },
+    [],
+  );
+
+  const clearStories = useCallback(async () => {
+    const currentStories = storiesRef.current;
+    if (currentStories.length === 0) {
+      return;
+    }
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      toast.error('Failed to clear archive.');
+      throw error;
+    }
+
+    const user = data.user;
+    if (!user) {
+      const authError = new Error('You must be signed in to clear the archive.');
+      toast.error(authError.message);
+      throw authError;
+    }
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('story_archives')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      const photoIds = currentStories
+        .map((story) => story.image?.id)
+        .filter((value): value is string => Boolean(value));
+      if (photoIds.length > 0) {
+        await supabase.from('photos').delete().in('id', photoIds);
+
+        const paths = currentStories
+          .map((story) => story.image?.filePath)
+          .filter((value): value is string => Boolean(value));
+        if (paths.length > 0) {
+          await supabase.storage.from('photos').remove(paths);
+        }
+      }
+
+      setStories([]);
+      toast.success('Archive cleared.');
+    } catch (clearError) {
+      const message =
+        clearError instanceof Error ? clearError.message : 'Failed to clear archive';
+      toast.error(message);
+      throw clearError;
+    }
   }, []);
 
   const exportStories = useCallback(() => {
-    const archive = createArchive(stories);
-    const blob = new Blob([JSON.stringify(archive, null, 2)], {
+    const payload = {
+      version: 2,
+      stories,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
