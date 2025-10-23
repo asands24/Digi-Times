@@ -69,7 +69,7 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
       }
 
       const processed = await Promise.all(
-        files.map(async (file) => {
+        files.map(async (file): Promise<StoryEntry | null> => {
           if (!file.type.startsWith('image/')) {
             toast.error(`Unsupported file: ${file.name}`);
             return null;
@@ -83,7 +83,7 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
           try {
             const imageDataUrl = await readFileAsDataUrl(file);
             const previewUrl = URL.createObjectURL(file);
-            return {
+            const entry: StoryEntry = {
               id: createId(),
               file,
               previewUrl,
@@ -92,6 +92,7 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
               createdAt: new Date(),
               status: 'idle' as const,
             };
+            return entry;
           } catch (error) {
             console.error('Failed to process file', error);
             toast.error(`Could not read ${file.name}`);

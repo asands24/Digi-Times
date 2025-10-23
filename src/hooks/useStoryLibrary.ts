@@ -20,7 +20,7 @@ interface StoryArchiveRow {
   article: unknown;
   created_at: string;
   updated_at: string;
-  photo?: PhotoRow | null;
+  photo?: PhotoRow | PhotoRow[] | null;
 }
 
 const isGeneratedArticle = (value: unknown): value is GeneratedArticle => {
@@ -54,7 +54,12 @@ const mapRowToStory = (row: StoryArchiveRow): StoryRecord => {
         tags: [],
       };
 
-  const photo = row.photo ?? null;
+  const rawPhoto = row.photo;
+  const photo = Array.isArray(rawPhoto)
+    ? rawPhoto.length > 0
+      ? rawPhoto[0]
+      : null
+    : rawPhoto ?? null;
   const publicUrl =
     photo?.file_path
       ? supabase.storage.from('photos').getPublicUrl(photo.file_path).data.publicUrl
