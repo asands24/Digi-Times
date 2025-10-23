@@ -1,9 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 
+const resolveEnvVar = (key: string): string | undefined => {
+  if (typeof process !== 'undefined' && process.env?.[key]) {
+    return process.env[key];
+  }
+
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env?.[key]) {
+    return (import.meta as any).env[key];
+  }
+
+  if (typeof window !== 'undefined' && (window as any).__env?.[key]) {
+    return (window as any).__env[key];
+  }
+
+  return undefined;
+};
+
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.REACT_APP_SUPABASE_URL;
+  resolveEnvVar('NEXT_PUBLIC_SUPABASE_URL') ??
+  resolveEnvVar('REACT_APP_SUPABASE_URL') ??
+  resolveEnvVar('VITE_SUPABASE_URL');
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.REACT_APP_SUPABASE_ANON_KEY;
+  resolveEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY') ??
+  resolveEnvVar('REACT_APP_SUPABASE_ANON_KEY') ??
+  resolveEnvVar('VITE_SUPABASE_ANON_KEY');
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(

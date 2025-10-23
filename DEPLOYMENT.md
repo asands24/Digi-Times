@@ -18,6 +18,10 @@
      ```
      NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
      NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+     REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co   # CRA fallback
+     REACT_APP_SUPABASE_ANON_KEY=your-anon-key                     # CRA fallback
+     VITE_SUPABASE_URL=https://your-project-ref.supabase.co        # Vite fallback
+     VITE_SUPABASE_ANON_KEY=your-anon-key                          # Vite fallback
      ```
    - Replace the placeholders with your real credentials and keep these files out of version control.
 
@@ -51,7 +55,11 @@
    - Add:
      - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon key
-   - If you still rely on Create React App builds, mirror the values under `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` for backward compatibility.
+   - If you ship CRA or Vite bundles from the same repo, also set:
+     - `REACT_APP_SUPABASE_URL`
+     - `REACT_APP_SUPABASE_ANON_KEY`
+     - `VITE_SUPABASE_URL`
+     - `VITE_SUPABASE_ANON_KEY`
 7. Click "Deploy site"
 
 #### Option B: Netlify CLI
@@ -72,10 +80,14 @@
    ```
 
 4. **Set environment variables**:
-   ```bash
-   netlify env:set NEXT_PUBLIC_SUPABASE_URL "your_supabase_url"
-   netlify env:set NEXT_PUBLIC_SUPABASE_ANON_KEY "your_supabase_anon_key"
-   ```
+     ```bash
+     netlify env:set NEXT_PUBLIC_SUPABASE_URL "your_supabase_url"
+     netlify env:set NEXT_PUBLIC_SUPABASE_ANON_KEY "your_supabase_anon_key"
+     netlify env:set REACT_APP_SUPABASE_URL "your_supabase_url"
+     netlify env:set REACT_APP_SUPABASE_ANON_KEY "your_supabase_anon_key"
+     netlify env:set VITE_SUPABASE_URL "your_supabase_url"
+     netlify env:set VITE_SUPABASE_ANON_KEY "your_supabase_anon_key"
+     ```
 
 5. **Deploy**:
    ```bash
@@ -171,6 +183,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 # Optional CRA fallback
 REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
+# Optional Vite fallback
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key_here
 ```
 - Netlify: set these under Site settings → Environment variables before triggering a build.
 - Vercel: set them in Project settings → Environment variables for both `Preview` and `Production`, then redeploy to propagate.
