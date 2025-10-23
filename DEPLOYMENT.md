@@ -13,8 +13,13 @@
 1. **Set up environment variables locally**:
    ```bash
    cp .env.example .env
-   # Edit .env with your actual Supabase credentials
    ```
+   - Ensure `.env.local` and `.env.production` exist at the project root with:
+     ```
+     NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+     ```
+   - Replace the placeholders with your real credentials and keep these files out of version control.
 
 2. **Test the build locally**:
    ```bash
@@ -44,8 +49,9 @@
 6. Add environment variables:
    - Go to Site settings > Environment variables
    - Add:
-     - `REACT_APP_SUPABASE_URL`: Your Supabase project URL
-     - `REACT_APP_SUPABASE_ANON_KEY`: Your Supabase anon key
+     - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon key
+   - If you still rely on Create React App builds, mirror the values under `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` for backward compatibility.
 7. Click "Deploy site"
 
 #### Option B: Netlify CLI
@@ -67,8 +73,8 @@
 
 4. **Set environment variables**:
    ```bash
-   netlify env:set REACT_APP_SUPABASE_URL "your_supabase_url"
-   netlify env:set REACT_APP_SUPABASE_ANON_KEY "your_supabase_anon_key"
+   netlify env:set NEXT_PUBLIC_SUPABASE_URL "your_supabase_url"
+   netlify env:set NEXT_PUBLIC_SUPABASE_ANON_KEY "your_supabase_anon_key"
    ```
 
 5. **Deploy**:
@@ -160,9 +166,15 @@ With this setup, any push to your main branch will automatically trigger a new d
 Required environment variables for production:
 
 ```
-REACT_APP_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+# Optional CRA fallback
+REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
 ```
+- Netlify: set these under Site settings → Environment variables before triggering a build.
+- Vercel: set them in Project settings → Environment variables for both `Preview` and `Production`, then redeploy to propagate.
+- Confirm availability locally by running `npm run dev` and checking that the startup logs include “✅ Supabase client initialized”.
 
 ### Troubleshooting
 
