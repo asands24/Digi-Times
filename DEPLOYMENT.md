@@ -89,7 +89,7 @@
 ### Step 4: Verify Deployment
 
 1. **Test Authentication**:
-   - Try signing in with magic link
+   - Sign in with the configured smoke credentials
    - Verify email redirection works
 
 2. **Test Core Features**:
@@ -97,12 +97,50 @@
    - Join a group with invite code
    - Create a newsletter
    - Add events
-   - Upload photos
+   - Upload photos (≤4MB)
    - Preview newsletters
 
 3. **Check Console for Errors**:
    - Open browser dev tools
    - Look for any console errors or warnings
+
+### Storage & Media Handling
+
+- Photos now upload to the Supabase `photos` storage bucket instead of being saved in `localStorage`.
+- Each upload is capped at **4MB**. Oversized files trigger a visible toast error (“Photo is too large. Max 4MB.”).
+- Metadata is persisted in the `photos` table, keyed by `photos.uploaded_by` for ownership.
+- Confirm new deployments have public bucket access configured and that successful uploads surface a public URL.
+
+### Print Preview Hardening
+
+- Print previews are rendered by constructing DOM nodes explicitly; no user-supplied HTML is ever injected.
+- This prevents script execution during print (`document.write` with interpolated HTML has been removed).
+- Smoke verification: trigger print preview on an existing story and ensure the preview renders without executing arbitrary scripts.
+
+### Accessibility Guarantees
+
+- Dialogs are focus-trapped, restore focus to their trigger on close, expose `role="dialog"` and `aria-modal="true"`, and close via `Escape`.
+- Dropdown menus support arrow navigation (Up/Down/Home/End) and keep focus within the menu until dismissed.
+- Include keyboard-only validation in each smoke test cycle to confirm tab/shift-tab behavior and Escape handling.
+
+### Smoke Testing Checklist
+
+Run before and after each deploy (locally or against production):
+
+1. `node scripts/smoke-create-group.ts` – succeeds whether the schema uses `owner_id` or `created_by`.
+2. Sign in using `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD`.
+3. Upload a ≤4MB photo and confirm the object appears in the `photos` bucket with matching metadata.
+4. Create a story, open print preview, and verify no `<script>` tags execute.
+5. Open a dialog (e.g., Story Preview) and confirm keyboard focus loops; open the account dropdown and navigate with arrow keys.
+6. Log out via the header menu and confirm redirection to `/login`.
+
+### Smoke Credential Rotation
+
+- Store smoke user credentials in `.env.local` and Netlify/Vercel environment variables:
+  - `SMOKE_TEST_EMAIL`
+  - `SMOKE_TEST_PASSWORD`
+- Rotate by creating a new Supabase user, updating the variables locally and in hosting dashboards, and invalidating the old credentials.
+- Document each rotation (who, when, why) in your team log to keep the smoke account auditable.
 
 ### Continuous Deployment
 
