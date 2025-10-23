@@ -164,8 +164,8 @@ export const useStoryLibrary = () => {
 
     return () => {
       cancelled = true;
-    },
-  );
+    };
+  }, [loadStories]);
 
   const saveStory = useCallback(
     async (payload: SaveStoryPayload) => {
