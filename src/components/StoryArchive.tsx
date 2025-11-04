@@ -1,18 +1,12 @@
-import { useMemo } from 'react';
-import { Calendar, Download, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, Eye, RefreshCcw } from 'lucide-react';
 import { Button } from './ui/button';
-import type { StoryRecord } from '../types/story';
+import type { ArchiveItem } from '../hooks/useStoryLibrary';
 
 interface StoryArchiveProps {
-  stories: StoryRecord[];
-  onPreview: (storyId: string) => void;
-  onEdit: (storyId: string) => void;
-  onRemove: (storyId: string) => void;
-  onClear: () => void;
-  onExport: () => void;
-  stats: {
-    lastUpdated: string | null;
-  };
+  stories: ArchiveItem[];
+  loading: boolean;
+  onPreview: (story: ArchiveItem) => void;
+  onRefresh: () => void;
 }
 
 const formatTimestamp = (value: string | null) => {
@@ -30,24 +24,8 @@ const formatTimestamp = (value: string | null) => {
   }
 };
 
-export function StoryArchive({
-  stories,
-  onPreview,
-  onEdit,
-  onRemove,
-  onClear,
-  onExport,
-  stats,
-}: StoryArchiveProps) {
+export function StoryArchive({ stories, loading, onPreview, onRefresh }: StoryArchiveProps) {
   const hasStories = stories.length > 0;
-  const sortedStories = useMemo(
-    () =>
-      [...stories].sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      ),
-    [stories],
-  );
 
   return (
     <section className="story-archive">
@@ -60,76 +38,50 @@ export function StoryArchive({
             edit, preview, and publish a polished newspaper spread.
           </p>
         </div>
-        <div className="story-archive__meta">
-          <span>{stories.length} saved stories</span>
-          <span>Last updated: {formatTimestamp(stats.lastUpdated)}</span>
-        </div>
+        <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
+          <RefreshCcw size={16} strokeWidth={1.75} />
+          Refresh
+        </Button>
       </header>
 
-      <div className="story-archive__actions">
-        <Button type="button" onClick={onExport} disabled={!hasStories}>
-          <Download size={16} strokeWidth={1.75} />
-          Export archive
-        </Button>
-        <Button type="button" variant="outline" onClick={onClear} disabled={!hasStories}>
-          <Trash2 size={16} strokeWidth={1.75} />
-          Clear archive
-        </Button>
-      </div>
-
-      {hasStories ? (
+      {loading ? (
+        <div className="story-archive__empty">
+          <p>Loading your saved stories…</p>
+        </div>
+      ) : hasStories ? (
         <div className="story-archive__grid">
-          {sortedStories.map((story) => (
+          {stories.map((story) => (
             <article key={story.id} className="story-archive__card">
               <div className="story-archive__image">
-                {story.image ? (
+                {story.imageUrl ? (
                   <img
-                    src={story.image.publicUrl}
-                    alt={story.image.caption ?? story.image.fileName}
+                    src={story.imageUrl}
+                    alt={story.title ?? 'Archived story image'}
                   />
                 ) : null}
               </div>
               <div className="story-archive__content">
                 <header>
-                  <h3>{story.article.headline}</h3>
-                  <p>{story.article.subheadline}</p>
+                  <h3>{story.title ?? 'Untitled story'}</h3>
+                  <span className="story-archive__template">
+                    Layout: {story.template_id ? `Template ${story.template_id}` : 'Unassigned'}
+                  </span>
                 </header>
                 <footer>
                   <div className="story-archive__details">
-                    <span>{story.article.byline}</span>
                     <span className="story-archive__dateline">
                       <Calendar size={14} strokeWidth={1.75} />
-                      {story.article.dateline}
+                      {formatTimestamp(story.created_at)}
                     </span>
                   </div>
                   <div className="story-archive__buttons">
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
-                      onClick={() => onPreview(story.id)}
+                      onClick={() => onPreview(story)}
                     >
                       <Eye size={14} strokeWidth={1.75} />
                       Preview
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onEdit(story.id)}
-                    >
-                      <Pencil size={14} strokeWidth={1.75} />
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="story-archive__remove"
-                      onClick={() => onRemove(story.id)}
-                    >
-                      <Trash2 size={14} strokeWidth={1.75} />
-                      Remove
                     </Button>
                   </div>
                 </footer>

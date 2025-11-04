@@ -1,12 +1,6 @@
 import * as React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cn } from '../../utils/cn';
-
-interface DialogContextValue {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-}
-
-const DialogContext = React.createContext<DialogContextValue | null>(null);
 
 interface DialogProps {
   open: boolean;
@@ -15,134 +9,45 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
-  const previousFocusRef = React.useRef<HTMLElement | null>(null);
+  const previouslyFocusedElement = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
     if (open) {
-      document.body.style.overflow = 'hidden';
-      previousFocusRef.current = document.activeElement as HTMLElement | null;
-      return () => {
-        document.body.style.overflow = '';
-      };
+      previouslyFocusedElement.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    } else if (previouslyFocusedElement.current) {
+      previouslyFocusedElement.current.focus();
+      previouslyFocusedElement.current = null;
     }
-
-    document.body.style.overflow = '';
-    previousFocusRef.current?.focus?.();
-    previousFocusRef.current = null;
-    return undefined;
   }, [open]);
 
   return (
-    <DialogContext.Provider value={{ open, setOpen: onOpenChange }}>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       {children}
-    </DialogContext.Provider>
+    </DialogPrimitive.Root>
   );
-}
-
-function useDialogContext(component: string) {
-  const context = React.useContext(DialogContext);
-  if (!context) {
-    throw new Error(`${component} must be used within a <Dialog>`);
-  }
-  return context;
 }
 
 export interface DialogContentProps
-  extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
-}
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {}
 
 export const DialogContent = React.forwardRef<
-  HTMLDivElement,
+  React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, ...props }, ref) => {
-  const { open, setOpen } = useDialogContext('DialogContent');
-  const localRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    if (!open || !localRef.current) {
-      return;
-    }
-
-    const container = localRef.current;
-    const focusableSelectors =
-      'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])';
-    const focusables = container.querySelectorAll<HTMLElement>(focusableSelectors);
-    const first = focusables[0] ?? null;
-    const last = focusables.length > 0 ? focusables[focusables.length - 1] : null;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Tab') {
-        if (focusables.length === 0) {
-          event.preventDefault();
-          container.focus();
-          return;
-        }
-
-        if (event.shiftKey) {
-          if (
-            document.activeElement === first ||
-            document.activeElement === container
-          ) {
-            event.preventDefault();
-            (last ?? first)?.focus();
-          }
-        } else if (document.activeElement === last) {
-          event.preventDefault();
-          (first ?? last)?.focus();
-        }
-      }
-
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    (first ?? container).focus();
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open, setOpen]);
-
-  if (!open) {
-    return null;
-  }
-
-  const handleOverlayClick = () => {
-    setOpen(false);
-  };
-
-  const handleContentClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    event.stopPropagation();
-  };
-
-  const assignRef = (node: HTMLDivElement | null) => {
-    localRef.current = node;
-    if (typeof ref === 'function') {
-      ref(node);
-    } else if (ref) {
-      (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-    }
-  };
-
-  return (
-    <div className="dt-dialog__overlay" onClick={handleOverlayClick}>
-      <div
-        ref={assignRef}
-        role="dialog"
-        aria-modal="true"
-        className={cn('dt-dialog__content', className)}
-        onClick={handleContentClick}
-        tabIndex={-1}
-        {...props}
-      >
-        {children}
-      </div>
-    </div>
-  );
-});
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogPrimitive.Overlay className="dt-dialog__overlay" />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn('dt-dialog__content', className)}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+));
 
 DialogContent.displayName = 'DialogContent';
 
@@ -172,29 +77,38 @@ export function DialogFooter({ children, className }: DialogFooterProps) {
   );
 }
 
-interface DialogTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
+export interface DialogTitleProps
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title> {}
 
 export const DialogTitle = React.forwardRef<
-  HTMLHeadingElement,
+  React.ElementRef<typeof DialogPrimitive.Title>,
   DialogTitleProps
 >(({ className, children, ...props }, ref) => (
-  <h2 ref={ref} className={cn('dt-dialog__title', className)} {...props}>
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn('dt-dialog__title', className)}
+    {...props}
+  >
     {children}
-  </h2>
+  </DialogPrimitive.Title>
 ));
 
 DialogTitle.displayName = 'DialogTitle';
 
-interface DialogDescriptionProps
-  extends React.HTMLAttributes<HTMLParagraphElement> {}
+export interface DialogDescriptionProps
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description> {}
 
 export const DialogDescription = React.forwardRef<
-  HTMLParagraphElement,
+  React.ElementRef<typeof DialogPrimitive.Description>,
   DialogDescriptionProps
 >(({ className, children, ...props }, ref) => (
-  <p ref={ref} className={cn('dt-dialog__description', className)} {...props}>
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn('dt-dialog__description', className)}
+    {...props}
+  >
     {children}
-  </p>
+  </DialogPrimitive.Description>
 ));
 
 DialogDescription.displayName = 'DialogDescription';

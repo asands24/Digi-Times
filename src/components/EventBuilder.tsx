@@ -19,8 +19,12 @@ import {
 import toast from 'react-hot-toast';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { TemplatesGallery } from './TemplatesGallery';
 import { generateArticle, GeneratedArticle } from '../utils/storyGenerator';
-import type { SaveStoryPayload } from '../hooks/useStoryLibrary';
+import { persistStory } from '../hooks/useStoryLibrary';
+import { supabase } from '../lib/supabaseClient';
+import { escapeHtml } from '../utils/sanitizeHtml';
+import type { StoryTemplate } from '../types/story';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -36,11 +40,21 @@ interface StoryEntry {
 }
 
 interface EventBuilderProps {
-  onStoryArchive?: (story: SaveStoryPayload) => Promise<unknown> | unknown;
+  onArchiveSaved?: () => Promise<unknown> | unknown;
 }
 
 const createId = () =>
   `story-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+export const __TEST__BYPASS_DEBOUNCE = process.env.NODE_ENV === 'test';
+
+const schedule = (fn: () => void, delay: number) => {
+  if (__TEST__BYPASS_DEBOUNCE) {
+    fn();
+    return 0;
+  }
+  return window.setTimeout(fn, delay);
+};
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -50,12 +64,54 @@ const readFileAsDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
-export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
+const toParagraphHtml = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  return `<p>${escapeHtml(trimmed)}</p>`;
+};
+
+const buildBodyHtml = (article: GeneratedArticle) => {
+  const decoParts = [
+    article.subheadline
+      ? `<p class="dek">${escapeHtml(article.subheadline)}</p>`
+      : '',
+    article.dateline || article.byline
+      ? `<div class="meta">${[
+          article.dateline
+            ? `<span class="dateline">${escapeHtml(article.dateline)}</span>`
+            : '',
+          article.byline
+            ? `<span class="byline">${escapeHtml(article.byline)}</span>`
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}</div>`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const body = article.body.map(toParagraphHtml).filter(Boolean).join('');
+  const quote = article.quote ? `<blockquote>${escapeHtml(article.quote)}</blockquote>` : '';
+  const tags =
+    article.tags.length > 0
+      ? `<ul class="tags">${article.tags
+          .map((tag) => `<li>${escapeHtml(tag)}</li>`)
+          .join('')}</ul>`
+      : '';
+
+  return [decoParts, body, quote, tags].filter(Boolean).join('');
+};
+
+export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const entryUrlsRef = useRef<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
 
   const handleFiles = useCallback(
     async (list: FileList | null) => {
@@ -219,7 +275,7 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
         capturedAt: target.createdAt,
       });
 
-      window.setTimeout(() => {
+      schedule(() => {
         setEntries((prev) =>
           prev.map((entry) =>
             entry.id === id
@@ -244,25 +300,46 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
         return;
       }
 
-      const payload: SaveStoryPayload = {
-        prompt: entry.prompt,
-        article: entry.article,
-        file: entry.file,
-        caption: null,
-        createdAt: entry.createdAt.toISOString(),
-      };
+      if (!selectedTemplate) {
+        toast.error('Choose a layout template before saving.');
+        return;
+      }
+
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr) {
+        toast.error('Failed to confirm your session.');
+        return;
+      }
+
+      const userId = userRes?.user?.id;
+      if (!userId) {
+        toast.error('You need to sign in before saving.');
+        return;
+      }
 
       try {
-        if (onStoryArchive) {
-          await onStoryArchive(payload);
-        }
+        await persistStory({
+          file: entry.file,
+          meta: {
+            headline: entry.article.headline,
+            bodyHtml: buildBodyHtml(entry.article),
+            prompt: entry.prompt,
+          },
+          templateId: selectedTemplate.id,
+          userId,
+        });
+
         toast.success('Story archived in your edition.');
         removeEntry(entry.id);
+        if (onArchiveSaved) {
+          await onArchiveSaved();
+        }
       } catch (error) {
-        console.error('Failed to archive story', error);
+        console.error('Failed to save:', error);
+        toast.error('Could not save to archive.');
       }
     },
-    [entries, onStoryArchive, removeEntry],
+    [entries, onArchiveSaved, removeEntry, selectedTemplate],
   );
 
   const hasEntries = entries.length > 0;
@@ -316,6 +393,11 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
           </Button>
         </div>
       </div>
+
+      <TemplatesGallery
+        selectedTemplateId={selectedTemplate?.id ?? null}
+        onSelect={setSelectedTemplate}
+      />
 
       <div
         className={`story-dropzone ${
@@ -451,6 +533,10 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
                           })}
                         </span>
                       </div>
+                      <div className="story-article__template">
+                        <span>Template:</span>
+                        <strong>{selectedTemplate?.title ?? 'Choose a template above'}</strong>
+                      </div>
                       <div className="story-article__meta">
                         <span className="story-article__dateline">
                           {entry.article.dateline}
@@ -485,6 +571,7 @@ export function EventBuilder({ onStoryArchive }: EventBuilderProps) {
                           type="button"
                           size="sm"
                           onClick={() => archiveStory(entry.id)}
+                          disabled={!selectedTemplate}
                         >
                           <Archive size={14} strokeWidth={1.75} />
                           Save to archive

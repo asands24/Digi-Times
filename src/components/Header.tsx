@@ -62,14 +62,14 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleNavigateSettings}>
+            <DropdownMenuItem onSelect={handleNavigateSettings}>
               <Settings size={16} strokeWidth={1.75} />
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="editorial-user__logout"
-              onClick={handleSignOut}
+              onSelect={handleSignOut}
             >
               <LogOut size={16} strokeWidth={1.75} />
               <span>Log Out</span>

@@ -22,6 +22,8 @@
      REACT_APP_SUPABASE_ANON_KEY=your-anon-key                     # CRA fallback
      VITE_SUPABASE_URL=https://your-project-ref.supabase.co        # Vite fallback
      VITE_SUPABASE_ANON_KEY=your-anon-key                          # Vite fallback
+     SMOKE_TEST_EMAIL=smoke+digitimes@example.com                  # rotate as needed
+     SMOKE_TEST_PASSWORD=TestSmoke123!                             # rotate as needed
      ```
    - Replace the placeholders with your real credentials and keep these files out of version control.
 
@@ -55,6 +57,8 @@
    - Add:
      - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon key
+     - `SMOKE_TEST_EMAIL`: Smoke user email (no content secrets committed)
+     - `SMOKE_TEST_PASSWORD`: Smoke user password
    - If you ship CRA or Vite bundles from the same repo, also set:
      - `REACT_APP_SUPABASE_URL`
      - `REACT_APP_SUPABASE_ANON_KEY`
@@ -87,6 +91,8 @@
      netlify env:set REACT_APP_SUPABASE_ANON_KEY "your_supabase_anon_key"
      netlify env:set VITE_SUPABASE_URL "your_supabase_url"
      netlify env:set VITE_SUPABASE_ANON_KEY "your_supabase_anon_key"
+     netlify env:set SMOKE_TEST_EMAIL "smoke+digitimes@example.com"
+     netlify env:set SMOKE_TEST_PASSWORD "TestSmoke123!"
      ```
 
 5. **Deploy**:
@@ -145,12 +151,13 @@
 
 Run before and after each deploy (locally or against production):
 
-1. `node scripts/smoke-create-group.ts` – succeeds whether the schema uses `owner_id` or `created_by`.
-2. Sign in using `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD`.
-3. Upload a ≤4MB photo and confirm the object appears in the `photos` bucket with matching metadata.
-4. Create a story, open print preview, and verify no `<script>` tags execute.
-5. Open a dialog (e.g., Story Preview) and confirm keyboard focus loops; open the account dropdown and navigate with arrow keys.
-6. Log out via the header menu and confirm redirection to `/login`.
+1. `npm run smoke:group` – verifies Supabase auth plus `friend_groups` / `group_members` inserts.
+2. `npm run smoke:archive` – uploads a small object to the `photos` storage bucket and persists metadata.
+3. Sign in using `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` and repeat the core archive flow in the UI.
+4. Upload a ≤4MB photo and confirm the object appears in the `photos` bucket with matching metadata.
+5. Create a story, open print preview, and verify no `<script>` tags execute.
+6. Open a dialog (e.g., Story Preview) and confirm keyboard focus loops; open the account dropdown and navigate with arrow keys.
+7. Log out via the header menu and confirm redirection to `/login`.
 
 ### Smoke Credential Rotation
 
@@ -159,6 +166,23 @@ Run before and after each deploy (locally or against production):
   - `SMOKE_TEST_PASSWORD`
 - Rotate by creating a new Supabase user, updating the variables locally and in hosting dashboards, and invalidating the old credentials.
 - Document each rotation (who, when, why) in your team log to keep the smoke account auditable.
+
+### Health Checks & Monitoring
+
+- `/healthz` (Netlify Function) returns `{ ok: true }` when Supabase credentials are valid and the anonymous `photos` query succeeds. Locally run `npm run healthz:local`; in production visit `https://<your-site>/.netlify/functions/healthz`.
+- Supabase Studio → Logs: after deploy, filter REST + Function logs for the past 30 minutes to ensure only 2xx/3xx responses for the smoke inserts.
+- Supabase Studio → Storage → `photos`: confirm new smoke uploads exist and clean them up after verification.
+- If the smoke scripts fail, rotate the smoke credentials, purge stale records, and re-run the suite before green-lighting a deploy.
+
+### Final Release Checklist
+
+1. `npm install && npm run test:cov` – coverage must meet the configured global thresholds.
+2. `npm run build` – confirm the production bundle compiles without warnings.
+3. `npm run smoke:group` and `npm run smoke:archive` – both succeed locally (and again against production after deploy).
+4. `npm run healthz:local` – returns `{ ok: true }`; repeat against the deployed URL.
+5. Review Supabase logs (REST + Function) and the `photos` bucket for smoke artefacts; remove leftovers.
+6. Update Netlify/Vercel environment variables if the smoke credentials changed, then redeploy.
+7. Document the deployment (date, commit SHA, smoke results) in your team journal.
 
 ### Continuous Deployment
 
@@ -186,10 +210,23 @@ REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
 # Optional Vite fallback
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key_here
+# Smoke automation
+SMOKE_TEST_EMAIL=smoke+digitimes@example.com
+SMOKE_TEST_PASSWORD=TestSmoke123!
 ```
 - Netlify: set these under Site settings → Environment variables before triggering a build.
 - Vercel: set them in Project settings → Environment variables for both `Preview` and `Production`, then redeploy to propagate.
-- Confirm availability locally by running `npm run dev` and checking that the startup logs include “✅ Supabase client initialized”.
+- Confirm availability locally by running `npm start` (or `npm run smoke:group`) and checking that Supabase sign-in succeeds without throwing “Missing Supabase env vars”.
+
+### Supabase Credential Checklist
+
+- Use the **public anon key** from Supabase Project Settings → API (do not use the `service_role` key for smokes).
+- Set the following everywhere smokes run:
+  - `NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY=<public anon key>`
+  - `SMOKE_TEST_EMAIL=smoke+digitimes@example.com`
+  - `SMOKE_TEST_PASSWORD=TestSmoke123!`
+- When rotating keys, update both local `.env.local` and hosted env vars before triggering `npm run smoke:group` or `npm run smoke:archive`.
 
 ### Troubleshooting
 

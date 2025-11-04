@@ -1,53 +1,47 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Header } from './components/Header';
 import { EventBuilder } from './components/EventBuilder';
 import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
-import { StoryEditorDialog } from './components/StoryEditorDialog';
-import { useStoryLibrary } from './hooks/useStoryLibrary';
+import { loadStories, type ArchiveItem } from './hooks/useStoryLibrary';
 
 export default function App() {
-  const {
-    stories,
-    saveStory,
-    removeStory,
-    updateStory,
-    clearStories,
-    exportStories,
-    stats,
-  } = useStoryLibrary();
+  const [stories, setStories] = useState<ArchiveItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
 
-  const [previewId, setPreviewId] = useState<string | null>(null);
-  const [editorId, setEditorId] = useState<string | null>(null);
+  const refreshArchive = useCallback(async () => {
+    setLoading(true);
+    try {
+      const items = await loadStories();
+      setStories(items);
+    } catch (error) {
+      console.error('Failed to load archive', error);
+      toast.error('Could not load archive.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const previewStory = useMemo(
-    () => stories.find((story) => story.id === previewId) ?? null,
-    [stories, previewId],
-  );
-
-  const editorStory = useMemo(
-    () => stories.find((story) => story.id === editorId) ?? null,
-    [stories, editorId],
-  );
+  useEffect(() => {
+    void refreshArchive();
+  }, [refreshArchive]);
 
   return (
     <div className="app-shell">
       <Header />
       <main className="editorial-main">
         <EventBuilder
-          onStoryArchive={async (payload) => {
-            const story = await saveStory(payload);
-            setPreviewId(story.id);
+          onArchiveSaved={async () => {
+            await refreshArchive();
           }}
         />
         <StoryArchive
           stories={stories}
-          onPreview={(storyId) => setPreviewId(storyId)}
-          onEdit={(storyId) => setEditorId(storyId)}
-          onRemove={removeStory}
-          onClear={clearStories}
-          onExport={exportStories}
-          stats={stats}
+          loading={loading}
+          onPreview={(story) => setPreviewStory(story)}
+          onRefresh={refreshArchive}
         />
       </main>
       <StoryPreviewDialog
@@ -55,24 +49,8 @@ export default function App() {
         open={Boolean(previewStory)}
         onOpenChange={(open) => {
           if (!open) {
-            setPreviewId(null);
+            setPreviewStory(null);
           }
-        }}
-      />
-      <StoryEditorDialog
-        story={editorStory}
-        open={Boolean(editorStory)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditorId(null);
-          }
-        }}
-        onSave={(id, payload) => {
-          updateStory(id, (current) => ({
-            ...current,
-            prompt: payload.prompt,
-            article: { ...payload.article },
-          }));
         }}
       />
     </div>

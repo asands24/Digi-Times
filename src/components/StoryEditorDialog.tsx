@@ -2,14 +2,23 @@ import { useEffect, useState } from 'react';
 import { Save, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
-import type { StoryRecord } from '../types/story';
+import { TemplatesGallery } from './TemplatesGallery';
+import type { StoryRecord, StoryTemplate } from '../types/story';
 import type { GeneratedArticle } from '../utils/storyGenerator';
 
 interface StoryEditorDialogProps {
   story: StoryRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (storyId: string, payload: { prompt: string; article: GeneratedArticle }) => void;
+  onSave: (
+    storyId: string,
+    payload: {
+      prompt: string;
+      article: GeneratedArticle;
+      templateId: string | null;
+      template?: StoryTemplate | null;
+    },
+  ) => void;
 }
 
 export function StoryEditorDialog({
@@ -25,6 +34,7 @@ export function StoryEditorDialog({
   const [quote, setQuote] = useState('');
   const [bodyText, setBodyText] = useState('');
   const [prompt, setPrompt] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
 
   useEffect(() => {
     if (!story) {
@@ -38,6 +48,7 @@ export function StoryEditorDialog({
     setQuote(story.article.quote);
     setBodyText(story.article.body.join('\n\n'));
     setPrompt(story.prompt);
+    setSelectedTemplate(story.template ?? null);
   }, [story]);
 
   if (!story) {
@@ -61,6 +72,8 @@ export function StoryEditorDialog({
         quote: quote.trim() || story.article.quote,
         tags: story.article.tags,
       },
+      templateId: selectedTemplate?.id ?? story.templateId ?? null,
+      template: selectedTemplate ?? story.template ?? null,
     });
     onOpenChange(false);
   };
@@ -73,6 +86,11 @@ export function StoryEditorDialog({
           <DialogDescription>
             Fine-tune the headline, subheadline, and body to perfectly match the memory.
           </DialogDescription>
+          {selectedTemplate ? (
+            <span className="story-editor__template-badge">
+              Layout: {selectedTemplate.title}
+            </span>
+          ) : null}
         </DialogHeader>
 
         <div className="story-editor__form">
@@ -136,6 +154,12 @@ export function StoryEditorDialog({
             />
           </label>
         </div>
+
+        <TemplatesGallery
+          selectedTemplateId={selectedTemplate?.id ?? story.templateId ?? null}
+          onSelect={setSelectedTemplate}
+          autoSelectFirst={false}
+        />
 
         <DialogFooter className="story-editor__footer">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

@@ -470,6 +470,22 @@ a {
   color: var(--ink-muted);
 }
 
+.story-article__template {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.story-article__template strong {
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
 .story-article__meta {
   display: flex;
   flex-wrap: wrap;
@@ -656,6 +672,18 @@ a {
   font-family: var(--font-serif);
 }
 
+.story-archive__template {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-top: 0.6rem;
+}
+
 .story-archive__details {
   display: flex;
   flex-direction: column;
@@ -747,6 +775,14 @@ a {
   padding: 1.5rem 2rem 2rem;
 }
 
+.story-preview__template-name {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
 .story-editor {
   max-width: 720px;
   width: 100%;
@@ -806,6 +842,17 @@ a {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
+}
+
+.story-editor__template-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
 }
 
 @keyframes spin {
@@ -930,6 +977,21 @@ a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
+}
+
+.template-gallery__group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.template-gallery__group h3 {
+  font-family: var(--font-sans);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0;
+  font-size: 0.8rem;
 }
 
 .template-gallery__empty {
@@ -1118,6 +1180,46 @@ a {
 .template-card__icon {
   font-size: 2.5rem;
   line-height: 1;
+}
+
+.template-card {
+  border: 1px solid var(--accent-border);
+  border-radius: 18px;
+  background: var(--paper);
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 14px 28px rgba(59, 48, 34, 0.08);
+  cursor: pointer;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+  text-align: left;
+}
+
+.template-card:hover {
+  border-color: var(--accent-gold);
+  box-shadow: 0 18px 36px rgba(59, 48, 34, 0.12);
+  transform: translateY(-4px);
+}
+
+.template-card--active {
+  border-color: var(--accent-gold);
+  box-shadow: 0 22px 44px rgba(196, 165, 116, 0.22);
+}
+
+.template-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.template-card__badge--personal {
+  color: var(--ink-muted);
 }
 
 .template-card__title {
