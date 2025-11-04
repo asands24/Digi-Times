@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -16,6 +16,7 @@ export const usePhotos = () => {
     try {
       setUploading(true)
       setUploadProgress(0)
+      const supabase = getSupabase()
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
@@ -127,6 +128,7 @@ export const usePhotos = () => {
   const deletePhoto = async (photoId, filePath) => {
     try {
       setUploading(true)
+      const supabase = getSupabase()
 
       // Delete from database first
       const { error: dbError } = await supabase
@@ -161,6 +163,7 @@ export const usePhotos = () => {
 
   const updatePhotoCaption = async (photoId, caption) => {
     try {
+      const supabase = getSupabase()
       const { data, error } = await supabase
         .from('photos')
         .update({ caption })
@@ -184,15 +187,22 @@ export const usePhotos = () => {
   const getPhotoUrl = (filePath) => {
     if (!filePath) return null
 
-    const { data } = supabase.storage
-      .from('photos')
-      .getPublicUrl(filePath)
+    try {
+      const supabase = getSupabase()
+      const { data } = supabase.storage
+        .from('photos')
+        .getPublicUrl(filePath)
 
-    return data.publicUrl
+      return data.publicUrl
+    } catch (error) {
+      console.error('Failed to resolve photo URL:', error)
+      return null
+    }
   }
 
   const downloadPhoto = async (filePath, fileName) => {
     try {
+      const supabase = getSupabase()
       const { data, error } = await supabase.storage
         .from('photos')
         .download(filePath)

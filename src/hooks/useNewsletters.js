@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -13,6 +13,7 @@ export const useNewsletters = (groupId) => {
 
     try {
       setLoading(true)
+      const supabase = getSupabase()
       const { data, error } = await supabase
         .from('newsletters')
         .select(`
@@ -53,6 +54,7 @@ export const useNewsletters = (groupId) => {
 
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data: newsletter, error: newsletterError } = await supabase
         .from('newsletters')
@@ -95,6 +97,7 @@ export const useNewsletters = (groupId) => {
   const updateNewsletter = async (newsletterId, updates) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data, error } = await supabase
         .from('newsletters')
@@ -122,6 +125,7 @@ export const useNewsletters = (groupId) => {
   const publishNewsletter = async (newsletterId) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data, error } = await supabase
         .from('newsletters')
@@ -152,6 +156,7 @@ export const useNewsletters = (groupId) => {
   const deleteNewsletter = async (newsletterId) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { error } = await supabase
         .from('newsletters')
@@ -177,6 +182,7 @@ export const useNewsletters = (groupId) => {
   const addCollaborator = async (newsletterId, userId, role = 'collaborator') => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data, error } = await supabase
         .from('newsletter_collaborators')

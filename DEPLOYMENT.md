@@ -16,8 +16,8 @@
    ```
    - Ensure `.env.local` and `.env.production` exist at the project root with:
      ```
-     NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+    REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
+    REACT_APP_SUPABASE_ANON_KEY=your-anon-key
      REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co   # CRA fallback
      REACT_APP_SUPABASE_ANON_KEY=your-anon-key                     # CRA fallback
      VITE_SUPABASE_URL=https://your-project-ref.supabase.co        # Vite fallback
@@ -55,8 +55,8 @@
 6. Add environment variables:
    - Go to Site settings > Environment variables
    - Add:
-     - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon key
+    - `REACT_APP_SUPABASE_URL`: Your Supabase project URL
+    - `REACT_APP_SUPABASE_ANON_KEY`: Your Supabase anon key
      - `SMOKE_TEST_EMAIL`: Smoke user email (no content secrets committed)
      - `SMOKE_TEST_PASSWORD`: Smoke user password
    - If you ship CRA or Vite bundles from the same repo, also set:
@@ -85,8 +85,8 @@
 
 4. **Set environment variables**:
      ```bash
-     netlify env:set NEXT_PUBLIC_SUPABASE_URL "your_supabase_url"
-     netlify env:set NEXT_PUBLIC_SUPABASE_ANON_KEY "your_supabase_anon_key"
+    netlify env:set REACT_APP_SUPABASE_URL "your_supabase_url"
+    netlify env:set REACT_APP_SUPABASE_ANON_KEY "your_supabase_anon_key"
      netlify env:set REACT_APP_SUPABASE_URL "your_supabase_url"
      netlify env:set REACT_APP_SUPABASE_ANON_KEY "your_supabase_anon_key"
      netlify env:set VITE_SUPABASE_URL "your_supabase_url"
@@ -202,8 +202,8 @@ With this setup, any push to your main branch will automatically trigger a new d
 Required environment variables for production:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
 # Optional CRA fallback
 REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
@@ -222,8 +222,8 @@ SMOKE_TEST_PASSWORD=TestSmoke123!
 
 - Use the **public anon key** from Supabase Project Settings → API (do not use the `service_role` key for smokes).
 - Set the following everywhere smokes run:
-  - `NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY=<public anon key>`
+  - `REACT_APP_SUPABASE_URL=https://<ref>.supabase.co`
+  - `REACT_APP_SUPABASE_ANON_KEY=<public anon key>`
   - `SMOKE_TEST_EMAIL=smoke+digitimes@example.com`
   - `SMOKE_TEST_PASSWORD=TestSmoke123!`
 - When rotating keys, update both local `.env.local` and hosted env vars before triggering `npm run smoke:group` or `npm run smoke:archive`.

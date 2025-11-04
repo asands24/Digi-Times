@@ -22,7 +22,7 @@ import { Badge } from './ui/badge';
 import { TemplatesGallery } from './TemplatesGallery';
 import { generateArticle, GeneratedArticle } from '../utils/storyGenerator';
 import { persistStory } from '../hooks/useStoryLibrary';
-import { supabase } from '../lib/supabaseClient';
+import { getSupabase } from '../lib/supabaseClient';
 import { escapeHtml } from '../utils/sanitizeHtml';
 import type { StoryTemplate } from '../types/story';
 
@@ -305,6 +305,7 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
         return;
       }
 
+      const supabase = getSupabase();
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
       if (userErr) {
         toast.error('Failed to confirm your session.');

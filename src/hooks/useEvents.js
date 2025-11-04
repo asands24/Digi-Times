@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -13,6 +13,7 @@ export const useEvents = (newsletterId) => {
 
     try {
       setLoading(true)
+      const supabase = getSupabase()
       const { data, error } = await supabase
         .from('events')
         .select(`
@@ -60,6 +61,7 @@ export const useEvents = (newsletterId) => {
 
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data, error } = await supabase
         .from('events')
@@ -90,6 +92,7 @@ export const useEvents = (newsletterId) => {
   const updateEvent = async (eventId, updates) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data, error } = await supabase
         .from('events')
@@ -117,6 +120,7 @@ export const useEvents = (newsletterId) => {
   const deleteEvent = async (eventId) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { error } = await supabase
         .from('events')
@@ -142,6 +146,7 @@ export const useEvents = (newsletterId) => {
   const addAttendee = async (eventId, userId) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data, error } = await supabase
         .from('event_attendees')
@@ -175,6 +180,7 @@ export const useEvents = (newsletterId) => {
   const removeAttendee = async (eventId, userId) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { error } = await supabase
         .from('event_attendees')

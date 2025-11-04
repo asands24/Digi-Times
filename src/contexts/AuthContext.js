@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { getSupabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext({})
@@ -17,8 +17,19 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [useMockAuth] = useState(process.env.REACT_APP_USE_MOCK_AUTH === 'true')
+  const supabase = useMemo(() => {
+    try {
+      return getSupabase()
+    } catch (error) {
+      console.error('Auth provider missing Supabase client:', error)
+      return null
+    }
+  }, [])
 
   const fetchProfile = async (userId) => {
+    if (!supabase) {
+      return
+    }
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -42,6 +53,9 @@ export const AuthProvider = ({ children }) => {
   }
 
   const createProfile = async (userId) => {
+    if (!supabase) {
+      return
+    }
     try {
       const { data: userData } = await supabase.auth.getUser()
       const { data, error } = await supabase
@@ -67,6 +81,10 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const getSession = async () => {
+      if (!supabase) {
+        setLoading(false)
+        return
+      }
       try {
         // Use mock auth if enabled
         if (useMockAuth) {
@@ -109,6 +127,10 @@ export const AuthProvider = ({ children }) => {
       return
     }
 
+    if (!supabase) {
+      return
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null)
@@ -128,6 +150,10 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const signInWithMagicLink = async (email) => {
+    if (!supabase) {
+      toast.error('Supabase is not configured')
+      return { error: new Error('Supabase not configured') }
+    }
     try {
       setLoading(true)
       const { error } = await supabase.auth.signInWithOtp({
@@ -153,6 +179,10 @@ export const AuthProvider = ({ children }) => {
   }
 
   const signOut = async () => {
+    if (!supabase) {
+      toast.error('Supabase is not configured')
+      return { error: new Error('Supabase not configured') }
+    }
     try {
       setLoading(true)
       const { error } = await supabase.auth.signOut()
@@ -175,6 +205,10 @@ export const AuthProvider = ({ children }) => {
   }
 
   const updateProfile = async (updates) => {
+    if (!supabase) {
+      toast.error('Supabase is not configured')
+      return { error: new Error('Supabase not configured') }
+    }
     try {
       setLoading(true)
 

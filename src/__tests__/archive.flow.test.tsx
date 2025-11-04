@@ -39,51 +39,26 @@ const persistStoryMock = jest.requireMock('../hooks/useStoryLibrary')
 const generateArticleMock = jest.requireMock('../utils/storyGenerator')
   .generateArticle as jest.Mock;
 
-jest.mock('../lib/supabaseClient', () => {
-  const mockUser = { id: 'user-123', email: 'smoke@example.com' };
+const mockSupabase = {
+  auth: {
+    getSession: jest.fn(),
+    getUser: jest.fn(),
+    signOut: jest.fn(),
+  },
+  from: jest.fn(),
+  storage: {
+    from: jest.fn(),
+  },
+};
 
-  const chain = () => ({
-    select: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue({ data: { id: 'row-1' }, error: null }),
-    eq: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-  });
+jest.mock('../lib/supabaseClient', () => ({
+  getSupabase: jest.fn(() => mockSupabase),
+}));
 
-  return {
-    supabase: {
-      auth: {
-        getSession: jest.fn().mockResolvedValue({
-          data: { session: { user: mockUser } },
-          error: null,
-        }),
-        getUser: jest.fn().mockResolvedValue({
-          data: { user: mockUser },
-          error: null,
-        }),
-        signOut: jest.fn().mockResolvedValue({ error: null }),
-      },
-      from: jest.fn(() => chain()),
-      storage: {
-        from: jest.fn(() => ({
-          upload: jest.fn().mockResolvedValue({
-            data: { path: 'photos/smoke.png' },
-            error: null,
-          }),
-          getPublicUrl: jest.fn(() => ({
-            data: { publicUrl: 'https://example.com/photos/smoke.png' },
-          })),
-        })),
-      },
-    },
-  };
-});
+const mockGetSupabase = jest.requireMock('../lib/supabaseClient')
+  .getSupabase as jest.Mock;
 
-const supabaseMock = jest.requireMock('../lib/supabaseClient')
-  .supabase as jest.Mocked<typeof import('../lib/supabaseClient').supabase>;
-
-const mockGetUser = supabaseMock.auth.getUser;
+const mockGetUser = mockSupabase.auth.getUser as jest.Mock;
 
 const setupUser = () =>
   typeof (userEvent as any).setup === 'function'
@@ -92,6 +67,7 @@ const setupUser = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockGetSupabase.mockReturnValue(mockSupabase);
 
   generateArticleMock.mockReturnValue({
     headline: 'Headline',
@@ -103,17 +79,17 @@ beforeEach(() => {
     tags: ['tag'],
   });
 
-  supabaseMock.auth.getUser.mockResolvedValue({
+  mockSupabase.auth.getUser.mockResolvedValue({
     data: { user: { id: 'user-123', email: 'smoke@example.com' } },
     error: null,
   });
-  supabaseMock.auth.getSession.mockResolvedValue({
+  mockSupabase.auth.getSession.mockResolvedValue({
     data: { session: { user: { id: 'user-123', email: 'smoke@example.com' } } },
     error: null,
   });
-  supabaseMock.auth.signOut.mockResolvedValue({ error: null });
+  mockSupabase.auth.signOut.mockResolvedValue({ error: null });
 
-  (supabaseMock.storage.from as jest.Mock).mockReturnValue({
+  (mockSupabase.storage.from as jest.Mock).mockReturnValue({
     upload: jest.fn().mockResolvedValue({
       data: { path: 'photos/smoke.png' },
       error: null,
@@ -123,7 +99,7 @@ beforeEach(() => {
     })),
   });
 
-  (supabaseMock.from as jest.Mock).mockReturnValue({
+  (mockSupabase.from as jest.Mock).mockReturnValue({
     insert: jest.fn().mockReturnValue({ error: null }),
     select: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue({ data: { id: 'row-1' }, error: null }),

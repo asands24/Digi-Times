@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import LoadingSpinner from './LoadingSpinner'
 
 const AuthCallback = () => {
@@ -9,6 +9,7 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        const supabase = getSupabase()
         const { data, error } = await supabase.auth.getSession()
 
         if (error) {

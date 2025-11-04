@@ -27,16 +27,16 @@ function required(name: string) {
 }
 
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
   process.env.REACT_APP_SUPABASE_URL?.trim() ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
   process.env.VITE_SUPABASE_URL?.trim() ||
-  required('NEXT_PUBLIC_SUPABASE_URL');
+  required('REACT_APP_SUPABASE_URL');
 
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
   process.env.REACT_APP_SUPABASE_ANON_KEY?.trim() ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
   process.env.VITE_SUPABASE_ANON_KEY?.trim() ||
-  required('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  required('REACT_APP_SUPABASE_ANON_KEY');
 
 // Decode JWT payload to verify project ref match + public key usage
 function decodePayload(jwt: string) {

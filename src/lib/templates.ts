@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { getSupabase } from './supabaseClient';
 
 export type TemplateRow = {
   id: string;
@@ -10,6 +10,7 @@ export type TemplateRow = {
 };
 
 export async function fetchAllTemplates(): Promise<TemplateRow[]> {
+  const supabase = getSupabase();
   const { data: system, error: sysErr } = await supabase
     .from('templates')
     .select('*')
@@ -28,6 +29,7 @@ export async function fetchAllTemplates(): Promise<TemplateRow[]> {
 }
 
 export async function getTemplateById(id: string): Promise<TemplateRow> {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('templates')
     .select('*')

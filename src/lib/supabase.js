@@ -1,4 +1,1 @@
-import { supabase } from './supabaseClient';
-
-export { supabase };
-export default supabase;
+export { getSupabase } from './supabaseClient';

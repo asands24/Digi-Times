@@ -1,38 +1,30 @@
 import { persistStory } from '../hooks/useStoryLibrary';
-import { supabase } from '../lib/supabaseClient';
 
-jest.mock('../lib/supabaseClient', () => {
-  const mockUser = { id: 'user-1' };
-  const insertMock = jest.fn().mockResolvedValue({ error: null });
+const mockSupabase = {
+  storage: {
+    from: jest.fn(),
+  },
+  from: jest.fn(),
+};
 
-  return {
-    supabase: {
-      auth: {
-        getUser: jest.fn().mockResolvedValue({
-          data: { user: mockUser },
-          error: null,
-        }),
-      },
-      storage: {
-        from: jest.fn(() => ({
-          upload: jest.fn().mockResolvedValue({
-            data: { path: 'photos/user-1/foo.png' },
-            error: null,
-          }),
-          getPublicUrl: jest.fn(() => ({
-            data: { publicUrl: 'https://example.com/photos/user-1/foo.png' },
-          })),
-        })),
-      },
-      from: jest.fn(() => ({
-        insert: insertMock,
-      })),
-    },
-  };
-});
+jest.mock('../lib/supabaseClient', () => ({
+  getSupabase: jest.fn(() => mockSupabase),
+}));
+
+const mockGetSupabase = jest.requireMock('../lib/supabaseClient')
+  .getSupabase as jest.Mock;
 
 describe('persistStory upload', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetSupabase.mockReturnValue(mockSupabase);
+    mockSupabase.storage.from.mockReset();
+    mockSupabase.from.mockReset();
+  });
+
   it('uploads file to storage and inserts archive record', async () => {
+    const { getSupabase } = jest.requireMock('../lib/supabaseClient');
+    const supabase = getSupabase();
     const storageFrom = supabase.storage.from as jest.Mock;
     const tableFrom = supabase.from as jest.Mock;
 

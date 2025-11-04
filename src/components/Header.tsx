@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { supabase } from '../lib/supabaseClient';
+import { getSupabase } from '../lib/supabaseClient';
 
 export function Header() {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export function Header() {
   }, [navigate]);
 
   const handleSignOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await getSupabase().auth.signOut();
     if (error) {
       toast.error('Failed to log out. Please try again.');
       return;

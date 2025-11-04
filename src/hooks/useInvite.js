@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 export const useInvite = () => {
@@ -8,6 +8,7 @@ export const useInvite = () => {
   const joinGroupWithInvite = async (inviteCode, userId) => {
     try {
       setLoading(true)
+      const supabase = getSupabase()
 
       const { data: group, error: groupError } = await supabase
         .from('friend_groups')

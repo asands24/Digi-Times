@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useInvite } from '../hooks/useInvite'
 import { Camera, Mail, Users } from 'lucide-react'
 import { getRandomPhotos } from '../data/stockPhotos'
+import DemoLoginButton from '../components/DemoLoginButton'
 
 const LoginPage = () => {
   const { signInWithMagicLink, loading } = useAuth()
@@ -188,6 +189,10 @@ const LoginPage = () => {
                   )}
                 </button>
               </form>
+
+              <div className="mt-4 text-center">
+                <DemoLoginButton />
+              </div>
 
               <div className="mt-6 text-center">
                 <button

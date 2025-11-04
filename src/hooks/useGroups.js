@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -33,6 +33,8 @@ export const useGroups = () => {
         setLoading(false)
         return
       }
+
+      const supabase = getSupabase()
       const { data, error } = await supabase
         .from('group_members')
         .select(`
@@ -75,6 +77,7 @@ export const useGroups = () => {
     if (!user) return { error: new Error('Not authenticated') }
 
     try {
+      const supabase = getSupabase()
       setLoading(true)
 
       const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase()
@@ -120,6 +123,7 @@ export const useGroups = () => {
 
   const updateGroup = async (groupId, updates) => {
     try {
+      const supabase = getSupabase()
       setLoading(true)
 
       const { data, error } = await supabase
@@ -147,6 +151,7 @@ export const useGroups = () => {
 
   const deleteGroup = async (groupId) => {
     try {
+      const supabase = getSupabase()
       setLoading(true)
 
       const { error } = await supabase
@@ -174,6 +179,7 @@ export const useGroups = () => {
     if (!user) return { error: new Error('Not authenticated') }
 
     try {
+      const supabase = getSupabase()
       setLoading(true)
 
       const { error } = await supabase

@@ -1,8 +1,9 @@
-import { supabase } from './supabaseClient';
+import { getSupabase } from './supabaseClient';
 
 export type CreateGroupInput = { name: string; description?: string };
 
 export async function createGroupViaSupabase({ name, description }: CreateGroupInput) {
+  const supabase = getSupabase();
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
   if (sessionErr) throw sessionErr;
   const userId = sessionData?.session?.user?.id;
@@ -24,4 +25,3 @@ export async function createGroupViaSupabase({ name, description }: CreateGroupI
 
   return group;
 }
-

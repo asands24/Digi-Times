@@ -1,3 +1,4 @@
+import { Route, Routes } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
@@ -5,8 +6,12 @@ import { EventBuilder } from './components/EventBuilder';
 import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { loadStories, type ArchiveItem } from './hooks/useStoryLibrary';
+import DebugEnv from './pages/DebugEnv';
+import DebugTemplates from './pages/DebugTemplates';
+import Logout from './pages/Logout';
+import Templates from './pages/Templates';
 
-export default function App() {
+function HomePage() {
   const [stories, setStories] = useState<ArchiveItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
@@ -54,5 +59,18 @@ export default function App() {
         }}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/templates" element={<Templates />} />
+      <Route path="/debug/env" element={<DebugEnv />} />
+      <Route path="/debug/templates" element={<DebugTemplates />} />
+      <Route path="/logout" element={<Logout />} />
+      <Route path="*" element={<HomePage />} />
+    </Routes>
   );
 }

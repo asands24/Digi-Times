@@ -23,7 +23,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:cov": "react-scripts test --coverage --watchAll=false",
-    "env:check": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -e \"console.log('URL=', process.env.NEXT_PUBLIC_SUPABASE_URL); console.log('KeyTail=', (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||'').slice(-10));\"",
+    "env:check": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -e \"console.log('URL=', process.env.REACT_APP_SUPABASE_URL); console.log('KeyTail=', (process.env.REACT_APP_SUPABASE_ANON_KEY||'').slice(-10));\"",
     "env:init": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -r ts-node/register/transpile-only -e \"import('./scripts/_supabaseClient.ts').then(()=>console.log('✅ Supabase client init OK')).catch(e=>console.error(e.message));\"",
     "smoke:group": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -r ts-node/register/transpile-only scripts/smoke-create-group.ts",
     "smoke:archive": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -r ts-node/register/transpile-only scripts/smoke-archive.ts",

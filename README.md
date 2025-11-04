@@ -48,8 +48,8 @@ Legacy Supabase hooks remain (for the original collaborative roadmap) but sit be
 
 - Use the **public anon key** from Supabase Project Settings → API (never the `service_role` key).
 - Env vars required locally and in CI:
-  - `NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY=<public anon key>`
+  - `REACT_APP_SUPABASE_URL=https://<ref>.supabase.co`
+  - `REACT_APP_SUPABASE_ANON_KEY=<public anon key>`
   - `SMOKE_TEST_EMAIL=smoke+digitimes@example.com`
   - `SMOKE_TEST_PASSWORD=TestSmoke123!`
 - Rotate keys in Supabase? Update `.env.local` and hosting env vars before re-running `npm run smoke:*`.

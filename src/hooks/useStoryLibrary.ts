@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { getSupabase } from '../lib/supabaseClient';
 
 export type PersistMeta = {
   headline: string;
@@ -12,6 +12,7 @@ export async function persistStory(params: {
   templateId: string;
   userId: string;
 }) {
+  const supabase = getSupabase();
   const { file, meta, templateId, userId } = params;
   if (!templateId) throw new Error('Pick a template before saving');
 
@@ -47,6 +48,7 @@ export type ArchiveItem = {
 };
 
 export async function loadStories(): Promise<ArchiveItem[]> {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('story_archives')
     .select('id,title,template_id,image_path,created_at,article,prompt')

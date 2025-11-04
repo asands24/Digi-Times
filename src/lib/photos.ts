@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { getSupabase } from './supabaseClient';
 
 export interface UploadedPhotoInfo {
   file_path: string;
@@ -19,6 +19,7 @@ export async function uploadPhotoToStorage(
 
   const extension = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const key = `users/${userId}/${Date.now()}.${extension}`;
+  const supabase = getSupabase();
 
   const { error: uploadError } = await supabase.storage
     .from('photos')
