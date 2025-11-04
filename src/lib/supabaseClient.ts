@@ -1,16 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
 const resolveEnvVar = (): { url?: string; anonKey?: string } => {
-  let url =
-    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL) ||
-    (typeof process !== 'undefined' && process.env.REACT_APP_SUPABASE_URL);
+  let url: string | undefined;
+  let anonKey: string | undefined;
 
-  let anonKey =
-    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
-    (typeof process !== 'undefined' && process.env.REACT_APP_SUPABASE_ANON_KEY);
+  if (typeof process !== 'undefined') {
+    url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.REACT_APP_SUPABASE_URL;
+    anonKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.REACT_APP_SUPABASE_ANON_KEY;
+  }
 
-  if ((typeof window !== 'undefined' && (window as any).__env) && (!url || !anonKey)) {
-    const runtimeEnv = (window as any).__env;
+  if (typeof window !== 'undefined' && (window as any).__env) {
+    const runtimeEnv = (window as any).__env as Record<string, string | undefined>;
     url =
       url ??
       runtimeEnv.NEXT_PUBLIC_SUPABASE_URL ??

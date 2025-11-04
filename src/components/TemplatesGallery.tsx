@@ -37,7 +37,7 @@ export function TemplatesGallery({
           title: row.title,
           slug: row.slug,
           html: row.html,
-          css: row.css,
+          css: row.css ?? '',
           isSystem: Boolean(row.is_system),
           owner: null,
         }));
