@@ -18,12 +18,9 @@
      ```
     REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
     REACT_APP_SUPABASE_ANON_KEY=your-anon-key
-     REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co   # CRA fallback
-     REACT_APP_SUPABASE_ANON_KEY=your-anon-key                     # CRA fallback
-     VITE_SUPABASE_URL=https://your-project-ref.supabase.co        # Vite fallback
-     VITE_SUPABASE_ANON_KEY=your-anon-key                          # Vite fallback
-     SMOKE_TEST_EMAIL=smoke+digitimes@example.com                  # rotate as needed
-     SMOKE_TEST_PASSWORD=TestSmoke123!                             # rotate as needed
+    SECRETS_SCAN_OMIT_KEYS=REACT_APP_SUPABASE_ANON_KEY
+    SMOKE_TEST_EMAIL=smoke+digitimes@example.com                  # rotate as needed
+    SMOKE_TEST_PASSWORD=TestSmoke123!                             # rotate as needed
      ```
    - Replace the placeholders with your real credentials and keep these files out of version control.
 
@@ -57,13 +54,9 @@
    - Add:
     - `REACT_APP_SUPABASE_URL`: Your Supabase project URL
     - `REACT_APP_SUPABASE_ANON_KEY`: Your Supabase anon key
+     - `SECRETS_SCAN_OMIT_KEYS`: Set to `REACT_APP_SUPABASE_ANON_KEY` to appease Netlify secret scanning
      - `SMOKE_TEST_EMAIL`: Smoke user email (no content secrets committed)
      - `SMOKE_TEST_PASSWORD`: Smoke user password
-   - If you ship CRA or Vite bundles from the same repo, also set:
-     - `REACT_APP_SUPABASE_URL`
-     - `REACT_APP_SUPABASE_ANON_KEY`
-     - `VITE_SUPABASE_URL`
-     - `VITE_SUPABASE_ANON_KEY`
 7. Click "Deploy site"
 
 #### Option B: Netlify CLI
@@ -87,10 +80,7 @@
      ```bash
     netlify env:set REACT_APP_SUPABASE_URL "your_supabase_url"
     netlify env:set REACT_APP_SUPABASE_ANON_KEY "your_supabase_anon_key"
-     netlify env:set REACT_APP_SUPABASE_URL "your_supabase_url"
-     netlify env:set REACT_APP_SUPABASE_ANON_KEY "your_supabase_anon_key"
-     netlify env:set VITE_SUPABASE_URL "your_supabase_url"
-     netlify env:set VITE_SUPABASE_ANON_KEY "your_supabase_anon_key"
+     netlify env:set SECRETS_SCAN_OMIT_KEYS "REACT_APP_SUPABASE_ANON_KEY"
      netlify env:set SMOKE_TEST_EMAIL "smoke+digitimes@example.com"
      netlify env:set SMOKE_TEST_PASSWORD "TestSmoke123!"
      ```
@@ -204,12 +194,7 @@ Required environment variables for production:
 ```
 REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
-# Optional CRA fallback
-REACT_APP_SUPABASE_URL=https://your-project-ref.supabase.co
-REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
-# Optional Vite fallback
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your_anon_key_here
+SECRETS_SCAN_OMIT_KEYS=REACT_APP_SUPABASE_ANON_KEY
 # Smoke automation
 SMOKE_TEST_EMAIL=smoke+digitimes@example.com
 SMOKE_TEST_PASSWORD=TestSmoke123!

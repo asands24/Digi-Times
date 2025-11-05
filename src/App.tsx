@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
@@ -10,6 +10,8 @@ import DebugEnv from './pages/DebugEnv';
 import DebugTemplates from './pages/DebugTemplates';
 import Logout from './pages/Logout';
 import Templates from './pages/Templates';
+import UploadPhoto from './components/UploadPhoto';
+import PhotoGallery from './components/PhotoGallery';
 
 function HomePage() {
   const [stories, setStories] = useState<ArchiveItem[]>([]);
@@ -64,13 +66,25 @@ function HomePage() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/templates" element={<Templates />} />
-      <Route path="/debug/env" element={<DebugEnv />} />
-      <Route path="/debug/templates" element={<DebugTemplates />} />
-      <Route path="/logout" element={<Logout />} />
-      <Route path="*" element={<HomePage />} />
-    </Routes>
+    <>
+      <nav style={{ display: 'flex', gap: 12, padding: 12, flexWrap: 'wrap' }}>
+        <Link to="/">Home</Link>
+        <Link to="/templates">Templates</Link>
+        <Link to="/upload">Upload</Link>
+        <Link to="/gallery">Gallery</Link>
+        <Link to="/debug/env">Debug Env</Link>
+        <Link to="/debug/templates">Debug Templates</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/templates" element={<Templates />} />
+        <Route path="/upload" element={<UploadPhoto />} />
+        <Route path="/gallery" element={<PhotoGallery />} />
+        <Route path="/debug/env" element={<DebugEnv />} />
+        <Route path="/debug/templates" element={<DebugTemplates />} />
+        <Route path="/logout" element={<Logout />} />
+        <Route path="*" element={<HomePage />} />
+      </Routes>
+    </>
   );
 }

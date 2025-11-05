@@ -8,7 +8,9 @@ Craft rich newspaper-style coverage from your everyday photos in minutes. Upload
 - **Editorial Tone Blends** – Smart heuristics adjust tone for celebrations, adventures, community events, or quiet spotlights.
 - **Local Story Archive** – Save generated features with their images, edit the copy later, and keep a timestamped history.
 - **Print & Export Ready** – Open a print-perfect layout or export the full archive as JSON for safekeeping.
-- **Offline Friendly** – All generation and storage happen locally; no Supabase credentials are required for the newsroom workflow.
+- **Public Template Gallery** – Browse shared templates at `/templates` with no authentication required.
+- **Anonymous Photo Uploads** – Upload images straight to Supabase Storage via `/upload` and share them through the `/gallery`.
+- **Offline Friendly** – Core newsroom workflows continue to run locally when Supabase credentials are absent.
 
 ## Quick Start
 
@@ -26,6 +28,16 @@ Open http://localhost:3000 to launch the studio.
 3. **Shape Each Story** – Adjust the prompt per photo if needed and generate the article.
 4. **Archive the Winners** – Save finished pieces to the Edition Archive where they persist in local storage.
 5. **Polish & Publish** – Edit saved copy, open a print-ready view, or export the archive for sharing.
+
+## Public Pages & Debug Routes
+
+- `/templates` – Lists the 50 most recent public templates (`is_public = true`) from Supabase.
+- `/upload` – Anonymous uploader that writes images to the `photos` bucket under the `public/` prefix.
+- `/gallery` – Renders a responsive grid of publicly uploaded images.
+- `/debug/env` – Shows whether `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` are present at runtime.
+- `/debug/templates` – Fetches a small sample of templates and surfaces Supabase errors for troubleshooting.
+
+These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_SETUP.md` are applied (public read on `public.templates` and the `photos` bucket).
 
 ## Scripts
 
@@ -52,4 +64,13 @@ Legacy Supabase hooks remain (for the original collaborative roadmap) but sit be
   - `REACT_APP_SUPABASE_ANON_KEY=<public anon key>`
   - `SMOKE_TEST_EMAIL=smoke+digitimes@example.com`
   - `SMOKE_TEST_PASSWORD=TestSmoke123!`
+  - `SECRETS_SCAN_OMIT_KEYS=REACT_APP_SUPABASE_ANON_KEY` (Netlify secret scanning allowlist)
 - Rotate keys in Supabase? Update `.env.local` and hosting env vars before re-running `npm run smoke:*`.
+
+## Acceptance Checklist
+
+- `/debug/env` resolves to `{ "HAS_URL": true, "HAS_ANON": true }` in production.
+- `/templates` renders public rows and handles empty/error states without crashing.
+- `/upload` accepts JPG/PNG/WebP images under 10 MB and returns a public URL.
+- `/gallery` displays files stored under `photos/public/*` with anonymous access.
+- Visiting these routes in a private/incognito window still succeeds (no auth flow).
