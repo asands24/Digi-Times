@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { JSX } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
 
 function generateKey(): string {

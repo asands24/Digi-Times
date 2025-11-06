@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { JSX } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
 
 type Photo = { name: string; publicUrl: string };
