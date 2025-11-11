@@ -1,29 +1,8 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_URL, SUPABASE_ANON } from './config';
 
-const url = process.env.REACT_APP_SUPABASE_URL;
-const anon = process.env.REACT_APP_SUPABASE_ANON_KEY;
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
-let client: SupabaseClient | null = null;
-
-export function getSupabase(): SupabaseClient {
-  if (!url || !anon) {
-    console.error('Missing Supabase env vars', {
-      hasUrl: !!url,
-      hasAnon: !!anon,
-    });
-    throw new Error(
-      'Supabase not configured. Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY.'
-    );
-  }
-
-  if (!client) {
-    client = createClient(url, anon, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-    });
-  }
-
-  return client;
+export function getSupabase() {
+  return supabase;
 }

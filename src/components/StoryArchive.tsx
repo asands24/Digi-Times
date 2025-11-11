@@ -7,6 +7,7 @@ interface StoryArchiveProps {
   loading: boolean;
   onPreview: (story: ArchiveItem) => void;
   onRefresh: () => void;
+  onToggleShare: (storyId: string, nextValue: boolean) => void;
 }
 
 const formatTimestamp = (value: string | null) => {
@@ -24,7 +25,13 @@ const formatTimestamp = (value: string | null) => {
   }
 };
 
-export function StoryArchive({ stories, loading, onPreview, onRefresh }: StoryArchiveProps) {
+export function StoryArchive({
+  stories,
+  loading,
+  onPreview,
+  onRefresh,
+  onToggleShare,
+}: StoryArchiveProps) {
   const hasStories = stories.length > 0;
 
   return (
@@ -75,6 +82,14 @@ export function StoryArchive({ stories, loading, onPreview, onRefresh }: StoryAr
                     </span>
                   </div>
                   <div className="story-archive__buttons">
+                    <label className="story-archive__share-toggle">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(story.is_public)}
+                        onChange={(event) => onToggleShare(story.id, event.target.checked)}
+                      />
+                      Share preview
+                    </label>
                     <Button
                       type="button"
                       size="sm"

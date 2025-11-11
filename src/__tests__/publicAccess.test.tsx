@@ -4,51 +4,84 @@ import Templates from '../pages/Templates';
 import UploadPhoto from '../components/UploadPhoto';
 import PhotoGallery from '../components/PhotoGallery';
 import { getSupabase } from '../lib/supabaseClient';
+import { fetchAllTemplates } from '../lib/templates';
 
-jest.mock('../lib/supabaseClient', () => ({
-  getSupabase: jest.fn(),
+jest.mock('../lib/supabaseClient', () => {
+  const supabaseInstance = {
+    storage: { from: jest.fn() },
+  };
+  const getSupabaseMock = jest.fn(() => supabaseInstance);
+  return {
+    supabase: supabaseInstance,
+    getSupabase: getSupabaseMock,
+  };
+});
+
+jest.mock('../lib/templates', () => ({
+  fetchAllTemplates: jest.fn(),
 }));
 
-const mockGetSupabase = getSupabase as jest.MockedFunction<typeof getSupabase>;
+const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
+  getSupabase: jest.Mock;
+  supabase: {
+    storage: { from: jest.Mock };
+  };
+};
+
+const mockSupabase = supabaseModule.supabase;
+const mockGetSupabase = supabaseModule.getSupabase as jest.MockedFunction<typeof getSupabase>;
+const mockFetchAllTemplates =
+  fetchAllTemplates as jest.MockedFunction<typeof fetchAllTemplates>;
+
+mockGetSupabase.mockReturnValue(mockSupabase as any);
+
+const originalCrypto = globalThis.crypto;
+
+beforeAll(() => {
+  Object.defineProperty(globalThis, 'crypto', {
+    configurable: true,
+    value: {
+      randomUUID: jest.fn(() => 'test-uuid'),
+    },
+  });
+});
+
+afterAll(() => {
+  Object.defineProperty(globalThis, 'crypto', {
+    configurable: true,
+    value: originalCrypto,
+  });
+});
 
 afterEach(() => {
   jest.resetAllMocks();
+  mockSupabase.storage.from = jest.fn();
+  mockGetSupabase.mockReturnValue(mockSupabase as any);
 });
 
-function createTemplatesClient(result: { data: unknown; error: unknown }) {
-  return {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          order: jest.fn(() => ({
-            limit: jest.fn(() => Promise.resolve(result)),
-          })),
-        })),
-      })),
-    })),
-  };
-}
-
 test('Templates renders public rows from Supabase', async () => {
-  const supabase = createTemplatesClient({
-    data: [{ id: '1', name: 'Welcome Template', description: 'Sample', is_public: true }],
-    error: null,
-  });
-
-  mockGetSupabase.mockReturnValue(supabase as any);
+  mockFetchAllTemplates.mockResolvedValue([
+    {
+      id: '1',
+      slug: 'welcome-template',
+      title: 'Welcome Template',
+      html: '<article/>',
+      css: '',
+      is_system: true,
+    },
+  ] as any);
 
   render(<Templates />);
 
   await waitFor(() => {
     expect(screen.getByText('Welcome Template')).toBeInTheDocument();
   });
-  expect(screen.getByText('Sample')).toBeInTheDocument();
-  expect(supabase.from).toHaveBeenCalledWith('templates');
+  expect(screen.getByText('welcome-template')).toBeInTheDocument();
+  expect(mockFetchAllTemplates).toHaveBeenCalled();
 });
 
 test('Templates shows empty state when no rows are returned', async () => {
-  const supabase = createTemplatesClient({ data: [], error: null });
-  mockGetSupabase.mockReturnValue(supabase as any);
+  mockFetchAllTemplates.mockResolvedValue([]);
 
   render(<Templates />);
 
@@ -69,9 +102,8 @@ test('UploadPhoto uploads an image and surfaces the public URL', async () => {
       getPublicUrl,
     }));
 
-    mockGetSupabase.mockReturnValue({
-      storage: { from },
-    } as any);
+    mockSupabase.storage.from = from;
+    mockGetSupabase.mockReturnValue(mockSupabase as any);
 
     const file = new File(['demo'], 'demo.png', { type: 'image/png' });
     const { container } = render(<UploadPhoto />);
@@ -88,9 +120,12 @@ test('UploadPhoto uploads an image and surfaces the public URL', async () => {
 
     expect(upload).toHaveBeenCalledTimes(1);
     const [pathArg, fileArg, optionsArg] = upload.mock.calls[0];
-    expect(pathArg).toMatch(/^public\/.*\.png$/);
+    expect(pathArg).toMatch(/^anonymous\/.*\.png$/);
     expect(fileArg).toBe(file);
-    expect(optionsArg).toMatchObject({ upsert: false, cacheControl: '3600' });
+    expect(optionsArg).toMatchObject({
+      upsert: false,
+      contentType: 'image/png',
+    });
     expect(getPublicUrl).toHaveBeenCalledWith(pathArg);
   } finally {
     consoleSpy.mockRestore();
@@ -102,24 +137,21 @@ test('PhotoGallery lists public images', async () => {
     data: [{ name: 'demo.png' }],
     error: null,
   });
-  const getPublicUrl = jest.fn().mockReturnValue({
-    data: { publicUrl: 'https://cdn.example.com/public/demo.png' },
-  });
   const from = jest.fn(() => ({
     list,
-    getPublicUrl,
   }));
 
-  mockGetSupabase.mockReturnValue({
-    storage: { from },
-  } as any);
+  mockSupabase.storage.from = from;
+  mockGetSupabase.mockReturnValue(mockSupabase as any);
 
   render(<PhotoGallery />);
 
   await waitFor(() => {
-    expect(screen.getByAltText('demo.png')).toBeInTheDocument();
+    const img = screen.getByAltText('demo.png') as HTMLImageElement;
+    expect(img).toBeInTheDocument();
+    expect(img.src).toContain('/storage/v1/object/public/photos/anonymous%2Fdemo.png');
   });
 
   expect(from).toHaveBeenCalledWith('photos');
-  expect(list).toHaveBeenCalledWith('public', expect.any(Object));
+  expect(list).toHaveBeenCalledWith('anonymous', expect.any(Object));
 });

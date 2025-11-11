@@ -1,14 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getSupabase } from '../lib/supabaseClient';
-
-type TemplateRow = {
-  id: string;
-  name: string;
-  description?: string | null;
-  is_public: boolean;
-  created_by?: string | null;
-  inserted_at?: string | null;
-};
+import { fetchAllTemplates, type TemplateRow } from '../lib/templates';
 
 export default function Templates() {
   const [rows, setRows] = useState<TemplateRow[] | null>(null);
@@ -18,14 +9,7 @@ export default function Templates() {
   useEffect(() => {
     async function load() {
       try {
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from('templates')
-          .select('id,name,description,is_public,created_by,inserted_at')
-          .eq('is_public', true)
-          .order('inserted_at', { ascending: false })
-          .limit(50);
-        if (error) throw error;
+        const data = await fetchAllTemplates();
         setRows(data ?? []);
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
@@ -46,8 +30,10 @@ export default function Templates() {
     <ul>
       {rows.map((t) => (
         <li key={t.id}>
-          <strong>{t.name}</strong>
-          {t.description ? <div>{t.description}</div> : null}
+          <strong>{t.title}</strong>
+          <div>
+            <small>{t.slug}</small>
+          </div>
         </li>
       ))}
     </ul>

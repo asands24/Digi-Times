@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
+import { publicPhotoUrl } from '../lib/storage';
 
 type Photo = { name: string; publicUrl: string };
 
@@ -15,17 +16,15 @@ export default function PhotoGallery(): JSX.Element {
         const supabase = getSupabase();
         const { data, error: listError } = await supabase.storage
           .from('photos')
-          .list('public', {
+          .list('anonymous', {
             limit: 100,
             offset: 0,
             sortBy: { column: 'created_at', order: 'desc' },
           });
         if (listError) throw listError;
         const resolved = (data ?? []).map((entry) => {
-          const { data: publicUrlData } = supabase.storage
-            .from('photos')
-            .getPublicUrl(`public/${entry.name}`);
-          return { name: entry.name, publicUrl: publicUrlData.publicUrl };
+          const path = `anonymous/${entry.name}`;
+          return { name: entry.name, publicUrl: publicPhotoUrl(path) };
         });
         setPhotos(resolved);
       } catch (err: unknown) {
@@ -64,6 +63,8 @@ export default function PhotoGallery(): JSX.Element {
           <img
             src={photo.publicUrl}
             alt={photo.name}
+            loading="lazy"
+            decoding="async"
             style={{
               width: '100%',
               height: 160,

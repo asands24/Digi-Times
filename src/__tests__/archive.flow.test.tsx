@@ -39,26 +39,40 @@ const persistStoryMock = jest.requireMock('../hooks/useStoryLibrary')
 const generateArticleMock = jest.requireMock('../utils/storyGenerator')
   .generateArticle as jest.Mock;
 
-const mockSupabase = {
-  auth: {
-    getSession: jest.fn(),
-    getUser: jest.fn(),
-    signOut: jest.fn(),
-  },
-  from: jest.fn(),
-  storage: {
+jest.mock('../lib/supabaseClient', () => {
+  const mockSupabase = {
+    auth: {
+      getSession: jest.fn(),
+      getUser: jest.fn(),
+      signOut: jest.fn(),
+    },
     from: jest.fn(),
-  },
+    storage: {
+      from: jest.fn(),
+    },
+  };
+  return {
+    supabase: mockSupabase,
+    getSupabase: jest.fn(() => mockSupabase),
+  };
+});
+
+const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
+  supabase: {
+    auth: {
+      getSession: jest.Mock;
+      getUser: jest.Mock;
+      signOut: jest.Mock;
+    };
+    from: jest.Mock;
+    storage: { from: jest.Mock };
+  };
+  getSupabase: jest.Mock;
 };
 
-jest.mock('../lib/supabaseClient', () => ({
-  getSupabase: jest.fn(() => mockSupabase),
-}));
-
-const mockGetSupabase = jest.requireMock('../lib/supabaseClient')
-  .getSupabase as jest.Mock;
-
-const mockGetUser = mockSupabase.auth.getUser as jest.Mock;
+const mockSupabase = supabaseModule.supabase;
+const mockGetSupabase = supabaseModule.getSupabase;
+const mockGetUser = mockSupabase.auth.getUser;
 
 const setupUser = () =>
   typeof (userEvent as any).setup === 'function'

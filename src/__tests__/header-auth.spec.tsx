@@ -67,22 +67,27 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
 }));
 
-const mockSupabaseAuth = { signOut: jest.fn() };
-
-jest.mock('../lib/supabaseClient', () => ({
-  getSupabase: jest.fn(() => ({
-    auth: mockSupabaseAuth,
-  })),
-}));
+jest.mock('../lib/supabaseClient', () => {
+  const mockSupabaseAuth = { signOut: jest.fn() };
+  const mockSupabaseClient = { auth: mockSupabaseAuth };
+  return {
+    supabase: mockSupabaseClient,
+    getSupabase: jest.fn(() => mockSupabaseClient),
+  };
+});
 
 const mockUseNavigate = jest.requireMock('react-router-dom')
   .useNavigate as jest.Mock;
 const mockNavigate = jest.fn();
 mockUseNavigate.mockReturnValue(mockNavigate);
 
-const mockGetSupabase = jest.requireMock('../lib/supabaseClient')
-  .getSupabase as jest.Mock;
-const mockSignOut = mockSupabaseAuth.signOut as jest.Mock;
+const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
+  getSupabase: jest.Mock;
+  supabase: { auth: { signOut: jest.Mock } };
+};
+const mockGetSupabase = supabaseModule.getSupabase;
+const mockSupabaseClient = supabaseModule.supabase;
+const mockSignOut = mockSupabaseClient.auth.signOut;
 
 jest.mock('react-hot-toast', () => ({
   __esModule: true,
@@ -103,7 +108,7 @@ const setupUser = () =>
 describe('Header auth actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetSupabase.mockReturnValue({ auth: mockSupabaseAuth });
+    mockGetSupabase.mockReturnValue(mockSupabaseClient as any);
     mockUseNavigate.mockReturnValue(mockNavigate);
     mockNavigate.mockClear();
     mockSignOut.mockResolvedValue({ error: null });

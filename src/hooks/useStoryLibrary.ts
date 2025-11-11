@@ -29,7 +29,7 @@ export async function persistStory(params: {
     prompt: meta.prompt ?? null,
     image_path: filePath,
     template_id: templateId,
-    created_by: userId,
+    user_id: userId,
   });
   if (insErr) throw insErr;
 
@@ -45,13 +45,18 @@ export type ArchiveItem = {
   article?: string | null;
   prompt?: string | null;
   imageUrl?: string | null;
+  is_public?: boolean | null;
 };
 
-export async function loadStories(): Promise<ArchiveItem[]> {
+export async function loadStories(userId?: string | null): Promise<ArchiveItem[]> {
+  if (!userId) {
+    return [];
+  }
+
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('story_archives')
-    .select('id,title,template_id,image_path,created_at,article,prompt')
+    .select('id,title,template_id,image_path,created_at,article,prompt,is_public')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -63,4 +68,13 @@ export async function loadStories(): Promise<ArchiveItem[]> {
     const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
     return { ...r, imageUrl: pub?.publicUrl ?? null };
   });
+}
+
+export async function updateStoryVisibility(id: string, nextValue: boolean): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from('story_archives')
+    .update({ is_public: nextValue })
+    .eq('id', id);
+  if (error) throw error;
 }

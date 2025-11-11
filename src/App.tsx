@@ -1,35 +1,63 @@
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
 import { EventBuilder } from './components/EventBuilder';
 import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
-import { loadStories, type ArchiveItem } from './hooks/useStoryLibrary';
+import { loadStories, type ArchiveItem, updateStoryVisibility } from './hooks/useStoryLibrary';
 import DebugEnv from './pages/DebugEnv';
 import DebugTemplates from './pages/DebugTemplates';
 import Logout from './pages/Logout';
 import Templates from './pages/Templates';
 import UploadPhoto from './components/UploadPhoto';
 import PhotoGallery from './components/PhotoGallery';
+import { useAuth } from './providers/AuthProvider';
+import LoginPage from './pages/LoginPage';
+import { REQUIRE_LOGIN } from './lib/config';
 
 function HomePage() {
   const [stories, setStories] = useState<ArchiveItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
+  const { user } = useAuth();
 
   const refreshArchive = useCallback(async () => {
+    if (!user) {
+      setStories([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const items = await loadStories();
-      setStories(items);
+      const items = await loadStories(user.id);
+      setStories(items ?? []);
     } catch (error) {
       console.error('Failed to load archive', error);
       toast.error('Could not load archive.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
+
+  const handleToggleShare = useCallback(
+    async (storyId: string, nextValue: boolean) => {
+      try {
+        await updateStoryVisibility(storyId, nextValue);
+        setStories((prev) =>
+          prev.map((story) =>
+            story.id === storyId ? { ...story, is_public: nextValue } : story,
+          ),
+        );
+        toast.success(nextValue ? 'Story is now public.' : 'Story set to private.');
+      } catch (error) {
+        console.error('Failed to update visibility', error);
+        toast.error('Could not update sharing setting.');
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     void refreshArchive();
@@ -49,6 +77,7 @@ function HomePage() {
           loading={loading}
           onPreview={(story) => setPreviewStory(story)}
           onRefresh={refreshArchive}
+          onToggleShare={handleToggleShare}
         />
       </main>
       <StoryPreviewDialog
@@ -65,6 +94,26 @@ function HomePage() {
 }
 
 export default function App() {
+  const { user, loading } = useAuth();
+
+  if (REQUIRE_LOGIN && loading) {
+    return (
+      <div className="app-shell" style={{ padding: 32 }}>
+        <p>Loading…</p>
+      </div>
+    );
+  }
+
+  if (REQUIRE_LOGIN && !user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/debug/env" element={<DebugEnv />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <>
       <nav style={{ display: 'flex', gap: 12, padding: 12, flexWrap: 'wrap' }}>
@@ -83,6 +132,10 @@ export default function App() {
         <Route path="/debug/env" element={<DebugEnv />} />
         <Route path="/debug/templates" element={<DebugTemplates />} />
         <Route path="/logout" element={<Logout />} />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/" replace /> : <LoginPage />}
+        />
         <Route path="*" element={<HomePage />} />
       </Routes>
     </>

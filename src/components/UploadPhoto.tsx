@@ -1,23 +1,8 @@
 import { useState } from 'react';
 import type { JSX } from 'react';
-import { getSupabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient';
 
-function generateKey(): string {
-  const cryptoApi = typeof globalThis !== 'undefined'
-    ? (globalThis.crypto as Crypto | undefined)
-    : undefined;
-  if (cryptoApi?.randomUUID) {
-    return cryptoApi.randomUUID();
-  }
-  try {
-    const objectUrl = URL.createObjectURL(new Blob());
-    const key = objectUrl.split('/').pop() || `${Date.now()}`;
-    URL.revokeObjectURL(objectUrl);
-    return key;
-  } catch {
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  }
-}
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export default function UploadPhoto(): JSX.Element {
   const [file, setFile] = useState<File | null>(null);
@@ -29,28 +14,18 @@ export default function UploadPhoto(): JSX.Element {
     setUploading(true);
     setStatus('Uploading...');
     try {
-      const supabase = getSupabase();
-      if (!file.type.startsWith('image/')) {
-        throw new Error('Only images are allowed.');
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        throw new Error('Only JPG, PNG, GIF, or WEBP images are allowed.');
       }
       if (file.size > 10 * 1024 * 1024) {
         throw new Error('Max 10MB.');
       }
-      const extensionFromType =
-        typeof file.type === 'string' && file.type.includes('/')
-          ? file.type.split('/').pop()
-          : undefined;
-      const extensionFromName =
-        typeof file.name === 'string' && file.name.includes('.')
-          ? file.name.split('.').pop()
-          : undefined;
-      const extension = (extensionFromType || extensionFromName || 'jpg').toLowerCase();
-      const key = `public/${generateKey()}.${extension}`;
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const key = `anonymous/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
-      const { error } = await supabase.storage.from('photos').upload(key, file, {
-        upsert: false,
-        cacheControl: '3600',
-      });
+      const { error } = await supabase.storage
+        .from('photos')
+        .upload(key, file, { contentType: file.type, upsert: false });
       if (error) throw error;
 
       const { data } = supabase.storage.from('photos').getPublicUrl(key);

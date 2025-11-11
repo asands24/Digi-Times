@@ -1,4 +1,4 @@
-import { getSupabase } from './supabaseClient';
+import { supabase } from './supabaseClient';
 
 export type TemplateRow = {
   id: string;
@@ -7,34 +7,62 @@ export type TemplateRow = {
   html: string;
   css?: string | null;
   is_system: boolean;
+  created_at?: string;
 };
 
 export async function fetchAllTemplates(): Promise<TemplateRow[]> {
-  const supabase = getSupabase();
-  const { data: system, error: sysErr } = await supabase
-    .from('templates')
+  const view = await supabase
+    .from('templates_public')
     .select('*')
-    .eq('is_system', true)
-    .order('title');
-  if (sysErr) throw sysErr;
+    .order('title', { ascending: true });
 
-  const { data: mine, error: mineErr } = await supabase
+  if (!view.error && view.data) {
+    return view.data.map(mapToTemplateRow);
+  }
+
+  if (view.error) {
+    console.warn('templates_public view unavailable, falling back to legacy query', view.error);
+  }
+
+  const fallback = await supabase
     .from('templates')
-    .select('*')
-    .is('is_system', false)
-    .order('title');
-  if (mineErr) throw mineErr;
+    .select('id,slug,title,name,description,html,css,is_system,is_public,inserted_at,created_at')
+    .order('inserted_at', { ascending: false })
+    .limit(100);
 
-  return [...(system ?? []), ...(mine ?? [])];
+  if (!fallback.error && fallback.data) {
+    return fallback.data.map((row: any) => ({
+      id: row.id,
+      slug: row.slug ?? row.name ?? row.title ?? `template-${row.id}`,
+      title: row.title ?? row.name ?? row.description ?? 'Untitled',
+      html: row.html ?? '',
+      css: row.css ?? '',
+      is_system: Boolean(row.is_system || row.is_public),
+      created_at: row.created_at ?? row.inserted_at ?? new Date().toISOString(),
+    }));
+  }
+
+  if (view.error) {
+    throw view.error;
+  }
+
+  throw fallback.error ?? new Error('Unable to fetch templates.');
 }
 
 export async function getTemplateById(id: string): Promise<TemplateRow> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('templates')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const { data, error } = await supabase.from('templates').select('*').eq('id', id).single();
   if (error) throw error;
   return data as TemplateRow;
+}
+
+function mapToTemplateRow(row: any): TemplateRow {
+  return {
+    id: row.id,
+    slug: row.slug ?? row.name ?? `template-${row.id}`,
+    title: row.title ?? 'Untitled',
+    html: row.html ?? '',
+    css: row.css ?? '',
+    is_system: Boolean(row.is_system),
+    created_at: row.created_at,
+  };
 }

@@ -1,18 +1,28 @@
 import { persistStory } from '../hooks/useStoryLibrary';
 
-const mockSupabase = {
-  storage: {
+jest.mock('../lib/supabaseClient', () => {
+  const mockSupabase = {
+    storage: {
+      from: jest.fn(),
+    },
     from: jest.fn(),
-  },
-  from: jest.fn(),
+  };
+  return {
+    supabase: mockSupabase,
+    getSupabase: jest.fn(() => mockSupabase),
+  };
+});
+
+const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
+  supabase: {
+    storage: { from: jest.Mock };
+    from: jest.Mock;
+  };
+  getSupabase: jest.Mock;
 };
 
-jest.mock('../lib/supabaseClient', () => ({
-  getSupabase: jest.fn(() => mockSupabase),
-}));
-
-const mockGetSupabase = jest.requireMock('../lib/supabaseClient')
-  .getSupabase as jest.Mock;
+const mockSupabase = supabaseModule.supabase;
+const mockGetSupabase = supabaseModule.getSupabase;
 
 describe('persistStory upload', () => {
   beforeEach(() => {

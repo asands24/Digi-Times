@@ -11,8 +11,8 @@ export default function DebugTemplates() {
       try {
         const supabase = getSupabase();
         const { data, error } = await supabase
-          .from('templates')
-          .select('id,name,is_public')
+          .from('templates_public')
+          .select('id,slug,title,is_system')
           .limit(5);
         setPayload({ data, error });
       } catch (e: any) {
