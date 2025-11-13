@@ -23,7 +23,7 @@ export const useGroups = () => {
             name: 'Demo Family Group',
             description: 'A sample group for testing',
             invite_code: 'DEMO1234',
-            owner_id: 'mock-user-id',
+            created_by: 'mock-user-id',
             created_at: new Date().toISOString(),
             memberRole: 'admin',
             joinedAt: new Date().toISOString()
@@ -46,7 +46,7 @@ export const useGroups = () => {
             name,
             description,
             invite_code,
-            owner_id,
+            created_by,
             created_at
           )
         `)
@@ -87,7 +87,7 @@ export const useGroups = () => {
         .insert({
           ...groupData,
           invite_code: inviteCode,
-          owner_id: user.id
+          created_by: user.id
         })
         .select()
         .single()

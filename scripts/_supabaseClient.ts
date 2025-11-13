@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config as loadEnv } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import type { Database } from '../src/types/supabase';
 
 // Always load from repo root
 const rootDir = path.resolve(__dirname, '..');
@@ -59,7 +60,7 @@ try {
 }
 
 export function getSupabase() {
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient<Database>(supabaseUrl, supabaseAnonKey);
 }
 
 export async function signInSmoke(supabase: ReturnType<typeof createClient>) {

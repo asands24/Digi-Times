@@ -1,10 +1,14 @@
 import { getSupabase } from '../lib/supabaseClient';
+import type { Database } from '../types/supabase';
 
 export type PersistMeta = {
   headline: string;
   bodyHtml: string;
   prompt?: string;
 };
+
+type StoryArchiveRow = Database['public']['Tables']['story_archives']['Row'];
+type StoryArchiveInsert = Database['public']['Tables']['story_archives']['Insert'];
 
 export async function persistStory(params: {
   file: File;
@@ -23,30 +27,22 @@ export async function persistStory(params: {
   });
   if (up.error) throw up.error;
 
-  const { error: insErr } = await supabase.from('story_archives').insert({
+  const payload: StoryArchiveInsert = {
     title: meta.headline,
     article: meta.bodyHtml,
     prompt: meta.prompt ?? null,
     image_path: filePath,
     template_id: templateId,
     user_id: userId,
-  });
+  };
+
+  const { error: insErr } = await supabase.from('story_archives').insert(payload);
   if (insErr) throw insErr;
 
   return { filePath };
 }
 
-export type ArchiveItem = {
-  id: string;
-  title: string | null;
-  template_id: string | null;
-  image_path: string | null;
-  created_at: string;
-  article?: string | null;
-  prompt?: string | null;
-  imageUrl?: string | null;
-  is_public?: boolean | null;
-};
+export type ArchiveItem = StoryArchiveRow & { imageUrl?: string | null };
 
 export async function loadStories(userId?: string | null): Promise<ArchiveItem[]> {
   if (!userId) {
@@ -61,12 +57,17 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
 
   if (error) throw error;
 
-  const rows = (data ?? []) as ArchiveItem[];
+  const rows = (data ?? []) as StoryArchiveRow[];
 
   return rows.map((r) => {
     if (!r.image_path) return r;
-    const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
-    return { ...r, imageUrl: pub?.publicUrl ?? null };
+    const { data: pub, error: publicUrlError } = supabase.storage
+      .from('photos')
+      .getPublicUrl(r.image_path);
+    if (publicUrlError && process.env.NODE_ENV !== 'production') {
+      console.warn('Failed to resolve story image URL', publicUrlError.message);
+    }
+    return { ...r, imageUrl: publicUrlError ? null : pub?.publicUrl ?? null };
   });
 }
 

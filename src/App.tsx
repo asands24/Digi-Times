@@ -6,8 +6,6 @@ import { EventBuilder } from './components/EventBuilder';
 import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { loadStories, type ArchiveItem, updateStoryVisibility } from './hooks/useStoryLibrary';
-import DebugEnv from './pages/DebugEnv';
-import DebugTemplates from './pages/DebugTemplates';
 import Logout from './pages/Logout';
 import Templates from './pages/Templates';
 import UploadPhoto from './components/UploadPhoto';
@@ -110,7 +108,6 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/debug/env" element={<DebugEnv />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -123,16 +120,12 @@ export default function App() {
         <Link to="/templates">Templates</Link>
         <Link to="/upload">Upload</Link>
         <Link to="/gallery">Gallery</Link>
-        <Link to="/debug/env">Debug Env</Link>
-        <Link to="/debug/templates">Debug Templates</Link>
       </nav>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/templates" element={<Templates />} />
         <Route path="/upload" element={<UploadPhoto />} />
         <Route path="/gallery" element={<PhotoGallery />} />
-        <Route path="/debug/env" element={<DebugEnv />} />
-        <Route path="/debug/templates" element={<DebugTemplates />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route

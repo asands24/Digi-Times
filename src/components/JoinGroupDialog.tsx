@@ -21,7 +21,6 @@ export function JoinGroupDialog({ open, onOpenChange }: JoinGroupDialogProps) {
   const [inviteCode, setInviteCode] = useState('');
 
   const handleJoin = () => {
-    console.log({ inviteCode });
     onOpenChange(false);
     setInviteCode('');
   };

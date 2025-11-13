@@ -107,9 +107,12 @@ export function StoryArchive({
       ) : (
         <div className="story-archive__empty">
           <p>
-            Your archive is waiting. Save a drafted story to begin building an
-            edition you can print or share.
+            You haven’t saved any stories yet. Archive a generated article to see it
+            appear here, or refresh if you recently saved one on another device.
           </p>
+          <Button type="button" variant="outline" onClick={onRefresh}>
+            Refresh archive
+          </Button>
         </div>
       )}
     </section>

@@ -45,6 +45,8 @@ declare global {
   }
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const SHELL_KEYS = [
   'digiTimesShell',
   'digitimesShell',
@@ -88,7 +90,9 @@ async function createGroupThroughHostOrFallback(payload: CreateGroupPayload) {
     return handler(payload);
   }
 
-  console.warn('[DigiTimes] No host createGroup bridge detected. Using Supabase fallback.');
+  if (!isProduction) {
+    console.warn('[DigiTimes] No host createGroup bridge detected. Using Supabase fallback.');
+  }
   return createGroupViaSupabase(payload);
 }
 
@@ -109,7 +113,7 @@ export function CreateGroupDialog({
 
     const handler = findShellHandler(window as unknown as Record<string, unknown>);
 
-    if (!handler && process.env.NODE_ENV !== 'production') {
+    if (!handler && !isProduction) {
       console.warn(
         'CreateGroupDialog could not find a host shell handler. ' +
           'Expose window.digiTimesShell.createGroup to enable bridge-based group creation.'

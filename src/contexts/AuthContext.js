@@ -4,6 +4,18 @@ import toast from 'react-hot-toast'
 
 const AuthContext = createContext({})
 
+const buildProfileSnapshot = (profileData = null, fallbackUser = null) => {
+  const fallbackEmail =
+    profileData?.email || fallbackUser?.email || 'guest@digitimes.app'
+
+  return {
+    id: profileData?.id || fallbackUser?.id || 'guest-user',
+    email: fallbackEmail,
+    display_name: profileData?.display_name || fallbackUser?.user_metadata?.display_name || fallbackEmail || 'Guest Reporter',
+    avatar_url: profileData?.avatar_url || null
+  }
+}
+
 const buildRedirectTo = () => {
   if (typeof window === 'undefined') {
     return undefined
@@ -33,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  const fetchProfile = async (userId) => {
+  const fetchProfile = async (userId, fallbackUser = null) => {
     if (!supabase) {
       return
     }
@@ -48,18 +60,20 @@ export const AuthProvider = ({ children }) => {
         console.error('Error fetching profile:', error)
         // If profile doesn't exist, try to create it
         if (error.code === 'PGRST116') {
-          await createProfile(userId)
+          await createProfile(userId, fallbackUser)
         }
+        setProfile(buildProfileSnapshot(null, fallbackUser || user))
         return
       }
 
-      setProfile(data)
+      setProfile(buildProfileSnapshot(data, fallbackUser || user))
     } catch (error) {
       console.error('Error fetching profile:', error)
+      setProfile(buildProfileSnapshot(null, fallbackUser || user))
     }
   }
 
-  const createProfile = async (userId) => {
+  const createProfile = async (userId, fallbackUser = null) => {
     if (!supabase) {
       return
     }
@@ -77,12 +91,14 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         console.error('Error creating profile:', error)
+        setProfile(buildProfileSnapshot(null, fallbackUser || userData?.user || user))
         return
       }
 
-      setProfile(data)
+      setProfile(buildProfileSnapshot(data, fallbackUser || userData?.user || user))
     } catch (error) {
       console.error('Error creating profile:', error)
+      setProfile(buildProfileSnapshot(null, fallbackUser || user))
     }
   }
 
@@ -107,9 +123,11 @@ export const AuthProvider = ({ children }) => {
             avatar_url: null
           }
           setUser(mockUser)
-          setProfile(mockProfile)
+          setProfile(buildProfileSnapshot(mockProfile, mockUser))
           setLoading(false)
-          console.log('Mock auth enabled - using demo user')
+          if (process.env.NODE_ENV !== 'production') {
+            console.info('Mock auth enabled - using demo user')
+          }
           return
         }
 
@@ -117,7 +135,7 @@ export const AuthProvider = ({ children }) => {
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          await fetchProfile(session.user.id)
+          await fetchProfile(session.user.id, session.user)
         }
       } catch (error) {
         console.error('Error getting session:', error)
@@ -143,7 +161,7 @@ export const AuthProvider = ({ children }) => {
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          await fetchProfile(session.user.id)
+          await fetchProfile(session.user.id, session.user)
         } else {
           setProfile(null)
         }
@@ -264,7 +282,7 @@ export const AuthProvider = ({ children }) => {
         return { error }
       }
 
-      setProfile(data)
+      setProfile(buildProfileSnapshot(data, user))
       toast.success('Profile updated successfully')
       return { data, error: null }
     } catch (error) {

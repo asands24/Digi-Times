@@ -1,4 +1,10 @@
 import type { GeneratedArticle } from '../utils/storyGenerator';
+import type { Database } from './supabase';
+
+export type StoryArchiveRow = Database['public']['Tables']['story_archives']['Row'];
+export type TemplateTableRow = Database['public']['Tables']['templates']['Row'];
+export type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+export type PhotoRow = Database['public']['Tables']['photos']['Row'];
 
 export interface StoryImage {
   id: string;

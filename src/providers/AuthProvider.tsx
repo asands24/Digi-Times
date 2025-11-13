@@ -14,7 +14,7 @@ type UseAuthReturn = {
   signInWithOAuth: (provider: string) => Promise<{ error: unknown }>;
   signOut: () => Promise<{ error: unknown }>;
   updateProfile: (updates: Record<string, unknown>) => Promise<{ error: unknown }>;
-  fetchProfile: (id: string) => Promise<void>;
+  fetchProfile: (id: string, fallbackUser?: Record<string, unknown>) => Promise<void>;
 };
 
 export function useAuth(): UseAuthReturn {

@@ -9,14 +9,11 @@
       name="description"
       content="Create beautiful photo newsletters with friends"
     />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' https://*.supabase.co data: blob:; connect-src 'self' https://*.supabase.co; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; media-src 'self' data:; frame-ancestors 'none'"
-    />
     <title>DigiTimes – Create Photo Newsletters with Friends</title>
     <meta name="keywords" content="photo, newsletter, friends, sharing, DigiTimes" />
     <meta name="author" content="DigiTimes Team" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="stylesheet" href="%PUBLIC_URL%/csp-base.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -26,31 +23,14 @@
   </head>
   <body>
     <noscript>
-      <div style="text-align:center; margin-top:2em; color:#b00; font-size:1.2em;">
+      <div class="noscript-message">
         You need to enable JavaScript to run this app.
       </div>
     </noscript>
-    <div id="unsupported-browser" style="display:none; text-align:center; margin-top:2em; color:#b00; font-size:1.1em;">
+    <div id="unsupported-browser" class="unsupported-browser" role="status" aria-live="polite">
       Your browser may not be fully supported. Please update for the best experience.
     </div>
-    <div id="spinner" aria-busy="true" aria-label="Loading" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(255,255,255,0.7); z-index:9999; justify-content:center; align-items:center;">
-      <svg width="60" height="60" viewBox="0 0 50 50" aria-hidden="true">
-        <circle cx="25" cy="25" r="20" fill="none" stroke="#0078d4" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">
-          <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
-        </circle>
-      </svg>
-    </div>
     <div id="root" role="main" aria-live="polite"></div>
-    <script>
-      // Show spinner until React app loads
-      document.getElementById('spinner').style.display = 'flex';
-      window.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('spinner').style.display = 'none';
-      });
-      // Simple unsupported browser check
-      if (!window.fetch || !window.Promise) {
-        document.getElementById('unsupported-browser').style.display = 'block';
-      }
-    </script>
+    <script src="%PUBLIC_URL%/browser-check.js" defer></script>
   </body>
 </html>

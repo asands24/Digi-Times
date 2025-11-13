@@ -29,13 +29,11 @@ Open http://localhost:3000 to launch the studio.
 4. **Archive the Winners** – Save finished pieces to the Edition Archive where they persist in local storage.
 5. **Polish & Publish** – Edit saved copy, open a print-ready view, or export the archive for sharing.
 
-## Public Pages & Debug Routes
+## Public Pages
 
 - `/templates` – Lists the 50 most recent public templates (`is_public = true`) from Supabase.
 - `/upload` – Anonymous uploader that writes images to the `photos` bucket under the `public/` prefix.
 - `/gallery` – Renders a responsive grid of publicly uploaded images.
-- `/debug/env` – Shows whether `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` are present at runtime.
-- `/debug/templates` – Fetches a small sample of templates and surfaces Supabase errors for troubleshooting.
 
 These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_SETUP.md` are applied (public read on `public.templates` and the `photos` bucket).
 
@@ -69,7 +67,6 @@ Legacy Supabase hooks remain (for the original collaborative roadmap) but sit be
 
 ## Acceptance Checklist
 
-- `/debug/env` resolves to `{ "HAS_URL": true, "HAS_ANON": true }` in production.
 - `/templates` renders public rows and handles empty/error states without crashing.
 - `/upload` accepts JPG/PNG/WebP images under 10 MB and returns a public URL.
 - `/gallery` displays files stored under `photos/public/*` with anonymous access.

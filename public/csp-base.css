@@ -1,0 +1,24 @@
+:root {
+  font-family: 'Source Sans 3', 'Helvetica Neue', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.noscript-message,
+.unsupported-browser {
+  text-align: center;
+  margin-top: 2rem;
+  color: #b00020;
+}
+
+.noscript-message {
+  font-size: 1.2em;
+  line-height: 1.5;
+}
+
+.unsupported-browser {
+  display: none;
+  font-size: 1.1em;
+}
+
+.unsupported-browser.is-visible {
+  display: block;
+}
