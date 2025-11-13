@@ -15,6 +15,7 @@ import PhotoGallery from './components/PhotoGallery';
 import { useAuth } from './providers/AuthProvider';
 import LoginPage from './pages/LoginPage';
 import { REQUIRE_LOGIN } from './lib/config';
+import AuthCallback from './pages/AuthCallback';
 
 function HomePage() {
   const [stories, setStories] = useState<ArchiveItem[]>([]);
@@ -108,6 +109,7 @@ export default function App() {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/debug/env" element={<DebugEnv />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
@@ -132,6 +134,7 @@ export default function App() {
         <Route path="/debug/env" element={<DebugEnv />} />
         <Route path="/debug/templates" element={<DebugTemplates />} />
         <Route path="/logout" element={<Logout />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route
           path="/login"
           element={user ? <Navigate to="/" replace /> : <LoginPage />}

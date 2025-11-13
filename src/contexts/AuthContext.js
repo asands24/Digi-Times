@@ -4,6 +4,13 @@ import toast from 'react-hot-toast'
 
 const AuthContext = createContext({})
 
+const buildRedirectTo = () => {
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+  return `${window.location.origin}/auth/callback`
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -159,7 +166,7 @@ export const AuthProvider = ({ children }) => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: buildRedirectTo()
         }
       })
 
@@ -172,6 +179,35 @@ export const AuthProvider = ({ children }) => {
       return { error: null }
     } catch (error) {
       toast.error('Failed to send magic link')
+      return { error }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const signInWithOAuth = async (provider) => {
+    if (!supabase) {
+      toast.error('Supabase is not configured')
+      return { error: new Error('Supabase not configured') }
+    }
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: buildRedirectTo()
+        }
+      })
+
+      if (error) {
+        toast.error(error.message)
+        return { error }
+      }
+
+      toast.success('Continue in the popup to finish signing in.')
+      return { error: null }
+    } catch (error) {
+      toast.error('Failed to start OAuth flow')
       return { error }
     } finally {
       setLoading(false)
@@ -244,6 +280,7 @@ export const AuthProvider = ({ children }) => {
     profile,
     loading,
     signInWithMagicLink,
+    signInWithOAuth,
     signOut,
     updateProfile,
     fetchProfile

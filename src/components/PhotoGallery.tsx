@@ -38,45 +38,57 @@ export default function PhotoGallery(): JSX.Element {
     void load();
   }, []);
 
+  const renderMessage = (message: string) => (
+    <section className="container" style={{ padding: '2rem 1rem' }}>
+      <div className="card" style={{ textAlign: 'center' }}>
+        <p className="muted">{message}</p>
+      </div>
+    </section>
+  );
+
   if (loading) {
-    return <p>Loading photos...</p>;
+    return renderMessage('Loading photos…');
   }
 
   if (error) {
-    return <p>Could not load photos.</p>;
+    return renderMessage('Could not load photos.');
   }
 
   if (photos.length === 0) {
-    return <p>No photos yet.</p>;
+    return renderMessage('No photos yet.');
   }
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 12,
-        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-      }}
-    >
-      {photos.map((photo) => (
-        <figure key={photo.name} style={{ margin: 0 }}>
-          <img
-            src={photo.publicUrl}
-            alt={photo.name}
-            loading="lazy"
-            decoding="async"
-            style={{
-              width: '100%',
-              height: 160,
-              objectFit: 'cover',
-              borderRadius: 8,
-            }}
-          />
-          <figcaption style={{ fontSize: 12, opacity: 0.7 }}>
-            {photo.name}
-          </figcaption>
-        </figure>
-      ))}
-    </div>
+    <section className="container" style={{ padding: '2rem 1rem' }}>
+      <div className="card">
+        <div
+          className="grid"
+          style={{
+            gap: 12,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          }}
+        >
+          {photos.map((photo) => (
+            <figure key={photo.name} style={{ margin: 0 }}>
+              <img
+                src={photo.publicUrl}
+                alt={photo.name}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  width: '100%',
+                  height: 160,
+                  objectFit: 'cover',
+                  borderRadius: 8,
+                }}
+              />
+              <figcaption style={{ fontSize: 12, opacity: 0.7 }}>
+                {photo.name}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }

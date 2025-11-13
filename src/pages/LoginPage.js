@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useInvite } from '../hooks/useInvite'
 import { Camera, Mail, Users } from 'lucide-react'
@@ -6,23 +6,30 @@ import { getRandomPhotos } from '../data/stockPhotos'
 import DemoLoginButton from '../components/DemoLoginButton'
 
 const LoginPage = () => {
-  const { signInWithMagicLink, loading } = useAuth()
+  const { signInWithMagicLink, signInWithOAuth, loading } = useAuth()
   const { loading: inviteLoading } = useInvite()
   const [email, setEmail] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [showInviteForm, setShowInviteForm] = useState(false)
+  const emailInputRef = useRef(null)
 
   // Get sample photos to display
   const samplePhotos = getRandomPhotos(4)
 
-  const handleSignIn = async (e) => {
-    e.preventDefault()
-    if (!email.trim()) return
-
-    const { error } = await signInWithMagicLink(email)
-    if (!error) {
+  const sendMagicLink = async () => {
+    if (!email.trim()) {
+      return { error: new Error('Email is required') }
+    }
+    const result = await signInWithMagicLink(email)
+    if (!result?.error) {
       setEmail('')
     }
+    return result
+  }
+
+  const handleSignIn = async (e) => {
+    e.preventDefault()
+    await sendMagicLink()
   }
 
   const handleInviteSignIn = async (e) => {
@@ -34,6 +41,18 @@ const LoginPage = () => {
       setEmail('')
       setInviteCode('')
     }
+  }
+
+  const handleQuickEmail = async () => {
+    if (!email.trim()) {
+      emailInputRef.current?.focus()
+      return
+    }
+    await sendMagicLink()
+  }
+
+  const handleGoogleSignIn = async () => {
+    await signInWithOAuth('google')
   }
 
   return (
@@ -164,6 +183,7 @@ const LoginPage = () => {
                     <input
                       id="email"
                       type="email"
+                      ref={emailInputRef}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
@@ -177,7 +197,7 @@ const LoginPage = () => {
                 <button
                   type="submit"
                   disabled={loading || !email.trim()}
-                  className="btn btn-primary w-full"
+                  className="btn full"
                 >
                   {loading ? (
                     <>
@@ -196,8 +216,10 @@ const LoginPage = () => {
 
               <div className="mt-6 text-center">
                 <button
+                  type="button"
                   onClick={() => setShowInviteForm(true)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center justify-center gap-2 mx-auto"
+                  className="btn secondary"
+                  style={{ gap: '0.5rem' }}
                 >
                   <Users className="w-4 h-4" />
                   Have an invite code?
@@ -220,6 +242,7 @@ const LoginPage = () => {
                     <input
                       id="invite-email"
                       type="email"
+                      ref={emailInputRef}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
@@ -252,7 +275,7 @@ const LoginPage = () => {
                 <button
                   type="submit"
                   disabled={loading || inviteLoading || !email.trim() || !inviteCode.trim()}
-                  className="btn btn-primary w-full"
+                  className="btn full"
                 >
                   {loading || inviteLoading ? (
                     <>
@@ -267,8 +290,9 @@ const LoginPage = () => {
 
               <div className="mt-6 text-center">
                 <button
+                  type="button"
                   onClick={() => setShowInviteForm(false)}
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                  className="btn secondary"
                 >
                   Back to regular sign in
                 </button>
@@ -276,9 +300,27 @@ const LoginPage = () => {
             </>
           )}
 
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>
-              We'll send you a magic link to sign in securely without a password.
+          <div className="mt-6 grid" style={{ gap: '0.75rem' }}>
+            <div className="grid cols-2" style={{ gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={loading || inviteLoading}
+                onClick={handleQuickEmail}
+              >
+                Continue with Email
+              </button>
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={loading || inviteLoading}
+                onClick={handleGoogleSignIn}
+              >
+                Continue with Google
+              </button>
+            </div>
+            <p className="muted" style={{ textAlign: 'center' }}>
+              We'll email you a magic link to sign in securely without a password.
             </p>
           </div>
         </div>

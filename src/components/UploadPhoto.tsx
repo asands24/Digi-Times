@@ -41,16 +41,29 @@ export default function UploadPhoto(): JSX.Element {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 8, maxWidth: 440, margin: '0 auto' }}>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-      />
-      <button onClick={handleUpload} disabled={!file || uploading}>
-        {uploading ? 'Uploading...' : 'Upload'}
-      </button>
-      {status ? <small>{status}</small> : null}
-    </div>
+    <section className="container" style={{ padding: '2rem 1rem' }}>
+      <div className="card" style={{ maxWidth: 480, margin: '0 auto' }}>
+        <div className="grid" style={{ gap: '1rem' }}>
+          <label htmlFor="photo-upload" className="muted">
+            Choose a photo to upload
+          </label>
+          <input
+            id="photo-upload"
+            className="input"
+            type="file"
+            accept="image/*"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          />
+          <button className="btn" onClick={handleUpload} disabled={!file || uploading}>
+            {uploading ? 'Uploading…' : 'Upload'}
+          </button>
+          {status ? (
+            <small aria-live="polite" className="muted">
+              {status}
+            </small>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }

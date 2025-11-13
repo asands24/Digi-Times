@@ -37,7 +37,7 @@ describe('templates view fallback', () => {
           description: 'Desc',
           html: '<p>Legacy</p>',
           css: null,
-          is_system: false,
+          is_system: true,
           is_public: true,
           inserted_at: '2025-01-01T00:00:00.000Z',
           created_at: null,

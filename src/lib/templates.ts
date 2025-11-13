@@ -26,19 +26,19 @@ export async function fetchAllTemplates(): Promise<TemplateRow[]> {
 
   const fallback = await supabase
     .from('templates')
-    .select('id,slug,title,name,description,html,css,is_system,is_public,inserted_at,created_at')
-    .order('inserted_at', { ascending: false })
+    .select('id,name,description,html,css,is_system,created_at')
+    .order('created_at', { ascending: false })
     .limit(100);
 
   if (!fallback.error && fallback.data) {
     return fallback.data.map((row: any) => ({
       id: row.id,
-      slug: row.slug ?? row.name ?? row.title ?? `template-${row.id}`,
+      slug: row.name ?? row.description ?? `template-${row.id}`,
       title: row.title ?? row.name ?? row.description ?? 'Untitled',
       html: row.html ?? '',
       css: row.css ?? '',
-      is_system: Boolean(row.is_system || row.is_public),
-      created_at: row.created_at ?? row.inserted_at ?? new Date().toISOString(),
+      is_system: Boolean(row.is_system),
+      created_at: row.created_at ?? new Date().toISOString(),
     }));
   }
 
