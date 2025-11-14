@@ -36,7 +36,9 @@ export async function persistStory(params: {
     user_id: userId,
   };
 
-  const { error: insErr } = await supabase.from('story_archives').insert(payload);
+  const { error: insErr } = await supabase
+    .from('story_archives')
+    .insert(payload as Database['public']['Tables']['story_archives']['Insert']);
   if (insErr) throw insErr;
 
   return { filePath };
