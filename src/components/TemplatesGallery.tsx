@@ -32,15 +32,19 @@ export function TemplatesGallery({
           return;
         }
 
-        const mapped = data.map<StoryTemplate>((row: TemplateRow) => ({
-          id: row.id,
-          title: row.title,
-          slug: row.slug,
-          html: row.html,
-          css: row.css ?? '',
-          isSystem: Boolean(row.is_system),
-          owner: null,
-        }));
+        const mapped = data.map<StoryTemplate>((row: TemplateRow) => {
+          const fallbackSlug = row.slug ?? row.title ?? `template-${row.id}`;
+          const fallbackTitle = row.title ?? fallbackSlug ?? 'Untitled';
+          return {
+            id: row.id,
+            title: fallbackTitle,
+            slug: fallbackSlug,
+            html: row.html ?? '',
+            css: row.css ?? '',
+            isSystem: Boolean(row.is_system),
+            owner: null,
+          };
+        });
 
         setTemplates(mapped);
         setLoading(false);
