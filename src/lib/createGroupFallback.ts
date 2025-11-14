@@ -9,14 +9,12 @@ export async function createGroupViaSupabase({ name, description }: CreateGroupI
   const userId = sessionData?.session?.user?.id;
   if (!userId) throw new Error('Not authenticated');
 
-  const { data: groups, error: gErr } = await supabase
+  const { data: group, error: gErr } = await supabase
     .from('friend_groups')
     .insert({ name, description: description ?? '', created_by: userId })
     .select()
-    .limit(1);
+    .single();
   if (gErr) throw gErr;
-  const group = groups?.[0];
-  if (!group) throw new Error('Create group failed (no row)');
 
   const { error: mErr } = await supabase
     .from('group_members')

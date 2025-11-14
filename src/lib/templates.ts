@@ -24,7 +24,7 @@ export async function fetchAllTemplates(): Promise<TemplateRow[]> {
 
   const fallback = await supabase
     .from('templates')
-    .select('id,slug,title,html,css,is_system,created_at,updated_at')
+    .select('id,slug,title,html,css,is_system,created_at,updated_at,owner,is_public')
     .order('created_at', { ascending: false })
     .limit(100);
 

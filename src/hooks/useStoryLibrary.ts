@@ -36,9 +36,7 @@ export async function persistStory(params: {
     user_id: userId,
   };
 
-  const { error: insErr } = await supabase
-    .from('story_archives')
-    .insert(payload as Database['public']['Tables']['story_archives']['Insert']);
+  const { error: insErr } = await supabase.from('story_archives').insert(payload);
   if (insErr) throw insErr;
 
   return { filePath };
@@ -63,13 +61,8 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
 
   return rows.map((r) => {
     if (!r.image_path) return r;
-    const { data: pub, error: publicUrlError } = supabase.storage
-      .from('photos')
-      .getPublicUrl(r.image_path);
-    if (publicUrlError && process.env.NODE_ENV !== 'production') {
-      console.warn('Failed to resolve story image URL', publicUrlError.message);
-    }
-    return { ...r, imageUrl: publicUrlError ? null : pub?.publicUrl ?? null };
+    const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
+    return { ...r, imageUrl: pub?.publicUrl ?? null };
   });
 }
 

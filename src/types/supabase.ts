@@ -12,14 +12,14 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: {
-          id: string;
-          email: string;
-          display_name: Nullable<string>;
-          avatar_url: Nullable<string>;
-          created_at: string;
-          updated_at: string;
-        };
+      Row: {
+        id: string;
+        email: string;
+        display_name: Nullable<string>;
+        avatar_url: Nullable<string>;
+        created_at: string;
+        updated_at: string;
+      };
         Insert: {
           id: string;
           email: string;
@@ -31,18 +31,19 @@ export interface Database {
         Update: {
           id?: string;
           email?: string;
-          display_name?: Nullable<string>;
-          avatar_url?: Nullable<string>;
-          created_at?: string;
-          updated_at?: string;
-        };
+        display_name?: Nullable<string>;
+        avatar_url?: Nullable<string>;
+        created_at?: string;
+        updated_at?: string;
       };
+      Relationships: [];
+    };
       friend_groups: {
-        Row: {
-          id: string;
-          name: string;
-          description: Nullable<string>;
-          invite_code: string;
+      Row: {
+        id: string;
+        name: string;
+        description: Nullable<string>;
+        invite_code: string;
           created_by: string;
           created_at: string;
           updated_at: string;
@@ -60,19 +61,20 @@ export interface Database {
           id?: string;
           name?: string;
           description?: Nullable<string>;
-          invite_code?: string;
-          created_by?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
+        invite_code?: string;
+        created_by?: string;
+        created_at?: string;
+        updated_at?: string;
       };
+      Relationships: [];
+    };
       group_members: {
-        Row: {
-          id: string;
-          group_id: string;
-          user_id: string;
-          role: 'admin' | 'member';
-          joined_at: string;
+      Row: {
+        id: string;
+        group_id: string;
+        user_id: string;
+        role: 'admin' | 'member';
+        joined_at: string;
         };
         Insert: {
           id?: string;
@@ -85,16 +87,17 @@ export interface Database {
           id?: string;
           group_id?: string;
           user_id?: string;
-          role?: 'admin' | 'member';
-          joined_at?: string;
-        };
+        role?: 'admin' | 'member';
+        joined_at?: string;
       };
+      Relationships: [];
+    };
       newsletters: {
-        Row: {
-          id: string;
-          title: string;
-          description: Nullable<string>;
-          group_id: string;
+      Row: {
+        id: string;
+        title: string;
+        description: Nullable<string>;
+        group_id: string;
           layout: Nullable<Database['public']['Enums']['newsletter_layout']>;
           is_published: boolean;
           published_at: Nullable<string>;
@@ -121,18 +124,19 @@ export interface Database {
           group_id?: string;
           layout?: Nullable<Database['public']['Enums']['newsletter_layout']>;
           is_published?: boolean;
-          published_at?: Nullable<string>;
-          created_by?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
+        published_at?: Nullable<string>;
+        created_by?: string;
+        created_at?: string;
+        updated_at?: string;
       };
+      Relationships: [];
+    };
       newsletter_collaborators: {
-        Row: {
-          id: string;
-          newsletter_id: string;
-          user_id: string;
-          role: 'owner' | 'editor' | 'collaborator';
+      Row: {
+        id: string;
+        newsletter_id: string;
+        user_id: string;
+        role: 'owner' | 'editor' | 'collaborator';
           added_at: string;
         };
         Insert: {
@@ -145,17 +149,18 @@ export interface Database {
         Update: {
           id?: string;
           newsletter_id?: string;
-          user_id?: string;
-          role?: 'owner' | 'editor' | 'collaborator';
-          added_at?: string;
-        };
+        user_id?: string;
+        role?: 'owner' | 'editor' | 'collaborator';
+        added_at?: string;
       };
+      Relationships: [];
+    };
       events: {
-        Row: {
-          id: string;
-          newsletter_id: string;
-          title: string;
-          description: Nullable<string>;
+      Row: {
+        id: string;
+        newsletter_id: string;
+        title: string;
+        description: Nullable<string>;
           event_date: Nullable<string>;
           location: Nullable<string>;
           category: Nullable<Database['public']['Enums']['event_category']>;
@@ -182,18 +187,19 @@ export interface Database {
           description?: Nullable<string>;
           event_date?: Nullable<string>;
           location?: Nullable<string>;
-          category?: Nullable<Database['public']['Enums']['event_category']>;
-          created_by?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
+        category?: Nullable<Database['public']['Enums']['event_category']>;
+        created_by?: string;
+        created_at?: string;
+        updated_at?: string;
       };
+      Relationships: [];
+    };
       event_attendees: {
-        Row: {
-          id: string;
-          event_id: string;
-          user_id: string;
-          created_at: string;
+      Row: {
+        id: string;
+        event_id: string;
+        user_id: string;
+        created_at: string;
         };
         Insert: {
           id?: string;
@@ -203,17 +209,18 @@ export interface Database {
         };
         Update: {
           id?: string;
-          event_id?: string;
-          user_id?: string;
-          created_at?: string;
-        };
+        event_id?: string;
+        user_id?: string;
+        created_at?: string;
       };
+      Relationships: [];
+    };
       photos: {
-        Row: {
-          id: string;
-          event_id: string;
-          file_path: string;
-          file_name: string;
+      Row: {
+        id: string;
+        event_id: string;
+        file_path: string;
+        file_name: string;
           file_size: Nullable<number>;
           mime_type: Nullable<string>;
           caption: Nullable<string>;
@@ -238,17 +245,18 @@ export interface Database {
           file_name?: string;
           file_size?: Nullable<number>;
           mime_type?: Nullable<string>;
-          caption?: Nullable<string>;
-          uploaded_by?: string;
-          created_at?: string;
-        };
+        caption?: Nullable<string>;
+        uploaded_by?: string;
+        created_at?: string;
       };
+      Relationships: [];
+    };
       story_archives: {
-        Row: {
-          id: string;
-          user_id: string;
-          title: Nullable<string>;
-          prompt: Nullable<string>;
+      Row: {
+        id: string;
+        user_id: string;
+        title: Nullable<string>;
+        prompt: Nullable<string>;
           article: Nullable<string>;
           image_path: Nullable<string>;
           photo_id: Nullable<string>;
@@ -279,17 +287,18 @@ export interface Database {
           image_path?: Nullable<string>;
           photo_id?: Nullable<string>;
           template_id?: Nullable<string>;
-          is_public?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
+        is_public?: boolean;
+        created_at?: string;
+        updated_at?: string;
       };
+      Relationships: [];
+    };
       templates: {
-        Row: {
-          id: string;
-          title: string;
-          slug: string;
-          html: string;
+      Row: {
+        id: string;
+        title: string;
+        slug: string;
+        html: string;
           css: Nullable<string>;
           is_system: Nullable<boolean>;
           owner: Nullable<string>;
@@ -317,11 +326,12 @@ export interface Database {
           css?: Nullable<string>;
           is_system?: Nullable<boolean>;
           owner?: Nullable<string>;
-          created_at?: string;
-          updated_at?: string;
-          is_public?: Nullable<boolean>;
-        };
+        created_at?: string;
+        updated_at?: string;
+        is_public?: Nullable<boolean>;
       };
+      Relationships: [];
+    };
     };
     Views: {
       templates_public: {
@@ -336,6 +346,7 @@ export interface Database {
         };
         Insert: never;
         Update: never;
+        Relationships: [];
       };
     };
     Functions: Record<string, never>;
@@ -349,6 +360,7 @@ export interface Database {
         | 'minimal'
         | 'scrapbook';
     };
+    CompositeTypes: Record<string, never>;
   };
   storage: {
     Tables: {
@@ -383,6 +395,7 @@ export interface Database {
           file_size_limit?: Nullable<number>;
           allowed_mime_types?: Nullable<string[]>;
         };
+        Relationships: [];
       };
       objects: {
         Row: {
@@ -418,10 +431,12 @@ export interface Database {
           metadata?: Nullable<Json>;
           path_tokens?: Nullable<string[]>;
         };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }
