@@ -278,15 +278,6 @@ const toTitleCase = (value: string) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
-const toSentenceCase = (value: string) => {
-  if (!value) {
-    return '';
-  }
-  const normalized = value.trim();
-  const firstChar = normalized.charAt(0).toUpperCase();
-  return `${firstChar}${normalized.slice(1)}`;
-};
-
 const detectPalette = (text: string): StoryPalette => {
   const lowered = text.toLowerCase();
   for (const palette of storyPalettes) {
