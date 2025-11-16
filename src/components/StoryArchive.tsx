@@ -121,7 +121,8 @@ export function StoryArchive({
   onToggleShare,
 }: StoryArchiveProps) {
   const hasStories = stories.length > 0;
-  const readyStories = stories.filter((story) => Boolean(story.article));
+  const readyStories = stories.filter((story) => Boolean(story.article || story.prompt));
+  const canExportEdition = readyStories.length > 0;
 
   return (
     <section className="story-archive">
@@ -142,7 +143,7 @@ export function StoryArchive({
           <Button
             type="button"
             onClick={() => openEditionPreview(readyStories)}
-            disabled={readyStories.length === 0}
+            disabled={!canExportEdition}
           >
             <ArchiveIcon size={16} strokeWidth={1.75} />
             Export edition

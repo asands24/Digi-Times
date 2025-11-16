@@ -13,6 +13,7 @@ import {
   ImageIcon,
   Loader2,
   RefreshCcw,
+  Share2,
   Sparkles,
   Trash2,
   Upload,
@@ -115,6 +116,7 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const entryUrlsRef = useRef<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
+  const shareUrlRef = useRef<string | null>(null);
 
   const handleFiles = useCallback(
     async (list: FileList | null) => {
@@ -216,6 +218,36 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
       }
       return prev.filter((entry) => entry.id !== id);
     });
+  }, []);
+
+  const handleShareLink = useCallback(async () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const url =
+      shareUrlRef.current ||
+      (() => {
+        const next = new URL(window.location.href);
+        next.searchParams.set('guest', '1');
+        const result = next.toString();
+        shareUrlRef.current = result;
+        return result;
+      })();
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ url, title: 'DigiTimes Edition' });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast.success('Share link copied');
+      } else {
+        toast.error('Sharing isn’t supported on this browser.');
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Share failed', error);
+      }
+    }
   }, []);
 
   const clearEntries = useCallback(() => {
@@ -684,6 +716,10 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
             >
               <Sparkles size={16} strokeWidth={1.75} />
               Generate all articles
+            </Button>
+            <Button type="button" variant="outline" onClick={handleShareLink}>
+              <Share2 size={16} strokeWidth={1.75} />
+              Share viewing link
             </Button>
           </div>
         </>
