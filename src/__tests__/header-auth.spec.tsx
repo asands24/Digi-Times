@@ -1,7 +1,9 @@
+import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import toast from 'react-hot-toast';
 import { Header } from '../components/Header';
+import * as AuthProvider from '../providers/AuthProvider';
 
 jest.mock('../components/ui/dropdown-menu', () => {
   const React = require('react');
@@ -67,27 +69,12 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
 }));
 
-jest.mock('../lib/supabaseClient', () => {
-  const mockSupabaseAuth = { signOut: jest.fn() };
-  const mockSupabaseClient = { auth: mockSupabaseAuth };
-  return {
-    supabase: mockSupabaseClient,
-    getSupabase: jest.fn(() => mockSupabaseClient),
-  };
-});
+const mockSignOut = jest.fn().mockResolvedValue({ error: null });
+const useAuthSpy = jest.spyOn(AuthProvider, 'useAuth');
 
-const mockUseNavigate = jest.requireMock('react-router-dom')
-  .useNavigate as jest.Mock;
+const mockUseNavigate = jest.requireMock('react-router-dom').useNavigate as jest.Mock;
 const mockNavigate = jest.fn();
 mockUseNavigate.mockReturnValue(mockNavigate);
-
-const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
-  getSupabase: jest.Mock;
-  supabase: { auth: { signOut: jest.Mock } };
-};
-const mockGetSupabase = supabaseModule.getSupabase;
-const mockSupabaseClient = supabaseModule.supabase;
-const mockSignOut = mockSupabaseClient.auth.signOut;
 
 jest.mock('react-hot-toast', () => ({
   __esModule: true,
@@ -108,12 +95,24 @@ const setupUser = () =>
 describe('Header auth actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetSupabase.mockReturnValue(mockSupabaseClient as any);
     mockUseNavigate.mockReturnValue(mockNavigate);
     mockNavigate.mockClear();
-    mockSignOut.mockResolvedValue({ error: null });
-    mockNavigate.mockClear();
     mockSignOut.mockClear();
+    mockSignOut.mockResolvedValue({ error: null });
+    useAuthSpy.mockReturnValue({
+      user: { id: 'user-1', email: 'guest@example.com' },
+      profile: null,
+      loading: false,
+      signInWithMagicLink: jest.fn(),
+      signInWithOAuth: jest.fn(),
+      signOut: mockSignOut,
+      updateProfile: jest.fn(),
+      fetchProfile: jest.fn(),
+    } as any);
+  });
+
+  afterEach(() => {
+    useAuthSpy.mockReset();
   });
 
   it('navigates to settings and logs out via Supabase', async () => {

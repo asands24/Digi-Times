@@ -34,7 +34,7 @@ export function Header() {
       return userEmail;
     }
 
-    return 'Signed in user';
+    return 'guest@digitimes.app';
   }, [profile?.display_name, profile?.email, user?.email]);
 
   const handleNavigateSettings = useCallback(() => {

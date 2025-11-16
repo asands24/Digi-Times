@@ -237,6 +237,12 @@ export const AuthProvider = ({ children }) => {
       toast.error('Supabase is not configured')
       return { error: new Error('Supabase not configured') }
     }
+    if (useMockAuth) {
+      setUser(null)
+      setProfile(null)
+      toast.success('Signed out successfully')
+      return { error: null }
+    }
     try {
       setLoading(true)
       const { error } = await supabase.auth.signOut()
