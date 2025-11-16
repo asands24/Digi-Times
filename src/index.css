@@ -1020,6 +1020,23 @@ a {
   font-size: 0.8rem;
 }
 
+.template-gallery__grid--page {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.template-gallery__notice {
+  font-family: var(--font-sans);
+  letter-spacing: 0.16em;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-top: 1rem;
+}
+
+.template-card--static {
+  cursor: default;
+}
+
 .template-gallery__empty {
   text-align: center;
   font-family: var(--font-sans);

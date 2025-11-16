@@ -12,49 +12,38 @@ export default function Templates() {
         html: '',
         css: '',
         is_system: true,
-        created_at: null,
+        created_at: new Date().toISOString(),
       })),
     [],
   );
 
-  const [rows, setRows] = useState<TemplateRow[] | null>(null);
+  const [rows, setRows] = useState<TemplateRow[]>(staticRows);
   const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
       try {
         const data = await fetchAllTemplates();
-        if (!data || data.length === 0) {
-          setRows(staticRows);
-        } else {
+        if (data && data.length > 0) {
           setRows(data);
+          setErr(null);
+        } else if (!data || data.length === 0) {
+          setErr('Showing featured templates while Supabase loads.');
+          setRows(staticRows);
         }
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
         console.error('Templates load failed:', message);
+        setErr('Showing featured templates while Supabase loads.');
         setRows(staticRows);
-        setErr(null);
       } finally {
         setLoading(false);
       }
     }
     void load();
   }, [staticRows]);
-
-  const renderMessage = (message: string) => (
-    <section className="container" style={{ padding: '2rem 1rem' }}>
-      <div className="card">
-        <p className="muted" style={{ margin: 0 }}>
-          {message}
-        </p>
-      </div>
-    </section>
-  );
-
-  if (loading) return renderMessage('Loading templates…');
-  if (err) return renderMessage('Could not load templates.');
-  if (!rows || rows.length === 0) return renderMessage('No public templates yet.');
 
   return (
     <section className="container" style={{ padding: '2.5rem 1rem' }}>
@@ -67,6 +56,11 @@ export default function Templates() {
               inspire your next edition.
             </p>
           </div>
+          {loading ? (
+            <div className="template-gallery__notice">Loading templates…</div>
+          ) : err ? (
+            <div className="template-gallery__notice">{err}</div>
+          ) : null}
         </header>
         <div className="template-gallery__grid template-gallery__grid--page">
           {rows.map((t) => (
