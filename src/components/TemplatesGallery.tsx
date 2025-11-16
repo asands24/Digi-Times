@@ -5,11 +5,36 @@ import { fetchAllTemplates } from '../lib/templates';
 import type { TemplateRow } from '../lib/templates';
 import type { StoryTemplate } from '../types/story';
 import { cn } from '../utils/cn';
+import { groupTemplates } from '../data/templates';
 
 interface TemplatesGalleryProps {
   selectedTemplateId: string | null;
   onSelect: (template: StoryTemplate) => void;
   autoSelectFirst?: boolean;
+}
+
+const STATIC_TEMPLATE_FALLBACK: StoryTemplate[] = groupTemplates.map((template) => ({
+  id: template.id,
+  title: template.title ?? template.name ?? 'Template',
+  slug: template.name ?? template.title ?? template.id,
+  html: '',
+  css: '',
+  isSystem: true,
+  owner: null,
+}));
+
+function mapTemplateRow(row: TemplateRow): StoryTemplate {
+  const fallbackSlug = row.slug ?? row.title ?? `template-${row.id}`;
+  const fallbackTitle = row.title ?? fallbackSlug ?? 'Untitled';
+  return {
+    id: row.id,
+    title: fallbackTitle,
+    slug: fallbackSlug,
+    html: row.html ?? '',
+    css: row.css ?? '',
+    isSystem: Boolean(row.is_system),
+    owner: null,
+  };
 }
 
 export function TemplatesGallery({
@@ -32,25 +57,18 @@ export function TemplatesGallery({
           return;
         }
 
-        const mapped = data.map<StoryTemplate>((row: TemplateRow) => {
-          const fallbackSlug = row.slug ?? row.title ?? `template-${row.id}`;
-          const fallbackTitle = row.title ?? fallbackSlug ?? 'Untitled';
-          return {
-            id: row.id,
-            title: fallbackTitle,
-            slug: fallbackSlug,
-            html: row.html ?? '',
-            css: row.css ?? '',
-            isSystem: Boolean(row.is_system),
-            owner: null,
-          };
-        });
+        const mapped = data.map((row: TemplateRow) => mapTemplateRow(row));
+
+        if (mapped.length === 0) {
+          throw new Error('No templates');
+        }
 
         setTemplates(mapped);
         setLoading(false);
       } catch (error) {
         if (!cancelled) {
-          toast.error('Could not load templates.');
+          toast.error('Could not load templates from Supabase. Showing featured layouts instead.');
+          setTemplates(STATIC_TEMPLATE_FALLBACK);
           setLoading(false);
         }
       }

@@ -9,6 +9,7 @@ import {
 } from 'react';
 import {
   Archive,
+  Camera,
   ImageIcon,
   Loader2,
   RefreshCcw,
@@ -107,6 +108,7 @@ const buildBodyHtml = (article: GeneratedArticle) => {
 
 export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [entries, setEntries] = useState<StoryEntry[]>([]);
@@ -425,23 +427,42 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
           className="story-dropzone__input"
           onChange={onFileInputChange}
         />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="story-dropzone__input"
+          onChange={onFileInputChange}
+        />
 
         <div className="story-dropzone__icon">
           <Upload size={28} strokeWidth={1.75} />
         </div>
         <div className="story-dropzone__text">
           <strong>Drag & drop photos here</strong>
-          <span>or click to browse your library</span>
+          <span>or use the buttons below to choose from your photo library.</span>
         </div>
-        <Button
-          type="button"
-          className="story-dropzone__cta"
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <ImageIcon size={16} strokeWidth={1.75} />
-          Choose photos
-        </Button>
+        <div className="story-dropzone__actions">
+          <Button
+            type="button"
+            className="story-dropzone__cta"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <ImageIcon size={16} strokeWidth={1.75} />
+            Choose from photos
+          </Button>
+          <Button
+            type="button"
+            className="story-dropzone__cta"
+            variant="ghost"
+            onClick={() => cameraInputRef.current?.click()}
+          >
+            <Camera size={16} strokeWidth={1.75} />
+            Take a photo
+          </Button>
+        </div>
         <p className="story-dropzone__hint">
           We support JPG, PNG, and WebP files up to 10MB.
         </p>
