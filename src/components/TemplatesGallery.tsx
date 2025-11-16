@@ -87,6 +87,11 @@ export function TemplatesGallery({
     return [system, personal];
   }, [templates]);
 
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.id === selectedTemplateId) ?? null,
+    [selectedTemplateId, templates],
+  );
+
   useEffect(() => {
     if (!autoSelectFirst) {
       return;
@@ -108,6 +113,16 @@ export function TemplatesGallery({
           <p>Pick the layout you want to use for the next story you archive.</p>
         </div>
       </header>
+      <div className="template-gallery__selection">
+        {selectedTemplate ? (
+          <>
+            <span>Selected layout</span>
+            <strong>{selectedTemplate.title}</strong>
+          </>
+        ) : (
+          <span>Tap a template card to set it for your next story.</span>
+        )}
+      </div>
 
       {loading ? (
         <div className="template-gallery__empty">Loading templates…</div>

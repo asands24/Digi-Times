@@ -109,6 +109,7 @@ const buildBodyHtml = (article: GeneratedArticle) => {
 export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const autoGenerateQueue = useRef<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [entries, setEntries] = useState<StoryEntry[]>([]);
@@ -168,6 +169,7 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
       }
 
       setEntries((prev) => [...prev, ...validEntries]);
+      validEntries.forEach((entry) => autoGenerateQueue.current.add(entry.id));
     },
     [globalPrompt],
   );
@@ -258,7 +260,10 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
         return;
       }
 
-      const idea = target.prompt.trim() || globalPrompt.trim();
+      const idea =
+        target.prompt.trim() ||
+        globalPrompt.trim() ||
+        `Front-page spotlight: ${target.file.name.replace(/\.[^/.]+$/, '')}`;
       if (!idea) {
         toast.error('Add a story idea to guide the article.');
         return;
@@ -293,6 +298,23 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
     },
     [entries, globalPrompt],
   );
+
+  useEffect(() => {
+    if (autoGenerateQueue.current.size === 0) {
+      return;
+    }
+    autoGenerateQueue.current.forEach((id) => {
+      const pending = entries.find((entry) => entry.id === id);
+      if (!pending) {
+        autoGenerateQueue.current.delete(id);
+        return;
+      }
+      if (pending.status === 'idle') {
+        generateStory(id);
+      }
+      autoGenerateQueue.current.delete(id);
+    });
+  }, [entries, generateStory]);
 
   const generateAllStories = useCallback(() => {
     if (entries.length === 0) {
@@ -497,16 +519,10 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
               {entries.length}{' '}
               {entries.length === 1 ? 'draft ready' : 'drafts ready'}
             </span>
-            <div className="story-builder__actions-buttons">
-              <Button type="button" onClick={generateAllStories} disabled={!entries.length}>
-                <Sparkles size={16} strokeWidth={1.75} />
-                Generate all articles
-              </Button>
-              <Button variant="outline" type="button" onClick={clearEntries}>
-                <Trash2 size={16} strokeWidth={1.75} />
-                Clear all
-              </Button>
-            </div>
+            <Button variant="outline" type="button" onClick={clearEntries}>
+              <Trash2 size={16} strokeWidth={1.75} />
+              Clear all
+            </Button>
           </div>
 
           <div className="story-grid">
@@ -649,6 +665,21 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
                 </div>
               </article>
             ))}
+          </div>
+
+          <div className="story-bulk-actions">
+            <div className="story-bulk-actions__copy">
+              <strong>Generate all stories</strong>
+              <p>We’ll write a draft for every photo automatically.</p>
+            </div>
+            <Button
+              type="button"
+              onClick={generateAllStories}
+              disabled={!entries.some((entry) => entry.status === 'idle')}
+            >
+              <Sparkles size={16} strokeWidth={1.75} />
+              Generate all articles
+            </Button>
           </div>
         </>
       ) : (
