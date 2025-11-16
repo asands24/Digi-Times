@@ -294,6 +294,28 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
     [entries, globalPrompt],
   );
 
+  const generateAllStories = useCallback(() => {
+    if (entries.length === 0) {
+      toast.error('Add at least one photo to generate an article.');
+      return;
+    }
+
+    if (!globalPrompt.trim()) {
+      const missingPrompt = entries.some((entry) => !entry.prompt.trim());
+      if (missingPrompt) {
+        toast.error('Add a story idea or fill each prompt before generating all stories.');
+        return;
+      }
+    }
+
+    entries.forEach((entry) => {
+      if (entry.status === 'idle') {
+        generateStory(entry.id);
+      }
+    });
+    toast.success('Generating newsroom drafts for every photo…');
+  }, [entries, generateStory, globalPrompt]);
+
   const archiveStory = useCallback(
     async (id: string) => {
       const entry = entries.find((item) => item.id === id);
@@ -475,10 +497,16 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
               {entries.length}{' '}
               {entries.length === 1 ? 'draft ready' : 'drafts ready'}
             </span>
-            <Button variant="outline" type="button" onClick={clearEntries}>
-              <Trash2 size={16} strokeWidth={1.75} />
-              Clear all
-            </Button>
+            <div className="story-builder__actions-buttons">
+              <Button type="button" onClick={generateAllStories} disabled={!entries.length}>
+                <Sparkles size={16} strokeWidth={1.75} />
+                Generate all articles
+              </Button>
+              <Button variant="outline" type="button" onClick={clearEntries}>
+                <Trash2 size={16} strokeWidth={1.75} />
+                Clear all
+              </Button>
+            </div>
           </div>
 
           <div className="story-grid">

@@ -5,6 +5,7 @@ import UploadPhoto from '../components/UploadPhoto';
 import PhotoGallery from '../components/PhotoGallery';
 import { getSupabase } from '../lib/supabaseClient';
 import { fetchAllTemplates } from '../lib/templates';
+import { groupTemplates } from '../data/templates';
 
 jest.mock('../lib/supabaseClient', () => {
   const supabaseInstance = {
@@ -80,13 +81,13 @@ test('Templates renders public rows from Supabase', async () => {
   expect(mockFetchAllTemplates).toHaveBeenCalled();
 });
 
-test('Templates shows empty state when no rows are returned', async () => {
+test('Templates falls back to featured layouts when remote data is empty', async () => {
   mockFetchAllTemplates.mockResolvedValue([]);
 
   render(<Templates />);
 
   await waitFor(() => {
-    expect(screen.getByText('No public templates yet.')).toBeInTheDocument();
+    expect(screen.getAllByText(groupTemplates[0].title).length).toBeGreaterThan(0);
   });
 });
 

@@ -389,6 +389,13 @@ a {
   color: var(--ink-muted);
 }
 
+.story-builder__actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .story-grid {
   display: grid;
   gap: 2rem;
@@ -988,6 +995,14 @@ a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
+}
+
+.template-gallery__grid--page {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.template-card--static {
+  cursor: default;
 }
 
 .template-gallery__group {
