@@ -359,6 +359,12 @@ a {
   color: var(--ink-muted);
 }
 
+.story-dropzone__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .story-dropzone__hint {
   margin: 0;
   font-family: var(--font-sans);

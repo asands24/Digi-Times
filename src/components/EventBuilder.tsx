@@ -433,6 +433,15 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
           <strong>Drag & drop photos here</strong>
           <span>or click to browse your library</span>
         </div>
+        <Button
+          type="button"
+          className="story-dropzone__cta"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <ImageIcon size={16} strokeWidth={1.75} />
+          Choose photos
+        </Button>
         <p className="story-dropzone__hint">
           We support JPG, PNG, and WebP files up to 10MB.
         </p>

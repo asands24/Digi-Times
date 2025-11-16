@@ -10,19 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { getSupabase } from '../lib/supabaseClient';
 import { useAuth } from '../providers/AuthProvider';
 
 export function Header() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
-
-  const formattedDate = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date());
+  const { user, profile, signOut } = useAuth();
 
   const displayName = useMemo(() => {
     const profileName =
@@ -30,32 +22,37 @@ export function Header() {
     if (profileName) {
       return profileName;
     }
-    if (typeof user?.email === 'string' && user.email.length > 0) {
-      return user.email;
+
+    const profileEmail =
+      typeof profile?.email === 'string' ? profile.email.trim() : '';
+    if (profileEmail) {
+      return profileEmail;
     }
-    return 'Guest Reporter';
-  }, [profile?.display_name, user?.email]);
+
+    const userEmail = typeof user?.email === 'string' ? user.email.trim() : '';
+    if (userEmail) {
+      return userEmail;
+    }
+
+    return 'Signed in user';
+  }, [profile?.display_name, profile?.email, user?.email]);
 
   const handleNavigateSettings = useCallback(() => {
     navigate('/settings');
   }, [navigate]);
 
   const handleSignOut = useCallback(async () => {
-    const { error } = await getSupabase().auth.signOut();
+    const { error } = await signOut();
     if (error) {
       toast.error('Failed to log out. Please try again.');
       return;
     }
     navigate('/login');
-  }, [navigate]);
+  }, [navigate, signOut]);
 
   return (
     <header className="editorial-header">
       <div className="editorial-header__inner">
-        <div className="editorial-header__date">
-          {formattedDate}
-        </div>
-
         <div className="editorial-header__logo" role="banner">
           <span className="editorial-header__name">DIGITIMES</span>
           <span className="editorial-header__tagline">
