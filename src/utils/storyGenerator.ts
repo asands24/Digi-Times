@@ -2,6 +2,8 @@ interface StoryGeneratorOptions {
   prompt?: string;
   fileName?: string;
   capturedAt?: Date;
+  templateName?: string;
+  storyIndex?: number;
 }
 
 interface GeneratedArticle {
@@ -254,6 +256,14 @@ const STAFF_BYLINES = [
   'By Family Features Bureau',
 ];
 
+const FALLBACK_SUBJECTS = [
+  'Front Page Moment',
+  'Neighborhood Chronicle',
+  'Family Spotlight',
+  'Morning Edition Feature',
+  'Evening Dispatch',
+];
+
 const sanitize = (value: string | undefined) =>
   (value ?? '')
     .replace(/[_-]+/g, ' ')
@@ -310,22 +320,29 @@ const formatDate = (value: Date) => {
 export const generateArticle = (
   options: StoryGeneratorOptions,
 ): GeneratedArticle => {
-  const prompt = sanitize(options.prompt) || 'Captured celebration';
+  const prompt = sanitize(options.prompt);
   const fileName =
     sanitize(options.fileName?.replace(/\.[^.]+$/, '')) || 'family moment';
-  const combinedSubject = prompt || fileName;
-  const seed = computeSeed(prompt, fileName);
+  const looksGeneric =
+    /^((img|dsc|photo|p|image)[-_]?\d+)$/i.test(fileName) ||
+    fileName.replace(/\s+/g, '').length <= 2;
+  const baseSeed = computeSeed(prompt || 'family moment', fileName);
+  const fallbackSubject = pick(FALLBACK_SUBJECTS, baseSeed, 0);
+  let combinedSubject =
+    prompt ||
+    (!looksGeneric ? fileName : '') ||
+    fallbackSubject ||
+    'Front Page Moment';
+  const seed = baseSeed + (options.storyIndex ?? 0);
   const palette = detectPalette(prompt);
   const subject = toTitleCase(
     combinedSubject
       .split(' ')
       .slice(0, 6)
       .join(' ')
-      .trim() || 'Family Spotlight',
+      .trim() || fallbackSubject,
   );
-  const subjectLower = toSentenceCase(
-    combinedSubject.replace(/[.?!]/g, '').toLowerCase(),
-  );
+  const subjectLower = subject.toLowerCase();
 
   const tonal = pick(palette.tones, seed, 1);
   const headlineTemplate = pick(palette.headline, seed, 2);
@@ -345,6 +362,10 @@ export const generateArticle = (
     .replace('{subjectLower}', subjectLower)
     .replace('{tonal}', toTitleCase(tonal));
 
+  const layoutPhrase = options.templateName
+    ? `Presented in the ${options.templateName} layout.`
+    : '';
+
   const subheadline = subheadlineTemplate
     .replace('{subject}', subject)
     .replace('{subjectLower}', subjectLower)
@@ -352,10 +373,16 @@ export const generateArticle = (
 
   return {
     headline,
-    subheadline,
+    subheadline: layoutPhrase
+      ? `${subheadline} ${layoutPhrase}`.trim()
+      : subheadline,
     byline,
     dateline,
-    body: [opener, development, closing],
+    body: [
+      opener,
+      development,
+      layoutPhrase ? `${closing} ${layoutPhrase}`.trim() : closing,
+    ],
     quote,
     tags: palette.tags,
   };

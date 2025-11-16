@@ -264,10 +264,13 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
         target.prompt.trim() ||
         globalPrompt.trim() ||
         `Front-page spotlight: ${target.file.name.replace(/\.[^/.]+$/, '')}`;
+
       if (!idea) {
         toast.error('Add a story idea to guide the article.');
         return;
       }
+
+      const entryIndex = entries.findIndex((entry) => entry.id === id);
 
       setEntries((prev) =>
         prev.map((entry) =>
@@ -280,6 +283,8 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
         prompt: idea,
         fileName: target.file.name,
         capturedAt: target.createdAt,
+        templateName: selectedTemplate?.title,
+        storyIndex: entryIndex,
       });
 
       schedule(() => {
@@ -296,7 +301,7 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
         );
       }, delay);
     },
-    [entries, globalPrompt],
+    [entries, globalPrompt, selectedTemplate],
   );
 
   useEffect(() => {

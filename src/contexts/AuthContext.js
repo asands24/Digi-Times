@@ -36,6 +36,13 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [useMockAuth] = useState(process.env.REACT_APP_USE_MOCK_AUTH === 'true')
+  const [shouldForceGuest, setShouldForceGuest] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+    const params = new URLSearchParams(window.location.search)
+    return params.get('guest') === '1'
+  })
   const supabase = useMemo(() => {
     try {
       return getSupabase()
@@ -109,6 +116,18 @@ export const AuthProvider = ({ children }) => {
         return
       }
       try {
+        if (shouldForceGuest) {
+          await supabase.auth.signOut()
+          setUser(null)
+          setProfile(null)
+          setShouldForceGuest(false)
+          if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search)
+            params.delete('guest')
+            const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash}`
+            window.history.replaceState({}, '', next)
+          }
+        }
         // Use mock auth if enabled
         if (useMockAuth) {
           const mockUser = {
@@ -172,7 +191,7 @@ export const AuthProvider = ({ children }) => {
 
     return () => subscription.unsubscribe()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [shouldForceGuest])
 
   const signInWithMagicLink = async (email) => {
     if (!supabase) {

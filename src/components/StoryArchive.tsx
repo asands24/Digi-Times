@@ -1,4 +1,4 @@
-import { Calendar, Eye, RefreshCcw } from 'lucide-react';
+import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import type { ArchiveItem } from '../hooks/useStoryLibrary';
 
@@ -25,6 +25,94 @@ const formatTimestamp = (value: string | null) => {
   }
 };
 
+const openEditionPreview = (stories: ArchiveItem[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const readyStories = stories.filter((story) => Boolean(story.article));
+  if (readyStories.length === 0) {
+    return;
+  }
+  const win = window.open('', '_blank', 'noopener,noreferrer');
+  if (!win) {
+    return;
+  }
+  const doc = win.document;
+  const articles = readyStories
+    .map((story) => {
+      const articleHtml = story.article ?? '<p>This story is still drafting.</p>';
+      return `
+        <article class="edition-story">
+          <h2>${story.title ?? 'Untitled story'}</h2>
+          <div class="edition-story__meta">${formatTimestamp(story.created_at)}</div>
+          <div class="edition-story__body">${articleHtml}</div>
+        </article>
+      `;
+    })
+    .join('');
+  doc.open();
+  doc.write(`<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8"/>
+        <title>DigiTimes Edition</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+        <style>
+          body {
+            margin: 0;
+            padding: 2rem;
+            font-family: 'Libre Baskerville', serif;
+            background: #fdfaf2;
+            color: #2b241c;
+          }
+          .edition-grid {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          }
+          h1 {
+            text-transform: uppercase;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 0.3em;
+            text-align: center;
+            margin-bottom: 2rem;
+          }
+          .edition-story {
+            border: 1px solid rgba(196, 165, 116, 0.6);
+            border-radius: 18px;
+            padding: 1.5rem;
+            background: linear-gradient(180deg, #fffdf8 0%, #f7ecd6 100%);
+            box-shadow: 0 18px 36px rgba(59, 48, 34, 0.08);
+          }
+          .edition-story h2 {
+            margin-top: 0;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+          .edition-story__meta {
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            color: #7a6d5b;
+          }
+          .edition-story__body p {
+            line-height: 1.7;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>DigiTimes Edition</h1>
+        <section class="edition-grid">${articles}</section>
+      </body>
+    </html>`);
+  doc.close();
+  win.focus();
+};
+
 export function StoryArchive({
   stories,
   loading,
@@ -33,6 +121,7 @@ export function StoryArchive({
   onToggleShare,
 }: StoryArchiveProps) {
   const hasStories = stories.length > 0;
+  const readyStories = stories.filter((story) => Boolean(story.article));
 
   return (
     <section className="story-archive">
@@ -45,10 +134,20 @@ export function StoryArchive({
             edit, preview, and publish a polished newspaper spread.
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
-          <RefreshCcw size={16} strokeWidth={1.75} />
-          Refresh
-        </Button>
+        <div className="story-archive__header-actions">
+          <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
+            <RefreshCcw size={16} strokeWidth={1.75} />
+            Refresh
+          </Button>
+          <Button
+            type="button"
+            onClick={() => openEditionPreview(readyStories)}
+            disabled={readyStories.length === 0}
+          >
+            <ArchiveIcon size={16} strokeWidth={1.75} />
+            Export edition
+          </Button>
+        </div>
       </header>
 
       {loading ? (

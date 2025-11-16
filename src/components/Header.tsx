@@ -1,4 +1,4 @@
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, Share2, User } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -41,6 +41,29 @@ export function Header() {
     navigate('/settings');
   }, [navigate]);
 
+  const handleShareLink = useCallback(async () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('guest', '1');
+    const shareUrl = url.toString();
+    try {
+      if (navigator.share) {
+        await navigator.share({ url: shareUrl, title: 'DigiTimes Edition' });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Share link copied');
+      } else {
+        toast.error('Copy not supported on this browser.');
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Share failed', error);
+      }
+    }
+  }, []);
+
   const handleSignOut = useCallback(async () => {
     const { error } = await signOut();
     if (error) {
@@ -60,33 +83,45 @@ export function Header() {
           </span>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="editorial-user"
-              aria-label={`Open account menu for ${displayName}`}
-            >
-              <User size={16} strokeWidth={1.75} />
-              <span className="editorial-user__name">{displayName}</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={handleNavigateSettings}>
-              <Settings size={16} strokeWidth={1.75} />
-              <span>Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="editorial-user__logout"
-              onSelect={handleSignOut}
-            >
-              <LogOut size={16} strokeWidth={1.75} />
-              <span>Log Out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="editorial-header__actions">
+          <Button
+            variant="outline"
+            size="sm"
+            className="editorial-share"
+            type="button"
+            onClick={handleShareLink}
+          >
+            <Share2 size={16} strokeWidth={1.75} />
+            Share
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="editorial-user"
+                aria-label={`Open account menu for ${displayName}`}
+              >
+                <User size={16} strokeWidth={1.75} />
+                <span className="editorial-user__name">{displayName}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={handleNavigateSettings}>
+                <Settings size={16} strokeWidth={1.75} />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="editorial-user__logout"
+                onSelect={handleSignOut}
+              >
+                <LogOut size={16} strokeWidth={1.75} />
+                <span>Log Out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
