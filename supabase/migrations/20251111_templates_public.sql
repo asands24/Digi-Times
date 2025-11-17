@@ -1,8 +1,13 @@
 create or replace view public.templates_public as
 select
   id,
-  coalesce(title, name, 'Untitled') as title,
+  slug,
+  coalesce(title, 'Untitled') as title,
+  null::text as description,
+  html,
+  css,
   is_system,
+  owner,
   created_at
 from public.templates;
 
