@@ -74,6 +74,7 @@ function HomePage() {
           onArchiveSaved={async () => {
             await refreshArchive();
           }}
+          hasArchivedStories={stories.length > 0}
         />
         <StoryArchive
           stories={stories}

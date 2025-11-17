@@ -44,6 +44,7 @@ interface StoryEntry {
 
 interface EventBuilderProps {
   onArchiveSaved?: () => Promise<unknown> | unknown;
+  hasArchivedStories?: boolean;
 }
 
 const createId = () =>
@@ -108,7 +109,7 @@ const buildBodyHtml = (article: GeneratedArticle) => {
   return [decoParts, body, quote, tags].filter(Boolean).join('');
 };
 
-export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
+export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: EventBuilderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const autoGenerateQueue = useRef<Set<string>>(new Set());
@@ -478,6 +479,16 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
       ),
     [entries],
   );
+  const hasDraftWithPrompt = useMemo(
+    () => entries.some((entry) => entry.prompt.trim().length > 0),
+    [entries],
+  );
+  const hasDraftWithArticle = useMemo(
+    () => entries.some((entry) => Boolean(entry.article)),
+    [entries],
+  );
+  const hasShareableDraft = hasDraftWithPrompt || hasDraftWithArticle;
+  const canShareStories = hasShareableDraft || hasArchivedStories;
 
   return (
     <section className="story-builder">
@@ -761,10 +772,20 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
               <Sparkles size={16} strokeWidth={1.75} />
               Generate all articles
             </Button>
-            <Button type="button" variant="outline" onClick={handleShareLink}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleShareLink}
+              disabled={!canShareStories}
+            >
               <Share2 size={16} strokeWidth={1.75} />
               Share viewing link
             </Button>
+            {!canShareStories ? (
+              <span className="story-bulk-actions__hint">
+                Add a prompt or archive a story to enable sharing.
+              </span>
+            ) : null}
           </div>
         </>
       ) : (

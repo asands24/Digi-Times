@@ -44,12 +44,14 @@ export function TemplatesGallery({
 }: TemplatesGalleryProps) {
   const [templates, setTemplates] = useState<StoryTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const fetchTemplates = async () => {
       setLoading(true);
+      setStatusMessage(null);
       try {
         const data = await fetchAllTemplates();
 
@@ -60,15 +62,31 @@ export function TemplatesGallery({
         const mapped = data.map((row: TemplateRow) => mapTemplateRow(row));
 
         if (mapped.length === 0) {
-          throw new Error('No templates');
+          setTemplates(STATIC_TEMPLATE_FALLBACK);
+          if (STATIC_TEMPLATE_FALLBACK.length === 0) {
+            setStatusMessage('No templates available right now.');
+          } else {
+            setStatusMessage('Showing featured templates.');
+          }
+          return;
         }
 
         setTemplates(mapped);
-        setLoading(false);
+        setStatusMessage(null);
       } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        toast.error('Could not load templates from Supabase. Showing featured layouts instead.');
+        const fallback = STATIC_TEMPLATE_FALLBACK;
+        setTemplates(fallback);
+        if (fallback.length === 0) {
+          setStatusMessage('No templates available right now.');
+        } else {
+          setStatusMessage('Showing featured templates.');
+        }
+      } finally {
         if (!cancelled) {
-          toast.error('Could not load templates from Supabase. Showing featured layouts instead.');
-          setTemplates(STATIC_TEMPLATE_FALLBACK);
           setLoading(false);
         }
       }
@@ -124,11 +142,15 @@ export function TemplatesGallery({
         )}
       </div>
 
+      {statusMessage ? (
+        <div className="template-gallery__notice">{statusMessage}</div>
+      ) : null}
+
       {loading ? (
         <div className="template-gallery__empty">Loading templates…</div>
       ) : templates.length === 0 ? (
         <div className="template-gallery__empty">
-          <p>No templates available yet.</p>
+          <p>No templates available right now.</p>
         </div>
       ) : (
         <>

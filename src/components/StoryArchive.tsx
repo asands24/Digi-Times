@@ -1,6 +1,7 @@
 import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import type { ArchiveItem } from '../hooks/useStoryLibrary';
+import { escapeHtml } from '../utils/sanitizeHtml';
 
 interface StoryArchiveProps {
   stories: ArchiveItem[];
@@ -25,12 +26,21 @@ const formatTimestamp = (value: string | null) => {
   }
 };
 
+const buildArticleHtml = (story: ArchiveItem) => {
+  if (story.article && story.article.trim().length > 0) {
+    return story.article;
+  }
+  if (story.prompt && story.prompt.trim().length > 0) {
+    return `<p>${escapeHtml(story.prompt.trim())}</p>`;
+  }
+  return '<p>This story is still drafting.</p>';
+};
+
 const openEditionPreview = (stories: ArchiveItem[]) => {
   if (typeof window === 'undefined') {
     return;
   }
-  const readyStories = stories.filter((story) => Boolean(story.article));
-  if (readyStories.length === 0) {
+  if (stories.length === 0) {
     return;
   }
   const win = window.open('', '_blank', 'noopener,noreferrer');
@@ -38,9 +48,9 @@ const openEditionPreview = (stories: ArchiveItem[]) => {
     return;
   }
   const doc = win.document;
-  const articles = readyStories
+  const articles = stories
     .map((story) => {
-      const articleHtml = story.article ?? '<p>This story is still drafting.</p>';
+      const articleHtml = buildArticleHtml(story);
       return `
         <article class="edition-story">
           <h2>${story.title ?? 'Untitled story'}</h2>
@@ -121,8 +131,11 @@ export function StoryArchive({
   onToggleShare,
 }: StoryArchiveProps) {
   const hasStories = stories.length > 0;
-  const readyStories = stories.filter((story) => Boolean(story.article || story.prompt));
-  const canExportEdition = readyStories.length > 0;
+  const shareableStories = stories.filter((story) =>
+    Boolean(story.article || story.prompt || story.title),
+  );
+  const canExportEdition = shareableStories.length > 0;
+  const showExportHint = !loading && !canExportEdition;
 
   return (
     <section className="story-archive">
@@ -142,12 +155,15 @@ export function StoryArchive({
           </Button>
           <Button
             type="button"
-            onClick={() => openEditionPreview(readyStories)}
+            onClick={() => openEditionPreview(shareableStories)}
             disabled={!canExportEdition}
           >
             <ArchiveIcon size={16} strokeWidth={1.75} />
             Export edition
           </Button>
+          {showExportHint ? (
+            <span className="story-archive__hint">Add a story to enable export.</span>
+          ) : null}
         </div>
       </header>
 

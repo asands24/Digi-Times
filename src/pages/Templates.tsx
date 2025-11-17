@@ -17,32 +17,55 @@ export default function Templates() {
     [],
   );
 
-  const [rows, setRows] = useState<TemplateRow[]>(staticRows);
+  const [rows, setRows] = useState<TemplateRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setLoading(true);
+      setErr(null);
       try {
         const data = await fetchAllTemplates();
+        if (cancelled) {
+          return;
+        }
         if (data && data.length > 0) {
           setRows(data);
           setErr(null);
-        } else if (!data || data.length === 0) {
-          setErr('Showing featured templates while Supabase loads.');
+        } else {
           setRows(staticRows);
+          if (staticRows.length === 0) {
+            setErr('No templates available right now.');
+          } else {
+            setErr('Showing featured templates while Supabase loads.');
+          }
         }
       } catch (e: unknown) {
+        if (cancelled) {
+          return;
+        }
         const message = e instanceof Error ? e.message : String(e);
         console.error('Templates load failed:', message);
-        setErr('Showing featured templates while Supabase loads.');
         setRows(staticRows);
+        if (staticRows.length === 0) {
+          setErr('No templates available right now.');
+        } else {
+          setErr('Showing featured templates while Supabase loads.');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
     void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [staticRows]);
 
   return (
@@ -62,30 +85,40 @@ export default function Templates() {
             <div className="template-gallery__notice">{err}</div>
           ) : null}
         </header>
-        <div className="template-gallery__grid template-gallery__grid--page">
-          {rows.map((t) => (
-            <article
-              key={t.id}
-              className="template-card template-card--static"
-              aria-label={`Template ${t.title}`}
-            >
-              <div className="template-card__badge">Featured layout</div>
-              <h2 className="template-card__title">{t.title}</h2>
-              <p className="template-card__body">
-                <span style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                  Slug
-                </span>
-                <br />
-                <span>{t.slug ?? '—'}</span>
-              </p>
-              {t.is_system ? (
-                <span className="template-card__badge" style={{ color: 'var(--ink-muted)' }}>
-                  System template
-                </span>
-              ) : null}
-            </article>
-          ))}
-        </div>
+        {loading ? (
+          <div className="template-gallery__empty">Loading templates…</div>
+        ) : rows.length === 0 ? (
+          <div className="template-gallery__empty">
+            <p>No templates available right now.</p>
+          </div>
+        ) : (
+          <div className="template-gallery__grid template-gallery__grid--page">
+            {rows.map((t) => (
+              <article
+                key={t.id}
+                className="template-card template-card--static"
+                aria-label={`Template ${t.title}`}
+              >
+                <div className="template-card__badge">Featured layout</div>
+                <h2 className="template-card__title">{t.title}</h2>
+                <p className="template-card__body">
+                  <span
+                    style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase' }}
+                  >
+                    Slug
+                  </span>
+                  <br />
+                  <span>{t.slug ?? '—'}</span>
+                </p>
+                {t.is_system ? (
+                  <span className="template-card__badge" style={{ color: 'var(--ink-muted)' }}>
+                    System template
+                  </span>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
