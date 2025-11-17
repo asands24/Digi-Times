@@ -36,6 +36,7 @@ interface StoryEntry {
   previewUrl: string;
   imageDataUrl: string;
   prompt: string;
+  promptSource: 'global' | 'custom';
   createdAt: Date;
   status: 'idle' | 'generating' | 'ready';
   article?: GeneratedArticle;
@@ -129,6 +130,7 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
         return;
       }
 
+      const trimmedGlobalPrompt = globalPrompt.trim();
       const processed = await Promise.all(
         files.map(async (file): Promise<StoryEntry | null> => {
           if (!file.type.startsWith('image/')) {
@@ -149,7 +151,8 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
               file,
               previewUrl,
               imageDataUrl,
-              prompt: globalPrompt.trim(),
+              prompt: trimmedGlobalPrompt,
+              promptSource: 'global',
               createdAt: new Date(),
               status: 'idle' as const,
             };
@@ -257,16 +260,20 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
 
   const updatePrompt = useCallback((id: string, prompt: string) => {
     setEntries((prev) =>
-      prev.map((entry) =>
-        entry.id === id
-          ? {
-              ...entry,
-              prompt,
-              status: entry.status === 'ready' ? 'idle' : entry.status,
-              article: entry.status === 'ready' ? undefined : entry.article,
-            }
-          : entry,
-      ),
+      prev.map((entry) => {
+        if (entry.id !== id) {
+          return entry;
+        }
+        const trimmed = prompt.trim();
+        const nextSource: StoryEntry['promptSource'] = trimmed.length === 0 ? 'global' : 'custom';
+        return {
+          ...entry,
+          prompt,
+          promptSource: nextSource,
+          status: entry.status === 'ready' ? 'idle' : entry.status,
+          article: entry.status === 'ready' ? undefined : entry.article,
+        };
+      }),
     );
   }, []);
 
@@ -279,10 +286,41 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
     setEntries((prev) =>
       prev.map((entry) =>
         entry.status === 'idle' && !entry.prompt.trim()
-          ? { ...entry, prompt: trimmed }
+          ? { ...entry, prompt: trimmed, promptSource: 'global' }
           : entry,
       ),
     );
+  }, [globalPrompt]);
+
+  useEffect(() => {
+    const trimmed = globalPrompt.trim();
+    const idsToRegenerate: string[] = [];
+    let didChange = false;
+    setEntries((prev) => {
+      if (prev.length === 0) {
+        return prev;
+      }
+      const nextEntries = prev.map((entry) => {
+        if (entry.promptSource !== 'global') {
+          return entry;
+        }
+        if (entry.prompt === trimmed) {
+          return entry;
+        }
+        idsToRegenerate.push(entry.id);
+        didChange = true;
+        return {
+          ...entry,
+          prompt: trimmed,
+          status: 'idle',
+          article: undefined,
+        };
+      });
+      return didChange ? nextEntries : prev;
+    });
+    if (idsToRegenerate.length > 0) {
+      idsToRegenerate.forEach((id) => autoGenerateQueue.current.add(id));
+    }
   }, [globalPrompt]);
 
   const generateStory = useCallback(
@@ -322,7 +360,7 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
       schedule(() => {
         setEntries((prev) =>
           prev.map((entry) =>
-            entry.id === id
+            entry.id === id && entry.status === 'generating'
               ? {
                   ...entry,
                   status: 'ready',

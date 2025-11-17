@@ -50,20 +50,41 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
   }
 
   const supabase = getSupabase();
-  const { data, error } = await supabase
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  let query = supabase
     .from('story_archives')
     .select('id,title,template_id,image_path,created_at,article,prompt,is_public')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (controller) {
+    query = query.abortSignal(controller.signal);
+    timeout = setTimeout(() => controller.abort(), 10000);
+  }
 
-  const rows = (data ?? []) as StoryArchiveRow[];
+  try {
+    const { data, error } = await query;
+    if (error) throw error;
 
-  return rows.map((r) => {
-    if (!r.image_path) return r;
-    const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
-    return { ...r, imageUrl: pub?.publicUrl ?? null };
-  });
+    const rows = (data ?? []) as StoryArchiveRow[];
+
+    return rows.map((r) => {
+      if (!r.image_path) return r;
+      const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
+      return { ...r, imageUrl: pub?.publicUrl ?? null };
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Loading saved stories timed out. Please try again.');
+    }
+    throw error;
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 export async function updateStoryVisibility(id: string, nextValue: boolean): Promise<void> {
