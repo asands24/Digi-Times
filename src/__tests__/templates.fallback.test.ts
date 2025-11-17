@@ -1,11 +1,10 @@
-import type { TemplateRow } from '../lib/templates';
-
 jest.mock('../lib/supabaseClient', () => {
   const supabase = {
     from: jest.fn(),
   };
   return {
     supabase,
+    supabaseClient: supabase,
     getSupabase: jest.fn(() => supabase),
   };
 });
@@ -14,76 +13,57 @@ const supabase = jest.requireMock('../lib/supabaseClient').supabase as {
   from: jest.Mock;
 };
 
-describe('templates view fallback', () => {
+describe('templates local fallback', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('falls back to the legacy templates table when the view errors', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-    const viewOrder = jest.fn().mockResolvedValue({
+  it('returns local templates when Supabase errors', async () => {
+    const order = jest.fn().mockResolvedValue({
       data: null,
       error: new Error('missing view'),
     });
+    const select = jest.fn(() => ({ order }));
+    (supabase.from as jest.Mock).mockReturnValue({ select });
 
-    const fallbackLimit = jest.fn().mockResolvedValue({
+    const { fetchAllTemplates } = await import('../lib/templates');
+    const rows = await fetchAllTemplates();
+
+    expect(rows).toHaveLength(expect.any(Number));
+    expect(rows[0]).toHaveProperty('isSystem', true);
+    expect(order).toHaveBeenCalled();
+  });
+
+  it('maps remote templates when Supabase returns rows', async () => {
+    const order = jest.fn().mockResolvedValue({
       data: [
         {
-          id: 'legacy-1',
-          slug: null,
-          title: null,
-          name: 'Legacy Template',
-          description: 'Desc',
-          html: '<p>Legacy</p>',
-          css: null,
-          is_system: true,
-          is_public: true,
-          inserted_at: '2025-01-01T00:00:00.000Z',
-          created_at: null,
+          id: 'remote-1',
+          slug: 'remote-welcome',
+          title: 'Remote Welcome',
+          html: '<article/>',
+          css: '.news { }',
+          is_system: false,
+          owner: 'user-1',
         },
       ],
       error: null,
     });
-
-    const fallbackOrder = jest.fn().mockReturnValue({
-      limit: fallbackLimit,
-    });
-
-    (supabase.from as jest.Mock).mockImplementation((table: string) => {
-      if (table === 'templates_public') {
-        return {
-          select: jest.fn().mockReturnValue({
-            order: viewOrder,
-          }),
-        };
-      }
-
-      if (table === 'templates') {
-        return {
-          select: jest.fn().mockReturnValue({
-            order: fallbackOrder,
-          }),
-        };
-      }
-
-      throw new Error(`Unexpected table ${table}`);
-    });
+    const select = jest.fn(() => ({ order }));
+    (supabase.from as jest.Mock).mockReturnValue({ select });
 
     const { fetchAllTemplates } = await import('../lib/templates');
-    const rows = (await fetchAllTemplates()) as TemplateRow[];
+    const rows = await fetchAllTemplates();
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      id: 'legacy-1',
-      title: 'Legacy Template',
-      slug: 'Legacy Template',
-      html: '<p>Legacy</p>',
-      css: '',
-      is_system: true,
+      id: 'remote-1',
+      title: 'Remote Welcome',
+      slug: 'remote-welcome',
+      html: '<article/>',
+      css: '.news { }',
+      isSystem: false,
+      owner: 'user-1',
     });
-
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
   });
 });

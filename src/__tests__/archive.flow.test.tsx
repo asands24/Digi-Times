@@ -53,6 +53,7 @@ jest.mock('../lib/supabaseClient', () => {
   };
   return {
     supabase: mockSupabase,
+    supabaseClient: mockSupabase,
     getSupabase: jest.fn(() => mockSupabase),
   };
 });

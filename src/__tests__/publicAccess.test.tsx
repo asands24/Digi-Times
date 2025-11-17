@@ -5,7 +5,6 @@ import UploadPhoto from '../components/UploadPhoto';
 import PhotoGallery from '../components/PhotoGallery';
 import { getSupabase } from '../lib/supabaseClient';
 import { fetchAllTemplates } from '../lib/templates';
-import { groupTemplates } from '../data/templates';
 
 jest.mock('../lib/supabaseClient', () => {
   const supabaseInstance = {
@@ -14,6 +13,7 @@ jest.mock('../lib/supabaseClient', () => {
   const getSupabaseMock = jest.fn(() => supabaseInstance);
   return {
     supabase: supabaseInstance,
+    supabaseClient: supabaseInstance,
     getSupabase: getSupabaseMock,
   };
 });
@@ -68,7 +68,8 @@ test('Templates renders public rows from Supabase', async () => {
       title: 'Welcome Template',
       html: '<article/>',
       css: '',
-      is_system: true,
+      isSystem: true,
+      owner: null,
     },
   ] as any);
 
@@ -81,13 +82,13 @@ test('Templates renders public rows from Supabase', async () => {
   expect(mockFetchAllTemplates).toHaveBeenCalled();
 });
 
-test('Templates falls back to featured layouts when remote data is empty', async () => {
+test('Templates shows an empty state when no templates resolve', async () => {
   mockFetchAllTemplates.mockResolvedValue([]);
 
   render(<Templates />);
 
   await waitFor(() => {
-    expect(screen.getAllByText(groupTemplates[0].title).length).toBeGreaterThan(0);
+    expect(screen.getByText(/No templates available right now/i)).toBeInTheDocument();
   });
 });
 

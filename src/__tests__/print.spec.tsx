@@ -28,7 +28,8 @@ describe('StoryPreviewDialog print behaviour', () => {
       slug: 'template',
       html: '<article><h1>{{headline}}</h1><div class="body">{{bodyHtml}}</div><div class="meta">{{dateline}}</div></article>',
       css: '.meta { font-weight: bold; }',
-      is_system: true,
+      isSystem: true,
+      owner: null,
     });
   });
 

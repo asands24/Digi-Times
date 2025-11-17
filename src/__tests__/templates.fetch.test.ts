@@ -1,25 +1,25 @@
-import type { TemplateRow } from '../lib/templates';
-
 jest.mock('../lib/supabaseClient', () => {
   const supabase = {
     from: jest.fn(),
   };
   return {
     supabase,
+    supabaseClient: supabase,
     getSupabase: jest.fn(() => supabase),
   };
 });
 
 const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
   supabase: { from: jest.Mock };
+  supabaseClient: { from: jest.Mock };
 };
-const supabaseMock = supabaseModule.supabase;
+const supabaseMock = supabaseModule.supabaseClient;
 
 describe('templates_public view fetch', () => {
   it('queries the public view sorted by title', async () => {
     supabaseMock.from.mockReset();
 
-    const order = jest.fn().mockResolvedValue({ data: [] satisfies TemplateRow[], error: null });
+    const order = jest.fn().mockResolvedValue({ data: [], error: null });
     const select = jest.fn(() => ({ order }));
     supabaseMock.from.mockReturnValue({ select });
 

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { fetchAllTemplates, type TemplateRow } from '../lib/templates';
+import { fetchAllTemplates } from '../lib/templates';
+import type { StoryTemplate } from '../types/story';
 import { groupTemplates } from '../data/templates';
 import { formatSupabaseError } from '../utils/errorMessage';
 
 export default function DebugTemplates() {
-  const [rows, setRows] = useState<TemplateRow[] | null>(null);
+  const [rows, setRows] = useState<StoryTemplate[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,8 +51,8 @@ export default function DebugTemplates() {
       <header style={{ marginBottom: '1.5rem' }}>
         <h1>Template Debugger</h1>
         <p>
-          Inspect the raw Supabase payload, featured fallback data, and any error message to confirm
-          what the app sees while loading templates.
+          Inspect the resolved template payload, featured fallback data, and any error message to
+          confirm what the app sees while loading templates.
         </p>
       </header>
 
@@ -60,19 +61,19 @@ export default function DebugTemplates() {
           <strong>Loading:</strong> {loading ? 'Yes' : 'No'}
         </div>
         <div style={{ background: 'var(--surface-muted, #f4f4f4)', padding: '1rem', borderRadius: 8 }}>
-          <strong>Supabase templates:</strong> {supabaseCount}
+          <strong>Templates returned:</strong> {supabaseCount}
         </div>
         <div style={{ background: 'var(--surface-muted, #f4f4f4)', padding: '1rem', borderRadius: 8 }}>
-          <strong>Fallback featured templates:</strong> {fallbackCount}
+          <strong>Local featured templates:</strong> {fallbackCount}
         </div>
         <div style={{ background: 'var(--surface-muted, #f4f4f4)', padding: '1rem', borderRadius: 8 }}>
-          <strong>Supabase error:</strong> {fetchError ?? 'None'}
+          <strong>Fetch error:</strong> {fetchError ?? 'None'}
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: '1.5rem' }}>
         <div>
-          <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Supabase preview (first 3)</h2>
+          <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Resolved preview (first 3)</h2>
           <pre
             style={{
               background: '#111',
@@ -84,12 +85,12 @@ export default function DebugTemplates() {
           >
             {supabasePreview.length > 0
               ? JSON.stringify(supabasePreview, null, 2)
-              : 'No Supabase templates returned.'}
+              : 'No templates returned.'}
           </pre>
         </div>
 
         <div>
-          <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Fallback preview (first 3)</h2>
+          <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Local fallback (first 3)</h2>
           <pre
             style={{
               background: '#111',

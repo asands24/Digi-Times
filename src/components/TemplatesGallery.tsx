@@ -1,43 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, User } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { fetchAllTemplates } from '../lib/templates';
-import type { TemplateRow } from '../lib/templates';
 import type { StoryTemplate } from '../types/story';
 import { cn } from '../utils/cn';
-import { groupTemplates } from '../data/templates';
-import { formatSupabaseError } from '../utils/errorMessage';
-
-const IS_DEV = process.env.NODE_ENV === 'development';
 
 interface TemplatesGalleryProps {
   selectedTemplateId: string | null;
   onSelect: (template: StoryTemplate) => void;
   autoSelectFirst?: boolean;
-}
-
-const STATIC_TEMPLATE_FALLBACK: StoryTemplate[] = groupTemplates.map((template) => ({
-  id: template.id,
-  title: template.title ?? template.name ?? 'Template',
-  slug: template.name ?? template.title ?? template.id,
-  html: '',
-  css: '',
-  isSystem: true,
-  owner: null,
-}));
-
-function mapTemplateRow(row: TemplateRow): StoryTemplate {
-  const fallbackSlug = row.slug ?? row.title ?? `template-${row.id}`;
-  const fallbackTitle = row.title ?? fallbackSlug ?? 'Untitled';
-  return {
-    id: row.id,
-    title: fallbackTitle,
-    slug: fallbackSlug,
-    html: row.html ?? '',
-    css: row.css ?? '',
-    isSystem: Boolean(row.is_system),
-    owner: null,
-  };
 }
 
 export function TemplatesGallery({
@@ -47,59 +17,28 @@ export function TemplatesGallery({
 }: TemplatesGalleryProps) {
   const [templates, setTemplates] = useState<StoryTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [debugMessage, setDebugMessage] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const fetchTemplates = async () => {
       setLoading(true);
-      setStatusMessage(null);
-      if (IS_DEV) {
-        setDebugMessage(null);
-      }
+      setLoadError(null);
       try {
         const data = await fetchAllTemplates();
-
         if (cancelled) {
           return;
         }
 
-        const mapped = data.map((row: TemplateRow) => mapTemplateRow(row));
-
-        if (mapped.length === 0) {
-          setTemplates(STATIC_TEMPLATE_FALLBACK);
-          if (STATIC_TEMPLATE_FALLBACK.length === 0) {
-            setStatusMessage('No templates available right now.');
-          } else {
-            setStatusMessage('Showing featured templates.');
-          }
-          if (IS_DEV) {
-            setDebugMessage('Supabase returned 0 templates (using featured fallback).');
-          }
-          return;
-        }
-
-        setTemplates(mapped);
-        setStatusMessage(null);
-        if (IS_DEV) {
-          setDebugMessage(null);
-        }
+        setTemplates(data);
       } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        toast.error('Could not load templates from Supabase. Showing featured layouts instead.');
-        const fallback = STATIC_TEMPLATE_FALLBACK;
-        setTemplates(fallback);
-        if (fallback.length === 0) {
-          setStatusMessage('No templates available right now.');
-        } else {
-          setStatusMessage('Showing featured templates.');
-        }
-        if (IS_DEV) {
-          setDebugMessage(formatSupabaseError(error));
+        if (!cancelled) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('TemplatesGallery load failed:', error);
+          }
+          setTemplates([]);
+          setLoadError('No templates available right now. Please try again later.');
         }
       } finally {
         if (!cancelled) {
@@ -136,6 +75,24 @@ export function TemplatesGallery({
     }
   }, [autoSelectFirst, onSelect, selectedTemplateId, templates]);
 
+  if (loading) {
+    return (
+      <section className="template-gallery">
+        <div className="templates-loading">Loading templates…</div>
+      </section>
+    );
+  }
+
+  if (!templates || templates.length === 0) {
+    return (
+      <section className="template-gallery">
+        <div className="templates-empty">
+          <p>{loadError ?? 'No templates available right now. Please try again later.'}</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="template-gallery">
       <header className="template-gallery__heading">
@@ -158,78 +115,61 @@ export function TemplatesGallery({
         )}
       </div>
 
-      {statusMessage ? (
-        <div className="template-gallery__notice">{statusMessage}</div>
-      ) : null}
-
-      {IS_DEV && debugMessage ? (
-        <p className="template-gallery__notice" style={{ fontSize: 12 }}>
-          Debug: template fetch failed: {debugMessage}
-        </p>
-      ) : null}
-
-      {loading ? (
-        <div className="template-gallery__empty">Loading templates…</div>
-      ) : templates.length === 0 ? (
-        <div className="template-gallery__empty">
-          <p>No templates available right now.</p>
-        </div>
-      ) : (
-        <>
-          {systemTemplates.length > 0 ? (
-            <div className="template-gallery__group">
-              <h3>System templates</h3>
-              <div className="template-gallery__grid">
-                {systemTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    className={cn('template-card', {
-                      'template-card--active': template.id === selectedTemplateId,
-                    })}
-                    onClick={() => onSelect(template)}
-                    aria-pressed={template.id === selectedTemplateId}
-                  >
-                    <div className="template-card__badge">Featured</div>
-                    <h4 className="template-card__title">{template.title}</h4>
-                    <p className="template-card__body">
-                      Designed by DigiTimes editors for polished spreads.
-                    </p>
-                  </button>
-                ))}
-              </div>
+      <>
+        {systemTemplates.length > 0 ? (
+          <div className="template-gallery__group">
+            <h3>System templates</h3>
+            <div className="template-gallery__grid">
+              {systemTemplates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={cn('template-card', {
+                    'template-card--active': template.id === selectedTemplateId,
+                  })}
+                  onClick={() => onSelect(template)}
+                  aria-pressed={template.id === selectedTemplateId}
+                >
+                  <div className="template-card__badge">Featured</div>
+                  <h4 className="template-card__title">{template.title}</h4>
+                  <p className="template-card__body">
+                    {template.description ?? 'Designed by DigiTimes editors for polished spreads.'}
+                  </p>
+                </button>
+              ))}
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          {personalTemplates.length > 0 ? (
-            <div className="template-gallery__group">
-              <h3>Your templates</h3>
-              <div className="template-gallery__grid">
-                {personalTemplates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    className={cn('template-card', {
-                      'template-card--active': template.id === selectedTemplateId,
-                    })}
-                    onClick={() => onSelect(template)}
-                    aria-pressed={template.id === selectedTemplateId}
-                  >
-                    <div className="template-card__badge template-card__badge--personal">
-                      <User size={14} strokeWidth={1.8} />
-                      Yours
-                    </div>
-                    <h4 className="template-card__title">{template.title}</h4>
-                    <p className="template-card__body">
-                      Saved layouts you can tweak for recurring editions.
-                    </p>
-                  </button>
-                ))}
-              </div>
+        {personalTemplates.length > 0 ? (
+          <div className="template-gallery__group">
+            <h3>Your templates</h3>
+            <div className="template-gallery__grid">
+              {personalTemplates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={cn('template-card', {
+                    'template-card--active': template.id === selectedTemplateId,
+                  })}
+                  onClick={() => onSelect(template)}
+                  aria-pressed={template.id === selectedTemplateId}
+                >
+                  <div className="template-card__badge template-card__badge--personal">
+                    <User size={14} strokeWidth={1.8} />
+                    Yours
+                  </div>
+                  <h4 className="template-card__title">{template.title}</h4>
+                  <p className="template-card__body">
+                    {template.description ??
+                      'Saved layouts you can tweak for recurring editions.'}
+                  </p>
+                </button>
+              ))}
             </div>
-          ) : null}
-        </>
-      )}
+          </div>
+        ) : null}
+      </>
     </section>
   );
 }

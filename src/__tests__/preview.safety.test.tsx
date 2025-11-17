@@ -27,7 +27,8 @@ beforeEach(() => {
     slug: 'template',
     html: '<article><h1>{{headline}}</h1><div class="body">{{bodyHtml}}</div><img src="{{imageUrl}}" /></article>',
     css: 'article { font-family: sans-serif; }',
-    is_system: true,
+    isSystem: true,
+    owner: null,
   });
 });
 

@@ -21,6 +21,7 @@ export interface StoryTemplate {
   slug: string;
   html: string;
   css: string;
+  description?: string | null;
   isSystem: boolean;
   owner: string | null;
 }

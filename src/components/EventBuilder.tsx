@@ -40,6 +40,7 @@ interface StoryEntry {
   createdAt: Date;
   status: 'idle' | 'generating' | 'ready';
   article?: GeneratedArticle;
+  generationId: number;
 }
 
 interface EventBuilderProps {
@@ -109,6 +110,20 @@ const buildBodyHtml = (article: GeneratedArticle) => {
   return [decoParts, body, quote, tags].filter(Boolean).join('');
 };
 
+const normalizePrompt = (value: string) => value.trim();
+
+const getEffectivePrompt = (entry: StoryEntry, globalPrompt: string) => {
+  const trimmedGlobal = normalizePrompt(globalPrompt);
+  if (entry.promptSource === 'global') {
+    return trimmedGlobal;
+  }
+  const trimmedEntry = normalizePrompt(entry.prompt);
+  return trimmedEntry || trimmedGlobal;
+};
+
+const hasEffectivePrompt = (entry: StoryEntry, globalPrompt: string) =>
+  getEffectivePrompt(entry, globalPrompt).length > 0;
+
 export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: EventBuilderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -156,6 +171,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
               promptSource: 'global',
               createdAt: new Date(),
               status: 'idle' as const,
+              generationId: 0,
             };
             return entry;
           } catch (error) {
@@ -333,25 +349,29 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
   const generateStory = useCallback(
     (id: string) => {
       const target = entries.find((entry) => entry.id === id);
-      if (!target) {
+      if (!target || target.status === 'generating') {
         return;
       }
 
-      const idea =
-        target.prompt.trim() ||
-        globalPrompt.trim() ||
-        `Front-page spotlight: ${target.file.name.replace(/\.[^/.]+$/, '')}`;
+      const effectivePrompt = getEffectivePrompt(target, globalPrompt);
+      const cleanFileName = target.file.name.replace(/\.[^/.]+$/, '');
+      const fallbackIdea = `Front-page spotlight: ${cleanFileName || target.file.name || 'Feature'}`;
+      const idea = effectivePrompt || fallbackIdea || 'Front-page spotlight';
 
-      if (!idea) {
-        toast.error('Add a story idea to guide the article.');
-        return;
-      }
-
-      const entryIndex = entries.findIndex((entry) => entry.id === id);
+      const entryIndex = Math.max(entries.findIndex((entry) => entry.id === id), 0);
+      const nextGenerationId = target.generationId + 1;
 
       setEntries((prev) =>
         prev.map((entry) =>
-          entry.id === id ? { ...entry, status: 'generating' } : entry,
+          entry.id === id
+            ? {
+                ...entry,
+                prompt: entry.promptSource === 'global' ? effectivePrompt : entry.prompt,
+                status: 'generating',
+                article: undefined,
+                generationId: nextGenerationId,
+              }
+            : entry,
         ),
       );
 
@@ -361,13 +381,13 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         fileName: target.file.name,
         capturedAt: target.createdAt,
         templateName: selectedTemplate?.title,
-        storyIndex: entryIndex,
+        storyIndex: entryIndex + nextGenerationId,
       });
 
       schedule(() => {
         setEntries((prev) =>
           prev.map((entry) =>
-            entry.id === id && entry.status === 'generating'
+            entry.id === id && entry.generationId === nextGenerationId
               ? {
                   ...entry,
                   status: 'ready',
@@ -452,7 +472,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
           meta: {
             headline: entry.article.headline,
             bodyHtml: buildBodyHtml(entry.article),
-            prompt: entry.prompt,
+            prompt: getEffectivePrompt(entry, globalPrompt),
           },
           templateId: selectedTemplate.id,
           userId,
@@ -468,7 +488,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         toast.error('Could not save to archive.');
       }
     },
-    [entries, onArchiveSaved, removeEntry, selectedTemplate],
+    [entries, globalPrompt, onArchiveSaved, removeEntry, selectedTemplate],
   );
 
   const hasEntries = entries.length > 0;
@@ -480,8 +500,8 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
     [entries],
   );
   const hasDraftWithPrompt = useMemo(
-    () => entries.some((entry) => entry.prompt.trim().length > 0),
-    [entries],
+    () => entries.some((entry) => hasEffectivePrompt(entry, globalPrompt)),
+    [entries, globalPrompt],
   );
   const hasDraftWithArticle = useMemo(
     () => entries.some((entry) => Boolean(entry.article)),
@@ -653,7 +673,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
                       onClick={() => generateStory(entry.id)}
                       disabled={
                         entry.status === 'generating' ||
-                        (!entry.prompt.trim() && !globalPrompt.trim())
+                        !hasEffectivePrompt(entry, globalPrompt)
                       }
                     >
                       {entry.status === 'generating' ? (
