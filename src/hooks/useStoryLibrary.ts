@@ -79,7 +79,7 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Loading saved stories timed out. Please try again.');
     }
-    throw error;
+    throw new Error("We couldn't load your archive. Please refresh and try again.");
   } finally {
     if (timeout) {
       clearTimeout(timeout);

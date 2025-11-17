@@ -34,7 +34,11 @@ function HomePage() {
       setStories(items ?? []);
     } catch (error) {
       console.error('Failed to load archive', error);
-      toast.error('Could not load archive.');
+      const message =
+        error instanceof Error
+          ? error.message
+          : "We couldn't load your archive. Please try again.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

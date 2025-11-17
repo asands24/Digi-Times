@@ -319,6 +319,12 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
       return didChange ? nextEntries : prev;
     });
     if (idsToRegenerate.length > 0) {
+      const count = idsToRegenerate.length;
+      toast(
+        count === 1
+          ? 'Refreshing 1 draft with your new story idea…'
+          : `Refreshing ${count} drafts with your new story idea…`,
+      );
       idsToRegenerate.forEach((id) => autoGenerateQueue.current.add(id));
     }
   }, [globalPrompt]);
