@@ -14,6 +14,9 @@ import { useAuth } from './providers/AuthProvider';
 import LoginPage from './pages/LoginPage';
 import { REQUIRE_LOGIN } from './lib/config';
 import AuthCallback from './pages/AuthCallback';
+import DebugTemplates from './pages/DebugTemplates';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 function HomePage() {
   const [stories, setStories] = useState<ArchiveItem[]>([]);
@@ -125,10 +128,12 @@ export default function App() {
         <Link to="/templates">Templates</Link>
         <Link to="/upload">Upload</Link>
         <Link to="/gallery">Gallery</Link>
+        {IS_DEV ? <Link to="/debug/templates">Template Debug</Link> : null}
       </nav>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/templates" element={<Templates />} />
+        {IS_DEV ? <Route path="/debug/templates" element={<DebugTemplates />} /> : null}
         <Route path="/upload" element={<UploadPhoto />} />
         <Route path="/gallery" element={<PhotoGallery />} />
         <Route path="/logout" element={<Logout />} />

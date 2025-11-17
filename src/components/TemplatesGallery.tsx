@@ -6,6 +6,9 @@ import type { TemplateRow } from '../lib/templates';
 import type { StoryTemplate } from '../types/story';
 import { cn } from '../utils/cn';
 import { groupTemplates } from '../data/templates';
+import { formatSupabaseError } from '../utils/errorMessage';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 interface TemplatesGalleryProps {
   selectedTemplateId: string | null;
@@ -45,6 +48,7 @@ export function TemplatesGallery({
   const [templates, setTemplates] = useState<StoryTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [debugMessage, setDebugMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +56,9 @@ export function TemplatesGallery({
     const fetchTemplates = async () => {
       setLoading(true);
       setStatusMessage(null);
+      if (IS_DEV) {
+        setDebugMessage(null);
+      }
       try {
         const data = await fetchAllTemplates();
 
@@ -68,11 +75,17 @@ export function TemplatesGallery({
           } else {
             setStatusMessage('Showing featured templates.');
           }
+          if (IS_DEV) {
+            setDebugMessage('Supabase returned 0 templates (using featured fallback).');
+          }
           return;
         }
 
         setTemplates(mapped);
         setStatusMessage(null);
+        if (IS_DEV) {
+          setDebugMessage(null);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -84,6 +97,9 @@ export function TemplatesGallery({
           setStatusMessage('No templates available right now.');
         } else {
           setStatusMessage('Showing featured templates.');
+        }
+        if (IS_DEV) {
+          setDebugMessage(formatSupabaseError(error));
         }
       } finally {
         if (!cancelled) {
@@ -144,6 +160,12 @@ export function TemplatesGallery({
 
       {statusMessage ? (
         <div className="template-gallery__notice">{statusMessage}</div>
+      ) : null}
+
+      {IS_DEV && debugMessage ? (
+        <p className="template-gallery__notice" style={{ fontSize: 12 }}>
+          Debug: template fetch failed: {debugMessage}
+        </p>
       ) : null}
 
       {loading ? (

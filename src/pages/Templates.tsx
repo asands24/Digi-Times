@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { fetchAllTemplates, type TemplateRow } from '../lib/templates';
 import { groupTemplates } from '../data/templates';
+import { formatSupabaseError } from '../utils/errorMessage';
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 export default function Templates() {
   const staticRows = useMemo<TemplateRow[]>(
@@ -20,6 +23,7 @@ export default function Templates() {
   const [rows, setRows] = useState<TemplateRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [debugMessage, setDebugMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,6 +31,9 @@ export default function Templates() {
     async function load() {
       setLoading(true);
       setErr(null);
+      if (IS_DEV) {
+        setDebugMessage(null);
+      }
       try {
         const data = await fetchAllTemplates();
         if (cancelled) {
@@ -35,12 +42,18 @@ export default function Templates() {
         if (data && data.length > 0) {
           setRows(data);
           setErr(null);
+          if (IS_DEV) {
+            setDebugMessage(null);
+          }
         } else {
           setRows(staticRows);
           if (staticRows.length === 0) {
             setErr('No templates available right now.');
           } else {
             setErr('Showing featured templates while Supabase loads.');
+          }
+          if (IS_DEV) {
+            setDebugMessage('Supabase returned 0 templates (showing featured fallback).');
           }
         }
       } catch (e: unknown) {
@@ -54,6 +67,9 @@ export default function Templates() {
           setErr('No templates available right now.');
         } else {
           setErr('Showing featured templates while Supabase loads.');
+        }
+        if (IS_DEV) {
+          setDebugMessage(formatSupabaseError(e));
         }
       } finally {
         if (!cancelled) {
@@ -83,6 +99,11 @@ export default function Templates() {
             <div className="template-gallery__notice">Loading templates…</div>
           ) : err ? (
             <div className="template-gallery__notice">{err}</div>
+          ) : null}
+          {IS_DEV && debugMessage ? (
+            <div className="template-gallery__notice" style={{ fontSize: 12 }}>
+              Debug: template fetch failed: {debugMessage}
+            </div>
           ) : null}
         </header>
         {loading ? (
