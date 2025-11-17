@@ -312,7 +312,7 @@ export function EventBuilder({ onArchiveSaved }: EventBuilderProps) {
         return {
           ...entry,
           prompt: trimmed,
-          status: 'idle',
+          status: 'idle' as const,
           article: undefined,
         };
       });
