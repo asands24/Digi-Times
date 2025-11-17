@@ -54,6 +54,14 @@ These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_
 
 Legacy Supabase hooks remain (for the original collaborative roadmap) but sit behind configuration guards. If you plan to revive the backend experience, add `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` to `.env.local` and re-enable the associated hooks/pages.
 
+## Story Generation Pipeline
+
+- Generate/Regenerate actions in `src/components/EventBuilder.tsx` now call `generateStoryFromPrompt()` from `src/utils/storyGenerator.ts`, which POSTs to `/.netlify/functions/generateStory` before falling back to the seeded local generator.
+- `netlify/functions/generateStory.js` calls OpenAI’s Chat Completions API (`gpt-4o-mini`) with the effective prompt for the draft and returns `{ article }` text for the client to hydrate into the template.
+- If the function errors or OpenAI returns an invalid payload, the browser logs `[DigiTimes] Falling back to LocalStoryGenerator due to OpenAI error` and reuses the existing heuristic article builder so the UI keeps working offline.
+- `OPENAI_API_KEY` must be configured both in Netlify → Site settings → Environment variables and in `.env.local` when running Netlify CLI/dev locally so the function can authenticate.
+- In development mode successful calls log `[DigiTimes] Generated story via OpenAI`, letting you verify which path generated the draft.
+
 ### Smoke Script Credentials
 
 - Use the **public anon key** from Supabase Project Settings → API (never the `service_role` key).

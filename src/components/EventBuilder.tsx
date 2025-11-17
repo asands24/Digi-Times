@@ -22,7 +22,11 @@ import toast from 'react-hot-toast';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { TemplatesGallery } from './TemplatesGallery';
-import { generateArticle, GeneratedArticle } from '../utils/storyGenerator';
+import {
+  generateArticle,
+  generateStoryFromPrompt,
+  GeneratedArticle,
+} from '../utils/storyGenerator';
 import { persistStory } from '../hooks/useStoryLibrary';
 import { getSupabase } from '../lib/supabaseClient';
 import { escapeHtml } from '../utils/sanitizeHtml';
@@ -50,16 +54,6 @@ interface EventBuilderProps {
 
 const createId = () =>
   `story-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-
-export const __TEST__BYPASS_DEBOUNCE = process.env.NODE_ENV === 'test';
-
-const schedule = (fn: () => void, delay: number) => {
-  if (__TEST__BYPASS_DEBOUNCE) {
-    fn();
-    return 0;
-  }
-  return window.setTimeout(fn, delay);
-};
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -109,6 +103,12 @@ const buildBodyHtml = (article: GeneratedArticle) => {
 
   return [decoParts, body, quote, tags].filter(Boolean).join('');
 };
+
+const toStoryParagraphs = (value: string) =>
+  value
+    .split(/\n\s*\n/g)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
 
 const normalizePrompt = (value: string) => value.trim();
 
@@ -375,8 +375,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         ),
       );
 
-      const delay = 420 + (idea.length % 6) * 90;
-      const article = generateArticle({
+      const localArticle = generateArticle({
         prompt: idea,
         fileName: target.file.name,
         capturedAt: target.createdAt,
@@ -384,19 +383,35 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         storyIndex: entryIndex + nextGenerationId,
       });
 
-      schedule(() => {
+      const run = async () => {
+        let resolvedArticle = localArticle;
+        try {
+          const storyText = await generateStoryFromPrompt(idea);
+          const paragraphs = toStoryParagraphs(storyText);
+          if (paragraphs.length > 0) {
+            resolvedArticle = {
+              ...localArticle,
+              body: paragraphs,
+            };
+          }
+        } catch (error) {
+          console.error('[DigiTimes] Story generation failed, using local article:', error);
+        }
+
         setEntries((prev) =>
           prev.map((entry) =>
             entry.id === id && entry.generationId === nextGenerationId
               ? {
                   ...entry,
                   status: 'ready',
-                  article,
+                  article: resolvedArticle,
                 }
               : entry,
           ),
         );
-      }, delay);
+      };
+
+      void run();
     },
     [entries, globalPrompt, selectedTemplate],
   );

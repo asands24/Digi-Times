@@ -311,6 +311,9 @@ const formatDate = (value: Date) => {
 export const generateArticle = (
   options: StoryGeneratorOptions,
 ): GeneratedArticle => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DigiTimes] Generating story using LocalStoryGenerator via generateArticle');
+  }
   const prompt = sanitize(options.prompt);
   const fileName =
     sanitize(options.fileName?.replace(/\.[^.]+$/, '')) || 'family moment';
@@ -380,3 +383,71 @@ export const generateArticle = (
 };
 
 export type { GeneratedArticle };
+
+const buildLocalStoryText = (article: GeneratedArticle) =>
+  [
+    article.headline,
+    article.subheadline,
+    article.body.join('\n\n'),
+    article.quote,
+  ]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part && part.length > 0))
+    .join('\n\n');
+
+const LocalStoryGenerator = (prompt: string) => {
+  const article = generateArticle({
+    prompt,
+    fileName: prompt,
+    capturedAt: new Date(),
+  });
+  return buildLocalStoryText(article);
+};
+
+export async function generateStoryWithOpenAI(prompt: string): Promise<string> {
+  const res = await fetch('/.netlify/functions/generateStory', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!res.ok) {
+    if (process.env.NODE_ENV === 'development') {
+      const errorText = await res.text().catch(() => '');
+      console.error('[DigiTimes] OpenAI generateStory failed:', res.status, errorText);
+    }
+    throw new Error('Failed to generate story with OpenAI');
+  }
+
+  const data = (await res.json()) as { article?: string };
+  if (!data || typeof data.article !== 'string' || !data.article.trim()) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[DigiTimes] OpenAI generateStory returned invalid payload:', data);
+    }
+    throw new Error('Invalid story payload from OpenAI');
+  }
+
+  return data.article.trim();
+}
+
+export async function generateStoryFromPrompt(prompt: string): Promise<string> {
+  const trimmed = prompt.trim();
+  if (!trimmed) {
+    throw new Error('Prompt is empty');
+  }
+
+  try {
+    const article = await generateStoryWithOpenAI(trimmed);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[DigiTimes] Generated story via OpenAI');
+    }
+    return article;
+  } catch (err) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[DigiTimes] Falling back to LocalStoryGenerator due to OpenAI error:', err);
+    }
+    return LocalStoryGenerator(trimmed);
+  }
+}

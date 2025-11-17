@@ -7,7 +7,7 @@ import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { loadStories, type ArchiveItem, updateStoryVisibility } from './hooks/useStoryLibrary';
 import Logout from './pages/Logout';
-import Templates from './pages/Templates';
+import TemplatesPage from './pages/Templates';
 import UploadPhoto from './components/UploadPhoto';
 import PhotoGallery from './components/PhotoGallery';
 import { useAuth } from './providers/AuthProvider';
@@ -132,7 +132,7 @@ export default function App() {
       </nav>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/templates" element={<Templates />} />
+        <Route path="/templates" element={<TemplatesPage />} />
         {IS_DEV ? <Route path="/debug/templates" element={<DebugTemplates />} /> : null}
         <Route path="/upload" element={<UploadPhoto />} />
         <Route path="/gallery" element={<PhotoGallery />} />

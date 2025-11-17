@@ -17,14 +17,14 @@ export function TemplatesGallery({
 }: TemplatesGalleryProps) {
   const [templates, setTemplates] = useState<StoryTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const fetchTemplates = async () => {
       setLoading(true);
-      setLoadError(null);
+       setError(null);
       try {
         const data = await fetchAllTemplates();
         if (cancelled) {
@@ -38,7 +38,11 @@ export function TemplatesGallery({
             console.error('TemplatesGallery load failed:', error);
           }
           setTemplates([]);
-          setLoadError('No templates available right now. Please try again later.');
+          const normalized =
+            error instanceof Error
+              ? error
+              : new Error('No templates available right now. Please try again later.');
+          setError(normalized);
         }
       } finally {
         if (!cancelled) {
@@ -75,6 +79,13 @@ export function TemplatesGallery({
     }
   }, [autoSelectFirst, onSelect, selectedTemplateId, templates]);
 
+  if (process.env.NODE_ENV === 'development') {
+    console.log('TemplatesGallery state:', {
+      loading,
+      templatesCount: templates.length,
+    });
+  }
+
   if (loading) {
     return (
       <section className="template-gallery">
@@ -83,11 +94,21 @@ export function TemplatesGallery({
     );
   }
 
+  if (error && (!templates || templates.length === 0)) {
+    return (
+      <section className="template-gallery">
+        <div className="templates-error">
+          <p>We couldn’t load templates. Please try again later.</p>
+        </div>
+      </section>
+    );
+  }
+
   if (!templates || templates.length === 0) {
     return (
       <section className="template-gallery">
         <div className="templates-empty">
-          <p>{loadError ?? 'No templates available right now. Please try again later.'}</p>
+          <p>No templates available right now.</p>
         </div>
       </section>
     );
