@@ -150,14 +150,22 @@ export async function persistStory(params: {
 
 export type { ArchiveItem } from '../types/story';
 
-export async function loadStories(userId?: string | null): Promise<ArchiveItem[]> {
+const STORIES_LIMIT = 50;
+const QUERY_TIMEOUT_MS = 10000;
+
+/**
+ * Load stories list without large text fields (article, prompt) for performance.
+ * Use loadStoryDetails() to fetch full story content when needed.
+ */
+export async function loadStories(userId?: string | null, limit: number = STORIES_LIMIT): Promise<ArchiveItem[]> {
   if (!userId) {
     console.log('[StoryLibrary] ⚠️ loadStories called without userId, returning empty array');
     return [];
   }
 
-  console.log('[StoryLibrary] 📚 Loading stories for user', {
+  console.log('[StoryLibrary] 📚 Loading stories list for user', {
     userId,
+    limit,
     timestamp: new Date().toISOString(),
   });
 
@@ -165,25 +173,27 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
+  // Lightweight query - exclude large text fields for better performance
   let query = supabase
     .from('story_archives')
     .select(
-      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
+      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,is_public',
     )
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (controller) {
     query = query.abortSignal(controller.signal);
     timeout = setTimeout(() => {
       console.warn('[StoryLibrary] ⏱️ Query timeout reached, aborting...');
       controller.abort();
-    }, 10000);
-    console.log('[StoryLibrary] ⏱️ Query timeout set to 10 seconds');
+    }, QUERY_TIMEOUT_MS);
+    console.log('[StoryLibrary] ⏱️ Query timeout set to', QUERY_TIMEOUT_MS, 'ms');
   }
 
   try {
-    console.log('[StoryLibrary] 🌐 Fetching stories from Supabase...');
+    console.log('[StoryLibrary] 🌐 Fetching stories list from Supabase...');
     const queryStartTime = Date.now();
     const { data, error } = await query;
     const queryDuration = Date.now() - queryStartTime;
@@ -203,17 +213,22 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
       duration: queryDuration,
     });
 
-    const rows = (data ?? []) as StoryArchiveRow[];
+    const rows = data ?? [];
     console.log('[StoryLibrary] 🔗 Generating public URLs for images...', {
       rowsWithImages: rows.filter(r => r.image_path).length,
     });
 
     const mapped: ArchiveItem[] = rows.map((r) => {
-      if (!r.image_path) {
-        return { ...r };
+      const item: ArchiveItem = {
+        ...r,
+        article: null,
+        prompt: null,
+      };
+      if (r.image_path) {
+        const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
+        item.imageUrl = pub?.publicUrl ?? null;
       }
-      const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
-      return { ...r, imageUrl: pub?.publicUrl ?? null };
+      return item;
     });
 
     if (mapped.length === 0) {
@@ -260,6 +275,124 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
       clearTimeout(timeout);
     }
   }
+}
+
+/**
+ * Load full story details including article and prompt.
+ * Use this when you need the complete story content.
+ */
+export async function loadStoryDetails(storyId: string, userId: string): Promise<ArchiveItem | null> {
+  console.log('[StoryLibrary] 📖 Loading full story details', {
+    storyId,
+    userId,
+    timestamp: new Date().toISOString(),
+  });
+
+  const supabase = getSupabase();
+  const queryStartTime = Date.now();
+
+  const { data, error } = await supabase
+    .from('story_archives')
+    .select(
+      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
+    )
+    .eq('id', storyId)
+    .eq('user_id', userId)
+    .single();
+
+  const queryDuration = Date.now() - queryStartTime;
+
+  if (error) {
+    console.error('[StoryLibrary] ❌ Failed to load story details', {
+      error,
+      errorMessage: error.message,
+      errorCode: error.code,
+      storyId,
+      duration: queryDuration,
+    });
+    return null;
+  }
+
+  if (!data) {
+    console.warn('[StoryLibrary] ⚠️ Story not found', { storyId });
+    return null;
+  }
+
+  console.log('[StoryLibrary] ✅ Story details loaded', {
+    storyId,
+    title: data.title,
+    duration: queryDuration,
+    hasArticle: !!data.article,
+    hasPrompt: !!data.prompt,
+  });
+
+  const item: ArchiveItem = { ...data };
+  if (data.image_path) {
+    const { data: pub } = supabase.storage.from('photos').getPublicUrl(data.image_path);
+    item.imageUrl = pub?.publicUrl ?? null;
+  }
+
+  return item;
+}
+
+/**
+ * Load multiple stories with full details.
+ * Use this when you need article/prompt content for multiple stories (e.g., export).
+ */
+export async function loadStoriesWithDetails(
+  storyIds: string[],
+  userId: string,
+): Promise<ArchiveItem[]> {
+  if (storyIds.length === 0) {
+    return [];
+  }
+
+  console.log('[StoryLibrary] 📚 Loading multiple stories with details', {
+    count: storyIds.length,
+    userId,
+    timestamp: new Date().toISOString(),
+  });
+
+  const supabase = getSupabase();
+  const queryStartTime = Date.now();
+
+  const { data, error } = await supabase
+    .from('story_archives')
+    .select(
+      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
+    )
+    .eq('user_id', userId)
+    .in('id', storyIds);
+
+  const queryDuration = Date.now() - queryStartTime;
+
+  if (error) {
+    console.error('[StoryLibrary] ❌ Failed to load stories with details', {
+      error,
+      errorMessage: error.message,
+      errorCode: error.code,
+      duration: queryDuration,
+    });
+    throw error;
+  }
+
+  console.log('[StoryLibrary] ✅ Stories with details loaded', {
+    requestedCount: storyIds.length,
+    loadedCount: data?.length ?? 0,
+    duration: queryDuration,
+  });
+
+  const rows = (data ?? []) as StoryArchiveRow[];
+  const mapped: ArchiveItem[] = rows.map((r) => {
+    const item: ArchiveItem = { ...r };
+    if (r.image_path) {
+      const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
+      item.imageUrl = pub?.publicUrl ?? null;
+    }
+    return item;
+  });
+
+  return mapped;
 }
 
 export async function updateStoryVisibility(id: string, nextValue: boolean): Promise<void> {

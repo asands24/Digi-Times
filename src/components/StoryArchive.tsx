@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import type { ArchiveItem } from '../hooks/useStoryLibrary';
+import { loadStoriesWithDetails, type ArchiveItem } from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
+import { useAuth } from '../providers/AuthProvider';
 import toast from 'react-hot-toast';
 
 interface StoryArchiveProps {
@@ -68,15 +70,26 @@ const buildArticleHtml = (story: ArchiveItem) => {
   return '<p>This story is still drafting.</p>';
 };
 
-const openEditionPreview = (stories: ArchiveItem[]) => {
+const openEditionPreview = async (storyIds: string[], userId: string) => {
   if (typeof window === 'undefined') {
     return;
   }
-  if (stories.length === 0) {
+  if (storyIds.length === 0) {
     return;
   }
+
+  // Fetch full story details with article/prompt content
+  console.log('[StoryArchive] Loading full story details for export...');
+  const stories = await loadStoriesWithDetails(storyIds, userId);
+
+  if (stories.length === 0) {
+    toast.error('No stories found to export.');
+    return;
+  }
+
   const win = window.open('', '_blank', 'noopener,noreferrer');
   if (!win) {
+    toast.error('Pop-up blocked. Allow pop-ups to export edition.');
     return;
   }
   const doc = win.document;
@@ -163,16 +176,34 @@ export function StoryArchive({
   onToggleShare,
 }: StoryArchiveProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [exportLoading, setExportLoading] = useState(false);
   const hasStories = stories.length > 0;
-  const shareableStories = stories.filter((story) =>
-    Boolean(story.article || story.prompt || story.title),
-  );
-  const canExportEdition = shareableStories.length > 0;
+  // Filter out sample stories and stories without titles for export
+  const exportableStories = stories.filter((story) => !story.isSample && story.title);
+  const canExportEdition = exportableStories.length > 0;
   const showExportHint = !loading && !canExportEdition;
 
   const handleBuildNewspaper = () => {
-    const ids = shareableStories.map((story) => story.id).join(',');
+    const ids = exportableStories.map((story) => story.id).join(',');
     navigate(`/newspaper?ids=${ids}`);
+  };
+
+  const handleExportEdition = async () => {
+    if (!user || exportableStories.length === 0) {
+      return;
+    }
+
+    setExportLoading(true);
+    try {
+      const storyIds = exportableStories.map((story) => story.id);
+      await openEditionPreview(storyIds, user.id);
+    } catch (error) {
+      console.error('[StoryArchive] Export failed', error);
+      toast.error('Failed to export edition. Please try again.');
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   return (
@@ -202,11 +233,11 @@ export function StoryArchive({
           </Button>
           <Button
             type="button"
-            onClick={() => openEditionPreview(shareableStories)}
-            disabled={!canExportEdition}
+            onClick={handleExportEdition}
+            disabled={!canExportEdition || exportLoading}
           >
             <ArchiveIcon size={16} strokeWidth={1.75} />
-            Export edition
+            {exportLoading ? 'Loading...' : 'Export edition'}
           </Button>
           {showExportHint ? (
             <span className="story-archive__hint">Add a story to enable export.</span>

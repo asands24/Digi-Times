@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { getTemplateById } from '../lib/templates';
-import type { ArchiveItem } from '../hooks/useStoryLibrary';
+import { loadStoryDetails, type ArchiveItem } from '../hooks/useStoryLibrary';
 import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
+import { useAuth } from '../providers/AuthProvider';
 
 interface StoryPreviewDialogProps {
   story: ArchiveItem | null;
@@ -114,8 +115,10 @@ const openPreviewWindow = async (story: ArchiveItem) => {
 };
 
 export function StoryPreviewDialog({ story, open, onOpenChange }: StoryPreviewDialogProps) {
+  const { user } = useAuth();
+
   useEffect(() => {
-    if (!open || !story) {
+    if (!open || !story || !user) {
       return;
     }
 
@@ -123,7 +126,18 @@ export function StoryPreviewDialog({ story, open, onOpenChange }: StoryPreviewDi
 
     const preview = async () => {
       try {
-        const win = await openPreviewWindow(story);
+        // Fetch full story details if article/prompt is missing
+        let fullStory = story;
+        if (!story.article && !story.prompt) {
+          console.log('[StoryPreviewDialog] Fetching full story details for preview...');
+          const details = await loadStoryDetails(story.id, user.id);
+          if (!details) {
+            throw new Error('Story not found. It may have been deleted.');
+          }
+          fullStory = details;
+        }
+
+        const win = await openPreviewWindow(fullStory);
         if (!cancelled && win) {
           win.focus();
         }
@@ -144,7 +158,7 @@ export function StoryPreviewDialog({ story, open, onOpenChange }: StoryPreviewDi
     return () => {
       cancelled = true;
     };
-  }, [open, onOpenChange, story]);
+  }, [open, onOpenChange, story, user]);
 
   return null;
 }
