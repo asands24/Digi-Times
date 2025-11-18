@@ -1,9 +1,18 @@
 import { getSupabase } from './supabaseClient';
 
+const DEBUG_GROUPS = process.env.NODE_ENV !== 'production';
+
 export type CreateGroupInput = { name: string; description?: string };
 
 export async function createGroupViaSupabase({ name, description }: CreateGroupInput) {
   const supabase = getSupabase();
+  if (DEBUG_GROUPS) {
+    console.log('[Groups] Attempting to create group', {
+      name,
+      hasDescription: Boolean(description),
+    });
+  }
+
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
   if (sessionErr) throw sessionErr;
   const userId = sessionData?.session?.user?.id;
@@ -20,6 +29,10 @@ export async function createGroupViaSupabase({ name, description }: CreateGroupI
     .from('group_members')
     .insert({ group_id: group.id, user_id: userId, role: 'admin' });
   if (mErr) throw mErr;
+
+  if (DEBUG_GROUPS) {
+    console.log('[Groups] Created group and admin membership', { groupId: group.id });
+  }
 
   return group;
 }

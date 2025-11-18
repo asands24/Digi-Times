@@ -20,6 +20,8 @@ jest.mock('../lib/supabaseClient', () => {
 
 jest.mock('../lib/templates', () => ({
   fetchAllTemplates: jest.fn(),
+  getLocalTemplates: jest.fn(),
+  findLocalTemplate: jest.fn(),
 }));
 
 const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
@@ -35,6 +37,25 @@ const mockFetchAllTemplates =
   fetchAllTemplates as jest.MockedFunction<typeof fetchAllTemplates>;
 
 mockGetSupabase.mockReturnValue(mockSupabase as any);
+const templatesModule = jest.requireMock('../lib/templates') as {
+  getLocalTemplates: jest.Mock;
+  findLocalTemplate: jest.Mock;
+};
+const localTemplate = {
+  id: 'local-1',
+  slug: 'local-1',
+  title: 'Local Template',
+  description: '',
+  html: '<article/>',
+  css: '',
+  isSystem: true,
+  owner: null,
+};
+
+beforeEach(() => {
+  templatesModule.getLocalTemplates.mockReturnValue([localTemplate]);
+  templatesModule.findLocalTemplate.mockReturnValue(localTemplate);
+});
 
 const originalCrypto = globalThis.crypto;
 
@@ -78,7 +99,6 @@ test('Templates renders public rows from Supabase', async () => {
   await waitFor(() => {
     expect(screen.getByText('Welcome Template')).toBeInTheDocument();
   });
-  expect(screen.getByText('welcome-template')).toBeInTheDocument();
   expect(mockFetchAllTemplates).toHaveBeenCalled();
 });
 

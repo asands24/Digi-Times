@@ -29,7 +29,7 @@ describe('templates local fallback', () => {
     const { fetchAllTemplates } = await import('../lib/templates');
     const rows = await fetchAllTemplates();
 
-    expect(rows).toHaveLength(expect.any(Number));
+    expect(rows.length).toBeGreaterThan(0);
     expect(rows[0]).toHaveProperty('isSystem', true);
     expect(order).toHaveBeenCalled();
   });

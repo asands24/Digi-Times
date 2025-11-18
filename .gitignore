@@ -24,6 +24,7 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
+coverage/
 *.tsbuildinfo
 
 # IDE files
@@ -36,3 +37,7 @@ build/
 # Logs
 logs
 *.log
+
+# Local app data / archives
+Library/
+*.zip

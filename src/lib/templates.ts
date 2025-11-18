@@ -4,6 +4,7 @@ import type { Database } from '../types/supabase';
 import { TEMPLATE_SOURCE_MODE } from './appConfig';
 import { supabaseClient } from './supabaseClient';
 
+const DEBUG_TEMPLATES = process.env.NODE_ENV !== 'production';
 const LOG_WARNINGS = process.env.NODE_ENV === 'development';
 const TEMPLATE_VIEW_COLUMNS =
   'id, slug, title, description, html, css, is_system, owner, created_at';
@@ -85,7 +86,18 @@ export function findLocalTemplate(idOrSlug: string): StoryTemplate | undefined {
 export async function fetchAllTemplates(): Promise<StoryTemplate[]> {
   const localTemplates = getLocalTemplates();
 
+  if (DEBUG_TEMPLATES) {
+    console.log('[Templates] fetchAllTemplates() requested', {
+      templateSourceMode: TEMPLATE_SOURCE_MODE,
+    });
+  }
+
   if (TEMPLATE_SOURCE_MODE === 'local-only') {
+    if (DEBUG_TEMPLATES) {
+      console.log('[Templates] Returning local cache because source mode is local-only', {
+        count: localTemplates.length,
+      });
+    }
     return localTemplates;
   }
 
@@ -101,9 +113,19 @@ export async function fetchAllTemplates(): Promise<StoryTemplate[]> {
     }
 
     const remoteTemplates = data.map((row) => mapRemoteTemplate(row as TemplateViewRow));
+
+    if (DEBUG_TEMPLATES) {
+      console.log('[Templates] Supabase returned templates', {
+        remoteCount: remoteTemplates.length,
+        fallbackToLocal: remoteTemplates.length === 0,
+      });
+    }
     return remoteTemplates.length > 0 ? remoteTemplates : localTemplates;
   } catch (error) {
     logWarning('Unexpected error fetching templates, using local templates.', error);
+    if (DEBUG_TEMPLATES) {
+      console.log('[Templates] Falling back to local cache after error');
+    }
     return localTemplates;
   }
 }
@@ -111,6 +133,9 @@ export async function fetchAllTemplates(): Promise<StoryTemplate[]> {
 export async function getTemplateById(id: string): Promise<StoryTemplate> {
   const localMatch = findLocalTemplate(id);
   if (localMatch) {
+    if (DEBUG_TEMPLATES) {
+      console.log('[Templates] getTemplateById served from local cache', { id });
+    }
     return localMatch;
   }
 
@@ -119,6 +144,10 @@ export async function getTemplateById(id: string): Promise<StoryTemplate> {
   }
 
   try {
+    if (DEBUG_TEMPLATES) {
+      console.log('[Templates] getTemplateById querying Supabase', { id });
+    }
+
     const { data, error } = await supabaseClient
       .from('templates')
       .select(TEMPLATE_TABLE_COLUMNS)
@@ -129,9 +158,16 @@ export async function getTemplateById(id: string): Promise<StoryTemplate> {
       throw error ?? new Error('Template not found.');
     }
 
-    return mapRemoteTemplate(data as TemplateTableRow);
+    const template = mapRemoteTemplate(data as TemplateTableRow);
+    if (DEBUG_TEMPLATES) {
+      console.log('[Templates] getTemplateById received Supabase row', { id, slug: template.slug });
+    }
+    return template;
   } catch (error) {
     logWarning('Unable to load template by id.', error);
+    if (DEBUG_TEMPLATES) {
+      console.error('[Templates] Supabase template fetch failed', { id, error });
+    }
     throw error instanceof Error ? error : new Error('Unable to load template.');
   }
 }

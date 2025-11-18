@@ -1,8 +1,10 @@
-import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw } from 'lucide-react';
+import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import type { ArchiveItem } from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
+import toast from 'react-hot-toast';
 
 interface StoryArchiveProps {
   stories: ArchiveItem[];
@@ -24,6 +26,35 @@ const formatTimestamp = (value: string | null) => {
     }).format(new Date(value));
   } catch {
     return 'Recently';
+  }
+};
+
+const handleShareStory = async (storyId: string) => {
+  const shareUrl = `${window.location.origin}/read/${storyId}`;
+
+  // Try native share if available
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'DigiTimes Story',
+        url: shareUrl,
+      });
+      return;
+    } catch (err) {
+      // User cancelled or share failed, fall back to clipboard
+      if ((err as Error).name !== 'AbortError') {
+        console.warn('Share failed, falling back to clipboard', err);
+      }
+    }
+  }
+
+  // Fallback to clipboard
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    toast.success('Share link copied to clipboard!');
+  } catch (err) {
+    console.error('Failed to copy share link', err);
+    toast.error('Failed to copy share link');
   }
 };
 
@@ -131,12 +162,18 @@ export function StoryArchive({
   onRefresh,
   onToggleShare,
 }: StoryArchiveProps) {
+  const navigate = useNavigate();
   const hasStories = stories.length > 0;
   const shareableStories = stories.filter((story) =>
     Boolean(story.article || story.prompt || story.title),
   );
   const canExportEdition = shareableStories.length > 0;
   const showExportHint = !loading && !canExportEdition;
+
+  const handleBuildNewspaper = () => {
+    const ids = shareableStories.map((story) => story.id).join(',');
+    navigate(`/newspaper?ids=${ids}`);
+  };
 
   return (
     <section className="story-archive">
@@ -153,6 +190,15 @@ export function StoryArchive({
           <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
             <RefreshCcw size={16} strokeWidth={1.75} />
             Refresh
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleBuildNewspaper}
+            disabled={!canExportEdition}
+          >
+            <Newspaper size={16} strokeWidth={1.75} />
+            Build Newspaper
           </Button>
           <Button
             type="button"
@@ -216,8 +262,19 @@ export function StoryArchive({
                             : 'Toggle sharing'
                         }
                       />
-                      Share preview
+                      Public
                     </label>
+                    {story.is_public && !story.isSample && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleShareStory(story.id)}
+                      >
+                        <Share2 size={14} strokeWidth={1.75} />
+                        Share
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       size="sm"

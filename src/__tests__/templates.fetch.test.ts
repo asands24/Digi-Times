@@ -27,7 +27,9 @@ describe('templates_public view fetch', () => {
     await fetchAllTemplates();
 
     expect(supabaseMock.from).toHaveBeenCalledWith('templates_public');
-    expect(select).toHaveBeenCalledWith('*');
+    expect(select).toHaveBeenCalledWith(
+      'id, slug, title, description, html, css, is_system, owner, created_at',
+    );
     expect(order).toHaveBeenCalledWith('title', { ascending: true });
   });
 });

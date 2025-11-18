@@ -11,10 +11,34 @@ jest.mock('../hooks/useStoryLibrary', () => ({
 }));
 
 jest.mock('../lib/templates', () => ({
-  fetchAllTemplates: jest.fn().mockResolvedValue([]),
+  fetchAllTemplates: jest.fn(),
+  getLocalTemplates: jest.fn(),
+  findLocalTemplate: jest.fn(),
 }));
 
 const useAuth = jest.requireMock('../providers/AuthProvider').useAuth as jest.Mock;
+const templatesModule = jest.requireMock('../lib/templates') as {
+  fetchAllTemplates: jest.Mock;
+  getLocalTemplates: jest.Mock;
+  findLocalTemplate: jest.Mock;
+};
+
+const mockTemplate = {
+  id: 'mock-template',
+  slug: 'mock-template',
+  title: 'Mock Template',
+  description: '',
+  html: '<div></div>',
+  css: '',
+  isSystem: true,
+  owner: null,
+};
+
+beforeEach(() => {
+  templatesModule.fetchAllTemplates.mockResolvedValue([mockTemplate]);
+  templatesModule.getLocalTemplates.mockReturnValue([mockTemplate]);
+  templatesModule.findLocalTemplate.mockReturnValue(mockTemplate);
+});
 
 describe('/login route', () => {
   afterEach(() => {

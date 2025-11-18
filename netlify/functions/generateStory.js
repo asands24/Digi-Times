@@ -4,8 +4,14 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT =
-  'You are a friendly newspaper-style writer for kids and families. Write short, engaging, first-draft news articles based on the user\'s story description and photo context. Use 2-4 short paragraphs and keep it clear and fun.';
+const SYSTEM_PROMPT = [
+  'You are a warm, creative newspaper reporter for kids ages 7–12.',
+  'Write short, clear, engaging news-style articles.',
+  'Follow newspaper structure: catchy headline; then 2–4 short paragraphs with who/what/where/why.',
+  'Use friendly, simple language children can understand.',
+  'Avoid scary, violent, or adult topics.',
+  'Keep it positive, curious, and empowering.',
+].join(' ');
 
 exports.handler = async (event) => {
   if (event.httpMethod && event.httpMethod !== 'POST') {

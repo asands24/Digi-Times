@@ -15,6 +15,8 @@ import LoginPage from './pages/LoginPage';
 import { REQUIRE_LOGIN } from './lib/config';
 import AuthCallback from './pages/AuthCallback';
 import DebugTemplates from './pages/DebugTemplates';
+import PublicStoryPage from './pages/PublicStoryPage';
+import NewspaperPage from './pages/NewspaperPage';
 import { getCachedStories } from './utils/storyCache';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -123,6 +125,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/read/:id" element={<PublicStoryPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -145,6 +148,8 @@ export default function App() {
         <Route path="/gallery" element={<PhotoGallery />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/read/:id" element={<PublicStoryPage />} />
+        <Route path="/newspaper" element={<NewspaperPage />} />
         <Route
           path="/login"
           element={user ? <Navigate to="/" replace /> : <LoginPage />}

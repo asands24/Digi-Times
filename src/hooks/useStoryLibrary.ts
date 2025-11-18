@@ -4,6 +4,8 @@ import type { ArchiveItem } from '../types/story';
 import { cacheStories, cacheStory, getCachedStories } from '../utils/storyCache';
 import { buildStarterStory } from '../utils/storySeeds';
 
+const DEBUG_STORY_LIBRARY = process.env.NODE_ENV !== 'production';
+
 export type PersistMeta = {
   headline: string;
   bodyHtml: string;
@@ -23,12 +25,26 @@ export async function persistStory(params: {
   const { file, meta, templateId, userId } = params;
   if (!templateId) throw new Error('Pick a template before saving');
 
+  if (DEBUG_STORY_LIBRARY) {
+    console.log('[StoryLibrary] Persisting story', {
+      templateId,
+      userId,
+      fileName: file.name,
+      fileSize: file.size,
+      promptLength: (meta.prompt ?? '').length,
+    });
+  }
+
   const filePath = `stories/${userId}/${Date.now()}-${file.name}`;
   const up = await supabase.storage.from('photos').upload(filePath, file, {
     cacheControl: '3600',
     upsert: false,
   });
   if (up.error) throw up.error;
+
+  if (DEBUG_STORY_LIBRARY) {
+    console.log('[StoryLibrary] Uploaded image for story', { filePath });
+  }
 
   const payload: StoryArchiveInsert = {
     title: meta.headline,
@@ -53,6 +69,13 @@ export async function persistStory(params: {
     throw insErr ?? new Error('Failed to save story.');
   }
 
+  if (DEBUG_STORY_LIBRARY) {
+    console.log('[StoryLibrary] Persisted story archive row', {
+      id: inserted.id,
+      templateId: inserted.template_id,
+    });
+  }
+
   const normalized: ArchiveItem = {
     ...inserted,
     user_id: inserted.user_id ?? userId,
@@ -75,6 +98,10 @@ export type { ArchiveItem } from '../types/story';
 export async function loadStories(userId?: string | null): Promise<ArchiveItem[]> {
   if (!userId) {
     return [];
+  }
+
+  if (DEBUG_STORY_LIBRARY) {
+    console.log('[StoryLibrary] Loading stories for user', { userId });
   }
 
   const supabase = getSupabase();
@@ -110,22 +137,40 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
     if (mapped.length === 0) {
       const starter = buildStarterStory(userId);
       cacheStories(userId, [starter]);
+      if (DEBUG_STORY_LIBRARY) {
+        console.log('[StoryLibrary] No archives found, seeded starter story');
+      }
       return [starter];
     }
 
     cacheStories(userId, mapped);
+    if (DEBUG_STORY_LIBRARY) {
+      console.log('[StoryLibrary] Loaded stories', { count: mapped.length });
+    }
     return mapped;
   } catch (error) {
+    if (DEBUG_STORY_LIBRARY) {
+      console.error('[StoryLibrary] Failed to load stories', error);
+    }
+
     const cached = getCachedStories(userId);
     if (cached.length > 0) {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('Falling back to cached stories after load failure.', error);
+      }
+      if (DEBUG_STORY_LIBRARY) {
+        console.log('[StoryLibrary] Returning cached stories after load error', {
+          count: cached.length,
+        });
       }
       return cached;
     }
 
     const starter = buildStarterStory(userId);
     cacheStories(userId, [starter]);
+    if (DEBUG_STORY_LIBRARY) {
+      console.log('[StoryLibrary] Returning starter story after load failure.');
+    }
 
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Loading saved stories timed out. Please try again.');
@@ -140,9 +185,15 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
 
 export async function updateStoryVisibility(id: string, nextValue: boolean): Promise<void> {
   const supabase = getSupabase();
+  if (DEBUG_STORY_LIBRARY) {
+    console.log('[StoryLibrary] Updating visibility', { id, nextValue });
+  }
   const { error } = await supabase
     .from('story_archives')
     .update({ is_public: nextValue })
     .eq('id', id);
   if (error) throw error;
+  if (DEBUG_STORY_LIBRARY) {
+    console.log('[StoryLibrary] Updated visibility successfully', { id });
+  }
 }

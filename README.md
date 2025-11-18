@@ -42,6 +42,7 @@ These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_
 - `npm start` – Run the development server with hot reload.
 - `npm run build` – Create a production build of the single-page app.
 - `npm test` – Execute Jest in watch mode.
+- `npm run clean` – Remove build artifacts, coverage output, and stray OS files (`--all` also drops `node_modules`).
 
 ## Tech Stack
 

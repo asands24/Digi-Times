@@ -1,5 +1,7 @@
 import { getSupabase } from './supabaseClient';
 
+const DEBUG_PHOTOS = process.env.NODE_ENV !== 'production';
+
 export interface UploadedPhotoInfo {
   file_path: string;
   publicUrl: string;
@@ -21,6 +23,14 @@ export async function uploadPhotoToStorage(
   const key = `users/${userId}/${Date.now()}.${extension}`;
   const supabase = getSupabase();
 
+  if (DEBUG_PHOTOS) {
+    console.log('[Photos] Uploading file to Supabase storage', {
+      fileName: file.name,
+      size: file.size,
+      key,
+    });
+  }
+
   const { error: uploadError } = await supabase.storage
     .from('photos')
     .upload(key, file, {
@@ -29,9 +39,15 @@ export async function uploadPhotoToStorage(
     });
 
   if (uploadError) {
+    if (DEBUG_PHOTOS) {
+      console.error('[Photos] Upload failed', { key, error: uploadError.message });
+    }
     throw uploadError;
   }
 
   const { data } = supabase.storage.from('photos').getPublicUrl(key);
+  if (DEBUG_PHOTOS) {
+    console.log('[Photos] Upload succeeded', { key, publicUrl: data.publicUrl });
+  }
   return { file_path: key, publicUrl: data.publicUrl };
 }
