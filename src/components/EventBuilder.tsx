@@ -31,6 +31,7 @@ import { persistStory } from '../hooks/useStoryLibrary';
 import { getSupabase } from '../lib/supabaseClient';
 import { escapeHtml } from '../utils/sanitizeHtml';
 import type { StoryTemplate } from '../types/story';
+import { getLocalTemplates } from '../lib/templates';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -127,12 +128,14 @@ const hasEffectivePrompt = (entry: StoryEntry, globalPrompt: string) =>
 export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: EventBuilderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const autoGenerateQueue = useRef<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const entryUrlsRef = useRef<string[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(() => {
+    const [firstTemplate] = getLocalTemplates();
+    return firstTemplate ?? null;
+  });
   const shareUrlRef = useRef<string | null>(null);
 
   const handleFiles = useCallback(
@@ -191,7 +194,6 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
       }
 
       setEntries((prev) => [...prev, ...validEntries]);
-      validEntries.forEach((entry) => autoGenerateQueue.current.add(entry.id));
     },
     [globalPrompt],
   );
@@ -311,12 +313,12 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
 
   useEffect(() => {
     const trimmed = globalPrompt.trim();
-    const idsToRegenerate: string[] = [];
-    let didChange = false;
+    const idsToRefresh: string[] = [];
     setEntries((prev) => {
       if (prev.length === 0) {
         return prev;
       }
+      let didChange = false;
       const nextEntries = prev.map((entry) => {
         if (entry.promptSource !== 'global') {
           return entry;
@@ -324,7 +326,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         if (entry.prompt === trimmed) {
           return entry;
         }
-        idsToRegenerate.push(entry.id);
+        idsToRefresh.push(entry.id);
         didChange = true;
         return {
           ...entry,
@@ -335,14 +337,14 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
       });
       return didChange ? nextEntries : prev;
     });
-    if (idsToRegenerate.length > 0) {
-      const count = idsToRegenerate.length;
+
+    if (idsToRefresh.length > 0) {
+      const count = idsToRefresh.length;
       toast(
         count === 1
-          ? 'Refreshing 1 draft with your new story idea…'
-          : `Refreshing ${count} drafts with your new story idea…`,
+          ? 'Story idea updated—press Generate to refresh that draft.'
+          : `${count} drafts updated. Press Generate on each to refresh them.`,
       );
-      idsToRegenerate.forEach((id) => autoGenerateQueue.current.add(id));
     }
   }, [globalPrompt]);
 
@@ -416,22 +418,6 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
     [entries, globalPrompt, selectedTemplate],
   );
 
-  useEffect(() => {
-    if (autoGenerateQueue.current.size === 0) {
-      return;
-    }
-    autoGenerateQueue.current.forEach((id) => {
-      const pending = entries.find((entry) => entry.id === id);
-      if (!pending) {
-        autoGenerateQueue.current.delete(id);
-        return;
-      }
-      if (pending.status === 'idle') {
-        generateStory(id);
-      }
-      autoGenerateQueue.current.delete(id);
-    });
-  }, [entries, generateStory]);
 
   const generateAllStories = useCallback(() => {
     if (entries.length === 0) {
@@ -635,7 +621,8 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
           </Button>
         </div>
         <p className="story-dropzone__hint">
-          We support JPG, PNG, and WebP files up to 10MB.
+          We support JPG, PNG, and WebP files up to 10MB. After uploading, add a prompt for each
+          photo and press Generate to create the article.
         </p>
       </div>
 
@@ -674,13 +661,16 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
                   <textarea
                     id={entry.id}
                     className="story-builder__textarea story-card__textarea"
-                    placeholder="What should we highlight about this moment?"
+                    placeholder="Describe the scene so we can write the perfect article."
                     value={entry.prompt}
                     rows={3}
                     onChange={(event) =>
                       updatePrompt(entry.id, event.target.value)
                     }
                   />
+                  <p className="story-card__hint">
+                    Tell us what makes this photo special, then press Generate to draft the story.
+                  </p>
 
                   <div className="story-card__controls">
                     <Button
@@ -827,8 +817,8 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         <div className="story-builder__empty">
           <ImageIcon size={48} strokeWidth={1.4} />
           <p>
-            Start by uploading a photo and we&apos;ll take it from there with a
-            fully written feature spread.
+            Upload a photo, describe what&apos;s happening, and tap Generate
+            to see a newsroom-ready feature appear.
           </p>
         </div>
       )}
