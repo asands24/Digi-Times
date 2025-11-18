@@ -1,5 +1,6 @@
 import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw } from 'lucide-react';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import type { ArchiveItem } from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
 
@@ -189,6 +190,11 @@ export function StoryArchive({
                   <span className="story-archive__template">
                     Layout: {story.template_id ? `Template ${story.template_id}` : 'Unassigned'}
                   </span>
+                  {story.isSample ? (
+                    <Badge variant="secondary" className="story-archive__sample-badge">
+                      Starter example
+                    </Badge>
+                  ) : null}
                 </header>
                 <footer>
                   <div className="story-archive__details">
@@ -203,6 +209,12 @@ export function StoryArchive({
                         type="checkbox"
                         checked={Boolean(story.is_public)}
                         onChange={(event) => onToggleShare(story.id, event.target.checked)}
+                        disabled={Boolean(story.isSample)}
+                        title={
+                          story.isSample
+                            ? 'Archive your own story to enable sharing.'
+                            : 'Toggle sharing'
+                        }
                       />
                       Share preview
                     </label>

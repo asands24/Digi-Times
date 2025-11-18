@@ -15,6 +15,7 @@ import LoginPage from './pages/LoginPage';
 import { REQUIRE_LOGIN } from './lib/config';
 import AuthCallback from './pages/AuthCallback';
 import DebugTemplates from './pages/DebugTemplates';
+import { getCachedStories } from './utils/storyCache';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
 
@@ -31,12 +32,18 @@ function HomePage() {
       return;
     }
 
+    const cached = getCachedStories(user.id);
+    if (cached.length > 0) {
+      setStories(cached);
+    }
+
     setLoading(true);
     try {
       const items = await loadStories(user.id);
       setStories(items ?? []);
     } catch (error) {
       console.error('Failed to load archive', error);
+      setStories(getCachedStories(user.id));
       const message =
         error instanceof Error
           ? error.message

@@ -753,6 +753,11 @@ a {
   font-weight: 600;
 }
 
+.story-archive__sample-badge {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+}
+
 .story-archive__details {
   display: flex;
   flex-direction: column;

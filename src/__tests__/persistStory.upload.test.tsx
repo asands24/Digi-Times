@@ -49,8 +49,26 @@ describe('persistStory upload', () => {
         data: { publicUrl: 'https://example.com/photos/user-1/foo.png' },
       })),
     });
+    const selectMock = jest.fn().mockReturnThis();
+    const singleMock = jest.fn().mockResolvedValue({
+      data: {
+        id: 'story-1',
+        user_id: 'user-1',
+        title: 'Smoke Test',
+        article: '<p>Body</p>',
+        prompt: 'Prompt',
+        image_path: 'stories/user-1/foo.png',
+        template_id: 'tpl-1',
+        is_public: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      error: null,
+    });
     tableFrom.mockReturnValue({
-      insert: jest.fn().mockResolvedValue({ error: null }),
+      insert: jest.fn().mockReturnThis(),
+      select: selectMock,
+      single: singleMock,
     });
 
     const file = new File([new Uint8Array([1, 2, 3])], 'foo.png', {
@@ -69,6 +87,8 @@ describe('persistStory upload', () => {
     });
 
     expect(result.filePath).toMatch(/^stories\/user-1\/.+foo\.png$/);
+    expect(result.story).toBeTruthy();
+    expect(result.story?.template_id).toBe('tpl-1');
     expect(storageFrom).toHaveBeenCalledWith('photos');
     const uploadPath = uploadMock.mock.calls[0][0];
     expect(uploadPath).toMatch(/^stories\/user-1\/\d+-foo\.png$/);

@@ -1,5 +1,8 @@
 import { getSupabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
+import type { ArchiveItem } from '../types/story';
+import { cacheStories, cacheStory, getCachedStories } from '../utils/storyCache';
+import { buildStarterStory } from '../utils/storySeeds';
 
 export type PersistMeta = {
   headline: string;
@@ -36,13 +39,37 @@ export async function persistStory(params: {
     user_id: userId,
   };
 
-  const { error: insErr } = await supabase.from('story_archives').insert(payload);
-  if (insErr) throw insErr;
+  const {
+    data: inserted,
+    error: insErr,
+  } = await supabase
+    .from('story_archives')
+    .insert(payload)
+    .select(
+      'id,user_id,title,template_id,image_path,created_at,updated_at,article,prompt,is_public',
+    )
+    .single();
+  if (insErr || !inserted) {
+    throw insErr ?? new Error('Failed to save story.');
+  }
 
-  return { filePath };
+  const normalized: ArchiveItem = {
+    ...inserted,
+    user_id: inserted.user_id ?? userId,
+    imageUrl: null,
+  };
+
+  if (inserted.image_path) {
+    const { data: pub } = supabase.storage.from('photos').getPublicUrl(inserted.image_path);
+    normalized.imageUrl = pub?.publicUrl ?? null;
+  }
+
+  cacheStory(userId, normalized);
+
+  return { filePath, story: normalized };
 }
 
-export type ArchiveItem = StoryArchiveRow & { imageUrl?: string | null };
+export type { ArchiveItem } from '../types/story';
 
 export async function loadStories(userId?: string | null): Promise<ArchiveItem[]> {
   if (!userId) {
@@ -55,7 +82,9 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
 
   let query = supabase
     .from('story_archives')
-    .select('id,title,template_id,image_path,created_at,article,prompt,is_public')
+    .select(
+      'id,user_id,title,template_id,image_path,created_at,updated_at,article,prompt,is_public',
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -69,13 +98,34 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
     if (error) throw error;
 
     const rows = (data ?? []) as StoryArchiveRow[];
-
-    return rows.map((r) => {
-      if (!r.image_path) return r;
+    const mapped: ArchiveItem[] = rows.map((r) => {
+      if (!r.image_path) {
+        return { ...r };
+      }
       const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
       return { ...r, imageUrl: pub?.publicUrl ?? null };
     });
+
+    if (mapped.length === 0) {
+      const starter = buildStarterStory(userId);
+      cacheStories(userId, [starter]);
+      return [starter];
+    }
+
+    cacheStories(userId, mapped);
+    return mapped;
   } catch (error) {
+    const cached = getCachedStories(userId);
+    if (cached.length > 0) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Falling back to cached stories after load failure.', error);
+      }
+      return cached;
+    }
+
+    const starter = buildStarterStory(userId);
+    cacheStories(userId, [starter]);
+
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Loading saved stories timed out. Please try again.');
     }

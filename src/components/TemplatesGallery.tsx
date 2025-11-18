@@ -70,6 +70,11 @@ export function TemplatesGallery({
     return [system, personal];
   }, [templates]);
 
+  const hasSelection = useMemo(
+    () => templates.some((template) => template.id === selectedTemplateId),
+    [selectedTemplateId, templates],
+  );
+
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === selectedTemplateId) ?? null,
     [selectedTemplateId, templates],
@@ -80,10 +85,14 @@ export function TemplatesGallery({
       return;
     }
 
-    if (!selectedTemplateId && templates.length > 0) {
+    if (templates.length === 0) {
+      return;
+    }
+
+    if (!selectedTemplateId || !hasSelection) {
       onSelect(templates[0]);
     }
-  }, [autoSelectFirst, onSelect, selectedTemplateId, templates]);
+  }, [autoSelectFirst, hasSelection, onSelect, selectedTemplateId, templates]);
 
   if (process.env.NODE_ENV === 'development') {
     console.log('TemplatesGallery state:', {
