@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, User } from 'lucide-react';
-import { fetchAllTemplates } from '../lib/templates';
+import { fetchAllTemplates, getLocalTemplates } from '../lib/templates';
 import type { StoryTemplate } from '../types/story';
 import { cn } from '../utils/cn';
 
@@ -15,16 +15,20 @@ export function TemplatesGallery({
   onSelect,
   autoSelectFirst = true,
 }: TemplatesGalleryProps) {
-  const [templates, setTemplates] = useState<StoryTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialTemplates = useMemo(() => getLocalTemplates(), []);
+  const [templates, setTemplates] = useState<StoryTemplate[]>(initialTemplates);
+  const [loading, setLoading] = useState(initialTemplates.length === 0);
   const [error, setError] = useState<Error | null>(null);
+  const hasInitialTemplates = initialTemplates.length > 0;
 
   useEffect(() => {
     let cancelled = false;
 
     const fetchTemplates = async () => {
-      setLoading(true);
-       setError(null);
+      if (!hasInitialTemplates) {
+        setLoading(true);
+      }
+      setError(null);
       try {
         const data = await fetchAllTemplates();
         if (cancelled) {
@@ -37,7 +41,9 @@ export function TemplatesGallery({
           if (process.env.NODE_ENV === 'development') {
             console.error('TemplatesGallery load failed:', error);
           }
-          setTemplates([]);
+          if (!hasInitialTemplates) {
+            setTemplates([]);
+          }
           const normalized =
             error instanceof Error
               ? error
@@ -56,7 +62,7 @@ export function TemplatesGallery({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hasInitialTemplates]);
 
   const [systemTemplates, personalTemplates] = useMemo(() => {
     const system = templates.filter((template) => template.isSystem);

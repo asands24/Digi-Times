@@ -73,7 +73,7 @@ function logWarning(message: string, error?: unknown) {
   }
 }
 
-function getLocalTemplates(): StoryTemplate[] {
+export function getLocalTemplates(): StoryTemplate[] {
   return LOCAL_TEMPLATE_CACHE.map(cloneTemplate);
 }
 
