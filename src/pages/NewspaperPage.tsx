@@ -41,7 +41,7 @@ export default function NewspaperPage() {
     try {
       const { data, error: fetchError } = await supabase
         .from('story_archives')
-        .select('id, title, article, prompt, image_path, created_at, is_public, user_id')
+        .select('*')
         .in('id', ids);
 
       if (fetchError) {

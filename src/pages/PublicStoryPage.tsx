@@ -29,7 +29,7 @@ export default function PublicStoryPage() {
     try {
       const { data, error: fetchError } = await supabase
         .from('story_archives')
-        .select('id, title, article, prompt, image_path, created_at, is_public, user_id')
+        .select('*')
         .eq('id', id)
         .single();
 

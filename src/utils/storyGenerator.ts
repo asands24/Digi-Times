@@ -70,8 +70,8 @@ const storyPalettes: StoryPalette[] = [
     ],
     quotes: [
       '"This is why we love getting together as a family," said one happy cousin with a big smile.',
-      '"Today was so special. We'll remember this forever," said a family member.',
-      '"We didn't just have a party—we made memories that will last a lifetime," said one guest.',
+      '"Today was so special. We\'ll remember this forever," said a family member.',
+      '"We didn\'t just have a party—we made memories that will last a lifetime," said one guest.',
     ],
     tags: ['Celebrations', 'Family Archive', 'Milestones'],
     locations: [
@@ -123,7 +123,7 @@ const storyPalettes: StoryPalette[] = [
     ],
     quotes: [
       '"We came for the adventure and got way more than we expected," said one explorer looking at photos.',
-      '"This was so cool! I can't wait for the next trip," said the team leader with a grin.',
+      '"This was so cool! I can\'t wait for the next trip," said the team leader with a grin.',
       '"The trail was tough but totally worth it. We did it!" said one hiker proudly.',
     ],
     tags: ['Adventure Log', 'Field Notes', 'On Assignment'],
@@ -175,8 +175,8 @@ const storyPalettes: StoryPalette[] = [
       'As the music faded, the community spirit stayed strong. This neighborhood knows how to come together.',
     ],
     quotes: [
-      '"We helped each other and that's what matters most," said one volunteer while cleaning up.',
-      '"Everyone worked together to make this happen. That's what community is all about," said the event organizer.',
+      '"We helped each other and that\'s what matters most," said one volunteer while cleaning up.',
+      '"Everyone worked together to make this happen. That\'s what community is all about," said the event organizer.',
       '"This was amazing! I hope we do it again soon," said a young helper.',
     ],
     tags: ['Community Desk', 'Local Spotlight', 'Civic Pride'],
@@ -203,7 +203,7 @@ const storyPalettes: StoryPalette[] = [
       'The lens captures more than light—it preserves {subjectLower}.',
     ],
     openers: [
-      'Today, {subjectLower} caught everyone's attention. It was one of those special moments worth remembering.',
+      'Today, {subjectLower} caught everyone\'s attention. It was one of those special moments worth remembering.',
       'With a quick snap of the camera, {subjectLower} became an instant classic. This moment was too good not to share.',
       'What seemed like a normal day turned into something amazing when {subjectLower} happened.',
     ],
@@ -214,13 +214,13 @@ const storyPalettes: StoryPalette[] = [
     ],
     closings: [
       'Even after the camera stopped clicking, people kept talking about it. {subjectLower} was truly special.',
-      'This story ends here, but the memory will last forever. It's ready for the family photo album.',
+      'This story ends here, but the memory will last forever. It\'s ready for the family photo album.',
       'In the book of family memories, {subjectLower} just earned its own chapter and a big headline.',
     ],
     quotes: [
       '"I knew this moment was special and wanted to capture it," said the photographer.',
       '"This is exactly what makes a great story," said someone reviewing the photo.',
-      '"We might forget some details, but we'll always remember how this felt," said a family member.',
+      '"We might forget some details, but we\'ll always remember how this felt," said a family member.',
     ],
     tags: ['Spotlight', 'Feature Desk', 'Everyday Legends'],
     locations: [

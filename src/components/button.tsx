@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '../utils/cn';
 
 type ButtonVariant = 'default' | 'outline' | 'ghost';
 type ButtonSize = 'default' | 'sm' | 'lg';
