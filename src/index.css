@@ -27,6 +27,8 @@
   --transition-base: 180ms ease;
   --radius-soft: 12px;
   --radius-pill: 999px;
+  --body-newsprint-image: none;
+  --login-story-image: none;
 }
 
 * {
@@ -43,7 +45,7 @@ body {
       rgba(253, 252, 250, 0.94),
       rgba(247, 241, 230, 0.92)
     ),
-    url('/images/placeholders/newspapers1.jpeg');
+    var(--body-newsprint-image, none);
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -1261,7 +1263,7 @@ a {
       rgba(255, 255, 255, 0.86),
       rgba(247, 241, 230, 0.9)
     ),
-    url('/images/placeholders/newspaper2.jpeg');
+    var(--login-story-image, none);
   background-size: cover;
   background-position: center;
   display: flex;

@@ -46,7 +46,7 @@ export async function persistStory(params: {
     .from('story_archives')
     .insert(payload)
     .select(
-      'id,user_id,title,template_id,image_path,created_at,updated_at,article,prompt,is_public',
+      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
     )
     .single();
   if (insErr || !inserted) {
@@ -56,6 +56,7 @@ export async function persistStory(params: {
   const normalized: ArchiveItem = {
     ...inserted,
     user_id: inserted.user_id ?? userId,
+    photo_id: inserted.photo_id ?? null,
     imageUrl: null,
   };
 
@@ -83,7 +84,7 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
   let query = supabase
     .from('story_archives')
     .select(
-      'id,user_id,title,template_id,image_path,created_at,updated_at,article,prompt,is_public',
+      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
     )
     .eq('user_id', userId)
     .order('created_at', { ascending: false });

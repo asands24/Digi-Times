@@ -7,11 +7,25 @@ import './styles/base.css';
 import './index.css';
 import { AuthProvider } from './providers/AuthProvider';
 
+const setGlobalImageVariables = () => {
+  const root = document.documentElement;
+  root.style.setProperty(
+    '--body-newsprint-image',
+    `url(${process.env.PUBLIC_URL || ''}/images/placeholders/newspapers1.jpeg)`
+  );
+  root.style.setProperty(
+    '--login-story-image',
+    `url(${process.env.PUBLIC_URL || ''}/images/placeholders/newspaper2.jpeg)`
+  );
+};
+
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
   throw new Error('Root element not found');
 }
+
+setGlobalImageVariables();
 
 const root = ReactDOM.createRoot(rootElement);
 
