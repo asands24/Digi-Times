@@ -1,122 +1,164 @@
 /* ============================================================================
-   NEWSPAPER PAGE STYLES
-   Screen and print styles for the DigiTimes newspaper layout
+   DigiTimes Newspaper Layout
+   Screen + print styles scoped to the printable newspaper routes
    ============================================================================ */
-
-/* --- Screen Styles --- */
 
 .newspaper-page {
   min-height: 100vh;
-  background: #e8e5dd;
-  padding: 2rem 1rem;
-  font-family: 'Georgia', serif;
+  background: #ebe6dc;
+  padding: 2rem 1rem 3rem;
+  font-family: 'Playfair Display', 'Libre Baskerville', Georgia, serif;
 }
 
 .newspaper-container {
-  max-width: 1000px;
+  max-width: 1024px;
   margin: 0 auto;
-  background: white;
+  background: #fffefa;
   padding: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(22, 13, 2, 0.15);
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.12);
 }
 
 .newspaper-controls {
-  text-align: center;
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px dashed #ccc;
-}
-
-.newspaper-loading,
-.newspaper-error {
-  padding: 3rem 2rem;
-  text-align: center;
-}
-
-.newspaper-error h2 {
-  font-family: 'Playfair Display', 'Georgia', serif;
-  margin: 0 0 1rem;
-  color: #2b241c;
-}
-
-.newspaper-error p {
-  margin: 0 0 1.5rem;
-  color: #7a6d5b;
-}
-
-/* --- Masthead --- */
-
-.newspaper-masthead {
-  text-align: center;
+  border-bottom: 1px dashed rgba(22, 13, 2, 0.15);
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
 }
 
-.masthead-title {
-  font-family: 'Playfair Display', 'Georgia', serif;
-  font-size: 4rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
+.newspaper-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.newspaper-back-link {
+  color: #8b5d16;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.newspaper-notice {
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+  color: #7a5f3a;
+}
+
+.newspaper-loading,
+.newspaper-error {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+.newspaper-error h2 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.newspaper-error p {
+  max-width: 420px;
+  margin: 0 auto 0.5rem;
+  color: #5c4322;
+}
+
+.newspaper-error-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.newspaper-link {
+  color: #8b5d16;
+  text-decoration: underline;
+}
+
+/* Masthead ----------------------------------------------------------------- */
+
+.newspaper-masthead {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.newspaper-masthead h1 {
+  font-size: clamp(2.75rem, 6vw, 4.5rem);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  margin: 0 0 0.5rem;
-  color: #000;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
+  margin: 0.35rem 0;
+}
+
+.masthead-edition {
+  margin: 0;
+  letter-spacing: 0.25em;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  color: #7f6542;
 }
 
 .masthead-meta {
-  font-size: 0.875rem;
+  margin: 0.5rem 0;
+  font-size: 1rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #666;
-  margin: 0 0 1rem;
+  color: #3b2c1a;
 }
 
 .masthead-separator {
-  margin: 0 0.75rem;
+  padding: 0 0.75rem;
 }
 
 .masthead-border {
+  width: 100%;
   height: 4px;
-  background: linear-gradient(to right, transparent, #000 20%, #000 80%, transparent);
+  margin-top: 1rem;
+  background: linear-gradient(
+    to right,
+    transparent,
+    #120b03 10%,
+    #120b03 90%,
+    transparent
+  );
 }
 
-/* --- Lead Story --- */
+/* Lead story --------------------------------------------------------------- */
 
 .newspaper-lead-story {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
   padding-bottom: 2rem;
-  border-bottom: 2px solid #000;
+  border-bottom: 3px double rgba(18, 11, 3, 0.2);
 }
 
-.lead-story-headline {
-  font-family: 'Playfair Display', 'Georgia', serif;
-  font-size: 2.5rem;
-  font-weight: 700;
-  line-height: 1.2;
+.newspaper-lead-story h2 {
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  letter-spacing: 0.08em;
   margin: 0 0 1.5rem;
-  color: #000;
   text-align: center;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 1rem;
 }
 
 .lead-story-image {
-  margin: 0 0 1.5rem;
-  border: 1px solid #ccc;
+  margin: 0 auto 1.5rem;
+  border: 1px solid rgba(18, 11, 3, 0.25);
+  overflow: hidden;
 }
 
 .lead-story-image img {
   width: 100%;
   height: auto;
   display: block;
+  object-fit: cover;
 }
 
 .lead-story-content {
-  font-size: 1.125rem;
-  line-height: 1.8;
   column-count: 2;
   column-gap: 2rem;
-  color: #2b241c;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #2b2013;
 }
 
 .lead-story-content p {
@@ -124,81 +166,60 @@
   break-inside: avoid;
 }
 
-/* --- Secondary Stories Grid --- */
+/* Story grid --------------------------------------------------------------- */
 
 .newspaper-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2rem;
-  margin-bottom: 2rem;
 }
 
 .newspaper-story {
+  border-top: 2px solid rgba(18, 11, 3, 0.15);
+  padding-top: 1.25rem;
   break-inside: avoid;
 }
 
-.story-headline {
-  font-family: 'Playfair Display', 'Georgia', serif;
+.newspaper-story h3 {
+  margin: 0 0 0.75rem;
   font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.3;
-  margin: 0 0 1rem;
-  color: #000;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 0.5rem;
+  letter-spacing: 0.05em;
 }
 
 .story-image {
+  border: 1px solid rgba(18, 11, 3, 0.25);
   margin: 0 0 1rem;
-  border: 1px solid #ccc;
 }
 
 .story-image img {
   width: 100%;
   height: auto;
   display: block;
+  object-fit: cover;
 }
 
 .story-content {
   font-size: 1rem;
   line-height: 1.7;
-  color: #2b241c;
+  color: #2f2617;
 }
 
 .story-content p {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.85rem;
 }
-
-.story-content p:last-child {
-  margin-bottom: 0;
-}
-
-/* --- Footer --- */
 
 .newspaper-footer {
-  border-top: 2px solid #000;
-  padding-top: 1rem;
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid rgba(18, 11, 3, 0.35);
   text-align: center;
-  font-size: 0.875rem;
-  color: #666;
-  margin-top: 2rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
 }
 
-.newspaper-footer p {
-  margin: 0;
-}
+/* Responsive --------------------------------------------------------------- */
 
-/* --- Responsive (Screen Only) --- */
-
-@media (max-width: 768px) {
-  .masthead-title {
-    font-size: 2.5rem;
-  }
-
-  .lead-story-headline {
-    font-size: 2rem;
-  }
-
+@media (max-width: 900px) {
   .lead-story-content {
     column-count: 1;
   }
@@ -207,33 +228,33 @@
     grid-template-columns: 1fr;
   }
 
-  .newspaper-container {
-    padding: 1.5rem;
+  .newspaper-actions {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
-/* ============================================================================
-   PRINT STYLES
-   Optimized for clean printing on A4/Letter paper
-   ============================================================================ */
+@media (max-width: 600px) {
+  .newspaper-container {
+    padding: 1.5rem;
+  }
+
+  .newspaper-page {
+    padding: 1.5rem 1rem 2rem;
+  }
+}
+
+/* Print -------------------------------------------------------------------- */
 
 @media print {
-  /* Reset page */
   @page {
-    margin: 0.75in;
-    size: letter portrait;
+    size: auto;
+    margin: 0.6in;
   }
 
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  /* Page background */
   body {
-    background: white;
-    margin: 0;
-    padding: 0;
+    background: white !important;
+    font-family: 'Libre Baskerville', Georgia, serif !important;
   }
 
   .newspaper-page {
@@ -242,126 +263,47 @@
   }
 
   .newspaper-container {
-    max-width: 100%;
-    margin: 0;
-    padding: 0;
+    border: none;
     box-shadow: none;
-    background: white;
+    padding: 0;
+    max-width: 100%;
   }
 
-  /* Hide controls */
   .no-print,
-  .newspaper-controls,
   nav,
-  button:not(.newspaper-story button) {
+  button,
+  .newspaper-back-link {
     display: none !important;
   }
 
-  /* Masthead for print */
-  .newspaper-masthead {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-  }
-
-  .masthead-title {
-    font-size: 3rem;
-  }
-
-  .masthead-border {
-    background: #000;
-    height: 3px;
-  }
-
-  /* Lead story for print */
-  .newspaper-lead-story {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 2px solid #000;
-    page-break-inside: avoid;
-  }
-
-  .lead-story-headline {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-  }
-
   .lead-story-content {
-    column-count: 2;
-    column-gap: 1.5rem;
-    font-size: 11pt;
-    line-height: 1.6;
+    column-gap: 1.25rem;
   }
 
-  /* Grid for print */
-  .newspaper-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-  }
-
-  .newspaper-story {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  .story-headline {
-    font-size: 1.25rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .story-content {
-    font-size: 10pt;
-    line-height: 1.5;
-  }
-
-  /* Images for print */
+  .newspaper-lead-story,
+  .newspaper-story,
   .lead-story-image,
   .story-image {
     page-break-inside: avoid;
     break-inside: avoid;
-    margin-bottom: 0.75rem;
   }
 
-  .lead-story-image img,
-  .story-image img {
+  .newspaper-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .story-image img,
+  .lead-story-image img {
     max-height: 4in;
     object-fit: contain;
   }
 
-  /* Footer for print */
   .newspaper-footer {
-    margin-top: 1.5rem;
-    padding-top: 0.75rem;
-    border-top: 2px solid #000;
-    font-size: 9pt;
+    font-size: 10pt;
   }
 
-  /* Ensure black text */
-  body,
-  .newspaper-page,
-  .newspaper-container,
-  .lead-story-content,
-  .story-content {
-    color: #000 !important;
-    background: white !important;
-  }
-
-  /* Avoid orphans and widows */
-  p,
-  h2,
-  h3 {
-    orphans: 3;
-    widows: 3;
-  }
-
-  h2,
-  h3 {
-    page-break-after: avoid;
-  }
-
-  /* Links */
   a {
-    color: #000;
-    text-decoration: underline;
+    color: inherit;
+    text-decoration: none;
   }
 }
