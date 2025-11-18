@@ -311,9 +311,13 @@ const formatDate = (value: Date) => {
 export const generateArticle = (
   options: StoryGeneratorOptions,
 ): GeneratedArticle => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[DigiTimes] Generating story using LocalStoryGenerator via generateArticle');
-  }
+  console.log('[StoryGenerator] 📝 Starting article generation', {
+    hasPrompt: !!options.prompt,
+    promptLength: options.prompt?.length ?? 0,
+    fileName: options.fileName,
+    templateName: options.templateName,
+    storyIndex: options.storyIndex,
+  });
   const prompt = sanitize(options.prompt);
   const fileName =
     sanitize(options.fileName?.replace(/\.[^.]+$/, '')) || 'family moment';
@@ -329,6 +333,11 @@ export const generateArticle = (
     'Front Page Moment';
   const seed = baseSeed + (options.storyIndex ?? 0);
   const palette = detectPalette(prompt);
+  console.log('[StoryGenerator] 🎨 Detected story palette', {
+    paletteId: palette.id,
+    paletteKeywords: palette.keywords,
+  });
+
   const subject = toTitleCase(
     combinedSubject
       .split(' ')
@@ -337,6 +346,11 @@ export const generateArticle = (
       .trim() || fallbackSubject,
   );
   const subjectLower = subject.toLowerCase();
+
+  console.log('[StoryGenerator] 📰 Generated subject', {
+    subject,
+    usedFallback: combinedSubject === fallbackSubject,
+  });
 
   const tonal = pick(palette.tones, seed, 1);
   const headlineTemplate = pick(palette.headline, seed, 2);
@@ -365,7 +379,7 @@ export const generateArticle = (
     .replace('{subjectLower}', subjectLower)
     .replace('{tonal}', tonal);
 
-  return {
+  const article = {
     headline,
     subheadline: layoutPhrase
       ? `${subheadline} ${layoutPhrase}`.trim()
@@ -380,6 +394,14 @@ export const generateArticle = (
     quote,
     tags: palette.tags,
   };
+
+  console.log('[StoryGenerator] ✅ Article generation complete', {
+    headline: article.headline,
+    bodyParagraphs: article.body.length,
+    tags: article.tags,
+  });
+
+  return article;
 };
 
 export type { GeneratedArticle };
@@ -405,6 +427,12 @@ const LocalStoryGenerator = (prompt: string) => {
 };
 
 export async function generateStoryWithOpenAI(prompt: string): Promise<string> {
+  console.log('[StoryGenerator] 🤖 Calling OpenAI API...', {
+    promptLength: prompt.length,
+    endpoint: '/.netlify/functions/generateStory',
+  });
+
+  const startTime = Date.now();
   const res = await fetch('/.netlify/functions/generateStory', {
     method: 'POST',
     headers: {
@@ -412,42 +440,70 @@ export async function generateStoryWithOpenAI(prompt: string): Promise<string> {
     },
     body: JSON.stringify({ prompt }),
   });
+  const duration = Date.now() - startTime;
+
+  console.log('[StoryGenerator] 📡 OpenAI API response received', {
+    status: res.status,
+    statusText: res.statusText,
+    duration,
+    ok: res.ok,
+  });
 
   if (!res.ok) {
-    if (process.env.NODE_ENV === 'development') {
-      const errorText = await res.text().catch(() => '');
-      console.error('[DigiTimes] OpenAI generateStory failed:', res.status, errorText);
-    }
+    const errorText = await res.text().catch(() => '');
+    console.error('[StoryGenerator] ❌ OpenAI API error', {
+      status: res.status,
+      statusText: res.statusText,
+      errorText,
+      duration,
+    });
     throw new Error('Failed to generate story with OpenAI');
   }
 
   const data = (await res.json()) as { article?: string };
   if (!data || typeof data.article !== 'string' || !data.article.trim()) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[DigiTimes] OpenAI generateStory returned invalid payload:', data);
-    }
+    console.error('[StoryGenerator] ❌ Invalid OpenAI response payload', {
+      hasData: !!data,
+      hasArticle: !!data?.article,
+      articleType: typeof data?.article,
+      articleLength: data?.article?.length ?? 0,
+    });
     throw new Error('Invalid story payload from OpenAI');
   }
+
+  console.log('[StoryGenerator] ✅ OpenAI story generated successfully', {
+    articleLength: data.article.length,
+    duration,
+  });
 
   return data.article.trim();
 }
 
 export async function generateStoryFromPrompt(prompt: string): Promise<string> {
+  console.log('[StoryGenerator] 🚀 generateStoryFromPrompt called', {
+    promptLength: prompt.length,
+  });
+
   const trimmed = prompt.trim();
   if (!trimmed) {
+    console.error('[StoryGenerator] ❌ Empty prompt provided');
     throw new Error('Prompt is empty');
   }
 
   try {
+    console.log('[StoryGenerator] 🔄 Attempting OpenAI generation...');
     const article = await generateStoryWithOpenAI(trimmed);
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DigiTimes] Generated story via OpenAI');
-    }
+    console.log('[StoryGenerator] ✅ Using OpenAI-generated story');
     return article;
   } catch (err) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[DigiTimes] Falling back to LocalStoryGenerator due to OpenAI error:', err);
-    }
-    return LocalStoryGenerator(trimmed);
+    console.warn('[StoryGenerator] ⚠️ OpenAI failed, falling back to local generator', {
+      error: err,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    const fallbackArticle = LocalStoryGenerator(trimmed);
+    console.log('[StoryGenerator] ✅ Using locally-generated story', {
+      articleLength: fallbackArticle.length,
+    });
+    return fallbackArticle;
   }
 }

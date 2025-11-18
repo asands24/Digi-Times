@@ -25,6 +25,11 @@ export function TemplatesGallery({
     let cancelled = false;
 
     const fetchTemplates = async () => {
+      console.log('[TemplatesGallery] 🎨 Fetching templates...', {
+        hasInitialTemplates,
+        initialTemplatesCount: initialTemplates.length,
+      });
+
       if (!hasInitialTemplates) {
         setLoading(true);
       }
@@ -32,15 +37,24 @@ export function TemplatesGallery({
       try {
         const data = await fetchAllTemplates();
         if (cancelled) {
+          console.log('[TemplatesGallery] ⚠️ Fetch cancelled');
           return;
         }
+
+        console.log('[TemplatesGallery] ✅ Templates fetched successfully', {
+          count: data.length,
+          systemCount: data.filter(t => t.isSystem).length,
+          personalCount: data.filter(t => !t.isSystem).length,
+        });
 
         setTemplates(data);
       } catch (error) {
         if (!cancelled) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('TemplatesGallery load failed:', error);
-          }
+          console.error('[TemplatesGallery] ❌ Template fetch failed', {
+            error,
+            errorMessage: error instanceof Error ? error.message : String(error),
+            hasInitialTemplates,
+          });
           if (!hasInitialTemplates) {
             setTemplates([]);
           }
@@ -62,7 +76,7 @@ export function TemplatesGallery({
     return () => {
       cancelled = true;
     };
-  }, [hasInitialTemplates]);
+  }, [hasInitialTemplates, initialTemplates.length]);
 
   const [systemTemplates, personalTemplates] = useMemo(() => {
     const system = templates.filter((template) => template.isSystem);
@@ -82,24 +96,36 @@ export function TemplatesGallery({
 
   useEffect(() => {
     if (!autoSelectFirst) {
+      console.log('[TemplatesGallery] ⏭️ Auto-select disabled');
       return;
     }
 
     if (templates.length === 0) {
+      console.log('[TemplatesGallery] ⚠️ No templates to auto-select');
       return;
     }
 
     if (!selectedTemplateId || !hasSelection) {
+      console.log('[TemplatesGallery] 🎯 Auto-selecting first template', {
+        templateId: templates[0].id,
+        templateTitle: templates[0].title,
+      });
       onSelect(templates[0]);
+    } else {
+      console.log('[TemplatesGallery] ✅ Template already selected', {
+        selectedTemplateId,
+      });
     }
   }, [autoSelectFirst, hasSelection, onSelect, selectedTemplateId, templates]);
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('TemplatesGallery state:', {
-      loading,
-      templatesCount: templates.length,
+  const handleTemplateSelect = (template: StoryTemplate) => {
+    console.log('[TemplatesGallery] 👆 Template selected by user', {
+      templateId: template.id,
+      templateTitle: template.title,
+      isSystem: template.isSystem,
     });
-  }
+    onSelect(template);
+  };
 
   if (loading) {
     return (
@@ -163,7 +189,7 @@ export function TemplatesGallery({
                   className={cn('template-card', {
                     'template-card--active': template.id === selectedTemplateId,
                   })}
-                  onClick={() => onSelect(template)}
+                  onClick={() => handleTemplateSelect(template)}
                   aria-pressed={template.id === selectedTemplateId}
                 >
                   <div className="template-card__badge">Featured</div>
@@ -188,7 +214,7 @@ export function TemplatesGallery({
                   className={cn('template-card', {
                     'template-card--active': template.id === selectedTemplateId,
                   })}
-                  onClick={() => onSelect(template)}
+                  onClick={() => handleTemplateSelect(template)}
                   aria-pressed={template.id === selectedTemplateId}
                 >
                   <div className="template-card__badge template-card__badge--personal">

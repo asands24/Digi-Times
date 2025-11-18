@@ -23,28 +23,54 @@ export async function persistStory(params: {
 }) {
   const supabase = getSupabase();
   const { file, meta, templateId, userId } = params;
-  if (!templateId) throw new Error('Pick a template before saving');
 
-  if (DEBUG_STORY_LIBRARY) {
-    console.log('[StoryLibrary] Persisting story', {
-      templateId,
-      userId,
-      fileName: file.name,
-      fileSize: file.size,
-      promptLength: (meta.prompt ?? '').length,
-    });
+  console.log('[StoryLibrary] 💾 Starting story persistence', {
+    templateId,
+    userId,
+    fileName: file.name,
+    fileSize: file.size,
+    fileType: file.type,
+    headlineLength: meta.headline.length,
+    bodyHtmlLength: meta.bodyHtml.length,
+    promptLength: (meta.prompt ?? '').length,
+    timestamp: new Date().toISOString(),
+  });
+
+  if (!templateId) {
+    console.error('[StoryLibrary] ❌ No template ID provided');
+    throw new Error('Pick a template before saving');
   }
 
   const filePath = `stories/${userId}/${Date.now()}-${file.name}`;
+
+  console.log('[StoryLibrary] 📤 Uploading image to storage...', {
+    bucket: 'photos',
+    filePath,
+    fileSize: file.size,
+  });
+
+  const uploadStartTime = Date.now();
   const up = await supabase.storage.from('photos').upload(filePath, file, {
     cacheControl: '3600',
     upsert: false,
   });
-  if (up.error) throw up.error;
+  const uploadDuration = Date.now() - uploadStartTime;
 
-  if (DEBUG_STORY_LIBRARY) {
-    console.log('[StoryLibrary] Uploaded image for story', { filePath });
+  if (up.error) {
+    console.error('[StoryLibrary] ❌ Image upload failed', {
+      error: up.error,
+      errorMessage: up.error.message,
+      filePath,
+      duration: uploadDuration,
+    });
+    throw up.error;
   }
+
+  console.log('[StoryLibrary] ✅ Image uploaded successfully', {
+    filePath,
+    duration: uploadDuration,
+    uploadedPath: up.data?.path,
+  });
 
   const payload: StoryArchiveInsert = {
     title: meta.headline,
@@ -55,6 +81,14 @@ export async function persistStory(params: {
     user_id: userId,
   };
 
+  console.log('[StoryLibrary] 📝 Inserting story archive record...', {
+    title: payload.title,
+    templateId: payload.template_id,
+    hasPrompt: !!payload.prompt,
+    articleLength: payload.article?.length ?? 0,
+  });
+
+  const insertStartTime = Date.now();
   const {
     data: inserted,
     error: insErr,
@@ -65,16 +99,25 @@ export async function persistStory(params: {
       'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
     )
     .single();
+  const insertDuration = Date.now() - insertStartTime;
+
   if (insErr || !inserted) {
+    console.error('[StoryLibrary] ❌ Database insert failed', {
+      error: insErr,
+      errorMessage: insErr?.message,
+      errorCode: insErr?.code,
+      duration: insertDuration,
+    });
     throw insErr ?? new Error('Failed to save story.');
   }
 
-  if (DEBUG_STORY_LIBRARY) {
-    console.log('[StoryLibrary] Persisted story archive row', {
-      id: inserted.id,
-      templateId: inserted.template_id,
-    });
-  }
+  console.log('[StoryLibrary] ✅ Story archive record created', {
+    id: inserted.id,
+    templateId: inserted.template_id,
+    isPublic: inserted.is_public,
+    duration: insertDuration,
+    createdAt: inserted.created_at,
+  });
 
   const normalized: ArchiveItem = {
     ...inserted,
@@ -84,11 +127,23 @@ export async function persistStory(params: {
   };
 
   if (inserted.image_path) {
+    console.log('[StoryLibrary] 🔗 Getting public URL for image...', {
+      imagePath: inserted.image_path,
+    });
     const { data: pub } = supabase.storage.from('photos').getPublicUrl(inserted.image_path);
     normalized.imageUrl = pub?.publicUrl ?? null;
+    console.log('[StoryLibrary] ✅ Public URL generated', {
+      imageUrl: normalized.imageUrl,
+    });
   }
 
   cacheStory(userId, normalized);
+  console.log('[StoryLibrary] ✅ Story cached locally');
+
+  console.log('[StoryLibrary] 🎉 Story persistence complete!', {
+    storyId: inserted.id,
+    totalDuration: uploadDuration + insertDuration,
+  });
 
   return { filePath, story: normalized };
 }
@@ -97,12 +152,14 @@ export type { ArchiveItem } from '../types/story';
 
 export async function loadStories(userId?: string | null): Promise<ArchiveItem[]> {
   if (!userId) {
+    console.log('[StoryLibrary] ⚠️ loadStories called without userId, returning empty array');
     return [];
   }
 
-  if (DEBUG_STORY_LIBRARY) {
-    console.log('[StoryLibrary] Loading stories for user', { userId });
-  }
+  console.log('[StoryLibrary] 📚 Loading stories for user', {
+    userId,
+    timestamp: new Date().toISOString(),
+  });
 
   const supabase = getSupabase();
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -118,14 +175,39 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
 
   if (controller) {
     query = query.abortSignal(controller.signal);
-    timeout = setTimeout(() => controller.abort(), 10000);
+    timeout = setTimeout(() => {
+      console.warn('[StoryLibrary] ⏱️ Query timeout reached, aborting...');
+      controller.abort();
+    }, 10000);
+    console.log('[StoryLibrary] ⏱️ Query timeout set to 10 seconds');
   }
 
   try {
+    console.log('[StoryLibrary] 🌐 Fetching stories from Supabase...');
+    const queryStartTime = Date.now();
     const { data, error } = await query;
-    if (error) throw error;
+    const queryDuration = Date.now() - queryStartTime;
+
+    if (error) {
+      console.error('[StoryLibrary] ❌ Query error', {
+        error,
+        errorMessage: error.message,
+        errorCode: error.code,
+        duration: queryDuration,
+      });
+      throw error;
+    }
+
+    console.log('[StoryLibrary] ✅ Query successful', {
+      rowCount: data?.length ?? 0,
+      duration: queryDuration,
+    });
 
     const rows = (data ?? []) as StoryArchiveRow[];
+    console.log('[StoryLibrary] 🔗 Generating public URLs for images...', {
+      rowsWithImages: rows.filter(r => r.image_path).length,
+    });
+
     const mapped: ArchiveItem[] = rows.map((r) => {
       if (!r.image_path) {
         return { ...r };
@@ -135,42 +217,39 @@ export async function loadStories(userId?: string | null): Promise<ArchiveItem[]
     });
 
     if (mapped.length === 0) {
+      console.log('[StoryLibrary] ℹ️ No stories found, creating starter story');
       const starter = buildStarterStory(userId);
       cacheStories(userId, [starter]);
-      if (DEBUG_STORY_LIBRARY) {
-        console.log('[StoryLibrary] No archives found, seeded starter story');
-      }
+      console.log('[StoryLibrary] ✅ Starter story created and cached');
       return [starter];
     }
 
     cacheStories(userId, mapped);
-    if (DEBUG_STORY_LIBRARY) {
-      console.log('[StoryLibrary] Loaded stories', { count: mapped.length });
-    }
+    console.log('[StoryLibrary] ✅ Stories loaded and cached', {
+      count: mapped.length,
+      stories: mapped.map(s => ({ id: s.id, title: s.title, templateId: s.template_id })),
+    });
     return mapped;
   } catch (error) {
-    if (DEBUG_STORY_LIBRARY) {
-      console.error('[StoryLibrary] Failed to load stories', error);
-    }
+    console.error('[StoryLibrary] ❌ Failed to load stories', {
+      error,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      isAbortError: error instanceof Error && error.name === 'AbortError',
+    });
 
     const cached = getCachedStories(userId);
     if (cached.length > 0) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('Falling back to cached stories after load failure.', error);
-      }
-      if (DEBUG_STORY_LIBRARY) {
-        console.log('[StoryLibrary] Returning cached stories after load error', {
-          count: cached.length,
-        });
-      }
+      console.warn('[StoryLibrary] ⚠️ Falling back to cached stories', {
+        cachedCount: cached.length,
+      });
       return cached;
     }
 
+    console.log('[StoryLibrary] ⚠️ No cached stories, creating starter story');
     const starter = buildStarterStory(userId);
     cacheStories(userId, [starter]);
-    if (DEBUG_STORY_LIBRARY) {
-      console.log('[StoryLibrary] Returning starter story after load failure.');
-    }
+    console.log('[StoryLibrary] ✅ Starter story created after error');
 
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Loading saved stories timed out. Please try again.');
