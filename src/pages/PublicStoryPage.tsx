@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../providers/AuthProvider';
-import type { Database } from '../types/supabase';
 
 interface StoryWithImage {
   id: string;
