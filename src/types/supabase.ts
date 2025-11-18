@@ -339,9 +339,11 @@ export interface Database {
           id: string;
           slug: Nullable<string>;
           title: string;
+          description: Nullable<string>;
           html: string;
           css: Nullable<string>;
           is_system: Nullable<boolean>;
+          owner: Nullable<string>;
           created_at: Nullable<string>;
         };
         Insert: never;

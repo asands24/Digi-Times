@@ -7,11 +7,6 @@
   SECRETS_SCAN_OMIT_KEYS = "REACT_APP_SUPABASE_ANON_KEY"
 
 [[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

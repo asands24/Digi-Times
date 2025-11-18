@@ -1,17 +1,11 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { useInvite } from '../hooks/useInvite'
-import { Camera, Mail, Users } from 'lucide-react'
+import { Camera, Mail } from 'lucide-react'
 import { getRandomPhotos } from '../data/stockPhotos'
-import DemoLoginButton from '../components/DemoLoginButton'
 
 const LoginPage = () => {
-  const { signInWithMagicLink, signInWithOAuth, loading } = useAuth()
-  const { loading: inviteLoading } = useInvite()
+  const { signInWithMagicLink, loading } = useAuth()
   const [email, setEmail] = useState('')
-  const [inviteCode, setInviteCode] = useState('')
-  const [showInviteForm, setShowInviteForm] = useState(false)
-  const emailInputRef = useRef(null)
 
   // Get sample photos to display
   const samplePhotos = getRandomPhotos(4)
@@ -30,29 +24,6 @@ const LoginPage = () => {
   const handleSignIn = async (e) => {
     e.preventDefault()
     await sendMagicLink()
-  }
-
-  const handleInviteSignIn = async (e) => {
-    e.preventDefault()
-    if (!email.trim() || !inviteCode.trim()) return
-
-    const { error: signInError } = await signInWithMagicLink(email)
-    if (!signInError) {
-      setEmail('')
-      setInviteCode('')
-    }
-  }
-
-  const handleQuickEmail = async () => {
-    if (!email.trim()) {
-      emailInputRef.current?.focus()
-      return
-    }
-    await sendMagicLink()
-  }
-
-  const handleGoogleSignIn = async () => {
-    await signInWithOAuth('google')
   }
 
   return (
@@ -167,162 +138,51 @@ const LoginPage = () => {
           boxShadow: '6px 6px 0 rgba(0,0,0,0.2)',
           padding: '2rem'
         }}>
-          {!showInviteForm ? (
-            <>
-              <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">
-                Sign In
-              </h2>
+          <>
+            <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">
+              Sign In
+            </h2>
 
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="label">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      id="email"
-                      type="email"
-                      ref={emailInputRef}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="input pl-10"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="label">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="input pl-10"
+                    required
+                    disabled={loading}
+                  />
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || !email.trim()}
-                  className="btn full"
-                >
-                  {loading ? (
-                    <>
-                      <div className="loading w-4 h-4" />
-                      Sending Magic Link...
-                    </>
-                  ) : (
-                    'Send Magic Link'
-                  )}
-                </button>
-              </form>
-
-              <div className="mt-4 text-center">
-                <DemoLoginButton />
               </div>
 
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteForm(true)}
-                  className="btn secondary"
-                  style={{ gap: '0.5rem' }}
-                >
-                  <Users className="w-4 h-4" />
-                  Have an invite code?
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">
-                Join with Invite
-              </h2>
-
-              <form onSubmit={handleInviteSignIn} className="space-y-4">
-                <div>
-                  <label htmlFor="invite-email" className="label">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      id="invite-email"
-                      type="email"
-                      ref={emailInputRef}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="input pl-10"
-                      required
-                      disabled={loading || inviteLoading}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="invite-code" className="label">
-                    Invite Code
-                  </label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      id="invite-code"
-                      type="text"
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                      placeholder="Enter invite code"
-                      className="input pl-10 uppercase"
-                      required
-                      disabled={loading || inviteLoading}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading || inviteLoading || !email.trim() || !inviteCode.trim()}
-                  className="btn full"
-                >
-                  {loading || inviteLoading ? (
-                    <>
-                      <div className="loading w-4 h-4" />
-                      Sending Magic Link...
-                    </>
-                  ) : (
-                    'Join Group & Sign In'
-                  )}
-                </button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteForm(false)}
-                  className="btn secondary"
-                >
-                  Back to regular sign in
-                </button>
-              </div>
-            </>
-          )}
-
-          <div className="mt-6 grid" style={{ gap: '0.75rem' }}>
-            <div className="grid cols-2" style={{ gap: '0.75rem' }}>
               <button
-                type="button"
-                className="btn"
-                disabled={loading || inviteLoading}
-                onClick={handleQuickEmail}
+                type="submit"
+                disabled={loading || !email.trim()}
+                className="btn full"
               >
-                Continue with Email
+                {loading ? (
+                  <>
+                    <div className="loading w-4 h-4" />
+                    Sending Magic Link...
+                  </>
+                ) : (
+                  'Send Magic Link'
+                )}
               </button>
-              <button
-                type="button"
-                className="btn secondary"
-                disabled={loading || inviteLoading}
-                onClick={handleGoogleSignIn}
-              >
-                Continue with Google
-              </button>
-            </div>
-            <p className="muted" style={{ textAlign: 'center' }}>
+            </form>
+
+            <p className="muted mt-6" style={{ textAlign: 'center' }}>
               We'll email you a magic link to sign in securely without a password.
             </p>
-          </div>
+          </>
         </div>
 
         <div className="mt-8 text-center text-xs text-gray-500">
