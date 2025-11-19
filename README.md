@@ -4,13 +4,14 @@ Craft rich newspaper-style coverage from your everyday photos in minutes. Upload
 
 ## Highlights
 
-- **Photo-to-Story Pipeline** – Drop in one or many images and receive fully written feature articles tuned to your prompt.
+- **Photo-to-Story Pipeline** – Drop in one or many images and receive fully written kid-friendly feature articles tuned to your prompt.
+- **Kid-Friendly AI Generation** – Uses OpenAI's cheapest models (o3-mini, gpt-4o-mini) with carefully crafted prompts to ensure appropriate, positive content for ages 7-12.
 - **Editorial Tone Blends** – Smart heuristics adjust tone for celebrations, adventures, community events, or quiet spotlights.
-- **Local Story Archive** – Save generated features with their images, edit the copy later, and keep a timestamped history.
-- **Print & Export Ready** – Open a print-perfect layout or export the full archive as JSON for safekeeping.
+- **Story Archive** – Save generated features with their images to Supabase, edit visibility, and maintain a timestamped history.
+- **Share & Print** – Share individual stories via public links (`/read/:id`) or build a printable newspaper layout (`/newspaper`) with multiple stories.
+- **Production-Ready UX** – Comprehensive loading states, error handling, accessibility features, and first-time user onboarding.
 - **Public Template Gallery** – Browse shared templates at `/templates` with no authentication required.
-- **Anonymous Photo Uploads** – Upload images straight to Supabase Storage via `/upload` and share them through the `/gallery`.
-- **Offline Friendly** – Core newsroom workflows continue to run locally when Supabase credentials are absent.
+- **Offline Friendly** – Core newsroom workflows continue to run locally when Supabase or OpenAI are unavailable.
 
 ## Quick Start
 
@@ -21,13 +22,17 @@ npm start
 
 Open http://localhost:3000 to launch the studio.
 
-## Using the Studio
+## How It Works
 
-1. **Set the Angle** – Enter an optional “story idea” prompt. We reuse it for new uploads and inspiration.
-2. **Add Photos** – Drag & drop images (JPG/PNG/WebP) or click the upload area.
-3. **Shape Each Story** – Adjust the prompt per photo if needed and generate the article.
-4. **Archive the Winners** – Save finished pieces to the Edition Archive where they persist in local storage.
-5. **Polish & Publish** – Edit saved copy, open a print-ready view, or export the archive for sharing.
+DigiTimes follows a simple, delightful workflow designed for families:
+
+1. **Write a Story Idea** – Enter a prompt describing what you want to cover (e.g., "Sunset picnic celebrating grandma's 80th birthday").
+2. **Add Photos** – Upload images from your device or take new photos with your camera.
+3. **Generate Articles** – Click "Generate article" to create a kid-friendly newspaper story using AI.
+4. **Save to Archive** – Stories are saved to your personal archive in Supabase with images stored in secure cloud storage.
+5. **Share Stories** – Mark stories as public and share them via clean, printable links (`/read/:id`).
+6. **Build Your Newspaper** – Select multiple stories and create a beautiful printable newspaper layout (`/newspaper`).
+7. **Print & Enjoy** – Print your newspaper or export your stories for safekeeping.
 
 ## Public Pages
 
@@ -57,11 +62,47 @@ Legacy Supabase hooks remain (for the original collaborative roadmap) but sit be
 
 ## Story Generation Pipeline
 
-- Generate/Regenerate actions in `src/components/EventBuilder.tsx` now call `generateStoryFromPrompt()` from `src/utils/storyGenerator.ts`, which POSTs to `/.netlify/functions/generateStory` before falling back to the seeded local generator.
-- `netlify/functions/generateStory.js` calls OpenAI’s Chat Completions API (`gpt-4o-mini`) with the effective prompt for the draft and returns `{ article }` text for the client to hydrate into the template.
-- If the function errors or OpenAI returns an invalid payload, the browser logs `[DigiTimes] Falling back to LocalStoryGenerator due to OpenAI error` and reuses the existing heuristic article builder so the UI keeps working offline.
-- `OPENAI_API_KEY` must be configured both in Netlify → Site settings → Environment variables and in `.env.local` when running Netlify CLI/dev locally so the function can authenticate.
-- In development mode successful calls log `[DigiTimes] Generated story via OpenAI`, letting you verify which path generated the draft.
+DigiTimes uses a cost-effective, kid-safe AI pipeline with automatic fallback:
+
+### Primary Path: OpenAI (Cheapest Models)
+- Generate/Regenerate actions in `src/components/EventBuilder.tsx` call `generateStoryFromPrompt()` from `src/utils/storyGenerator.ts`
+- This POSTs to `/.netlify/functions/generateStory`, a Netlify serverless function
+- The function tries models in order of cost-effectiveness: **o3-mini** → **gpt-4o-mini**
+- Each model receives a carefully crafted system prompt enforcing:
+  - **Kid-friendly tone** (ages 7-12)
+  - **Newspaper structure** (headline, 2-4 paragraphs, who/what/where/why)
+  - **Simple, positive language**
+  - **No scary, violent, or adult content**
+- Returns `{ headline, article }` JSON for the client to display
+
+### Fallback Path: Local Generator
+- If OpenAI fails (network error, timeout, rate limit), the app automatically falls back to a local story generator
+- The fallback maintains the same kid-friendly tone and newspaper structure
+- Users see no disruption—generation continues seamlessly
+- Browser logs: `[DigiTimes] Story generation failed, using local article`
+
+### Configuration
+- **Production:** Set `OPENAI_API_KEY` in Netlify → Site settings → Environment variables
+- **Local Development:** Add `OPENAI_API_KEY` to `.env.local` for testing with Netlify CLI
+- **Cost Control:** The pipeline uses only the cheapest available OpenAI models to minimize API costs
+
+## Public vs Private Stories
+
+Every story in DigiTimes has an `is_public` flag that controls visibility:
+
+- **Public Stories** (`is_public = true`):
+  - Accessible to anyone via `/read/:id` share links
+  - No authentication required to view
+  - Perfect for sharing with family and friends
+  - RLS policies allow anonymous SELECT queries
+
+- **Private Stories** (`is_public = false`, default):
+  - Only visible to the story creator (matched by `user_id`)
+  - Attempting to access via `/read/:id` shows "This story is not available"
+  - Protected by Row Level Security (RLS) policies in Supabase
+  - Ideal for drafts or personal memories
+
+Users can toggle visibility with the "Public" checkbox in the Story Archive component. Share links are automatically generated when stories are marked public.
 
 ### Smoke Script Credentials
 

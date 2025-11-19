@@ -137,15 +137,24 @@ CREATE INDEX IF NOT EXISTS idx_photos_uploaded_by ON photos(uploaded_by);
 CREATE TABLE IF NOT EXISTS story_archives (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  prompt TEXT NOT NULL,
-  article JSONB NOT NULL,
+  title TEXT,
+  article TEXT,
+  prompt TEXT,
+  image_path TEXT,
+  template_id TEXT,
   photo_id UUID REFERENCES photos(id) ON DELETE SET NULL,
+  is_public BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_story_archives_user_id ON story_archives(user_id);
 CREATE INDEX IF NOT EXISTS idx_story_archives_updated_at ON story_archives(updated_at);
+CREATE INDEX IF NOT EXISTS idx_story_archives_user_created_at_desc
+  ON story_archives (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_story_archives_template_id ON story_archives(template_id);
+CREATE INDEX IF NOT EXISTS idx_story_archives_is_public ON story_archives(is_public);
+CREATE INDEX IF NOT EXISTS idx_story_archives_image_path ON story_archives(image_path);
 
 -- =============================================
 -- FUNCTIONS AND TRIGGERS

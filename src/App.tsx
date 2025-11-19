@@ -5,6 +5,8 @@ import { Header } from './components/Header';
 import { EventBuilder } from './components/EventBuilder';
 import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { OnboardingBanner } from './components/OnboardingBanner';
 import { loadStories, type ArchiveItem, updateStoryVisibility } from './hooks/useStoryLibrary';
 import Logout from './pages/Logout';
 import TemplatesPage from './pages/Templates';
@@ -82,6 +84,7 @@ function HomePage() {
     <div className="app-shell">
       <Header />
       <main className="editorial-main">
+        <OnboardingBanner />
         <EventBuilder
           onArchiveSaved={async () => {
             await refreshArchive();
@@ -122,17 +125,19 @@ export default function App() {
 
   if (REQUIRE_LOGIN && !user) {
     return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/read/:id" element={<PublicStoryPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <AppErrorBoundary>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/read/:id" element={<PublicStoryPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AppErrorBoundary>
     );
   }
 
   return (
-    <>
+    <AppErrorBoundary>
       <nav style={{ display: 'flex', gap: 12, padding: 12, flexWrap: 'wrap' }}>
         <Link to="/">Home</Link>
         <Link to="/templates">Templates</Link>
@@ -156,6 +161,6 @@ export default function App() {
         />
         <Route path="*" element={<HomePage />} />
       </Routes>
-    </>
+    </AppErrorBoundary>
   );
 }

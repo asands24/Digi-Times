@@ -147,6 +147,9 @@ CREATE INDEX idx_photos_event_id ON photos(event_id);
 CREATE INDEX idx_event_attendees_event_id ON event_attendees(event_id);
 CREATE INDEX idx_newsletter_collaborators_newsletter_id ON newsletter_collaborators(newsletter_id);
 CREATE INDEX idx_friend_groups_invite_code ON friend_groups(invite_code);
+CREATE INDEX idx_story_archives_user_id ON story_archives(user_id);
+CREATE INDEX idx_story_archives_updated_at ON story_archives(updated_at);
+CREATE INDEX idx_story_archives_user_created_at_desc ON story_archives (user_id, created_at DESC);
 ```
 
 ### Create Functions and Triggers
