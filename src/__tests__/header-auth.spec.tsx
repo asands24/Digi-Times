@@ -115,7 +115,7 @@ describe('Header auth actions', () => {
     useAuthSpy.mockReset();
   });
 
-  it('navigates to settings and logs out via Supabase', async () => {
+  it('logs out via Supabase', async () => {
     const user = setupUser();
     render(<Header />);
 
@@ -124,12 +124,6 @@ describe('Header auth actions', () => {
     fireEvent.pointerDown(trigger);
     fireEvent.click(trigger);
 
-    const settingsItem = await screen.findByRole('menuitem', { name: /settings/i });
-    await user.click(settingsItem);
-
-    expect(mockNavigate).toHaveBeenCalledWith('/settings');
-
-    await user.click(trigger);
     const logoutItem = await screen.findByRole('menuitem', { name: /log out/i });
     await user.click(logoutItem);
 

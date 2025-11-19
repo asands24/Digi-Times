@@ -412,25 +412,19 @@ ALTER TABLE story_archives ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view their stories" ON story_archives;
 CREATE POLICY "Users can view their stories"
   ON story_archives FOR SELECT
-  USING (auth.uid() = created_by);
+  USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert their stories" ON story_archives;
 CREATE POLICY "Users can insert their stories"
   ON story_archives FOR INSERT
-  WITH CHECK (auth.uid() = created_by);
+  WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update their stories" ON story_archives;
 CREATE POLICY "Users can update their stories"
   ON story_archives FOR UPDATE
-  USING (auth.uid() = created_by);
+  USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete their stories" ON story_archives;
 CREATE POLICY "Users can delete their stories"
   ON story_archives FOR DELETE
-  USING (auth.uid() = created_by);
-
-DROP POLICY IF EXISTS "Public stories are readable" ON story_archives;
-CREATE POLICY "Public stories are readable"
-  ON story_archives FOR SELECT
-  TO public
-  USING (is_public = true);
+  USING (auth.uid() = user_id);

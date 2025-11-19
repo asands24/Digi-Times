@@ -1,4 +1,4 @@
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -7,7 +7,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { useAuth } from '../providers/AuthProvider';
@@ -37,18 +36,19 @@ export function Header() {
     return 'guest@digitimes.app';
   }, [profile?.display_name, profile?.email, user?.email]);
 
-  const handleNavigateSettings = useCallback(() => {
-    navigate('/settings');
-  }, [navigate]);
-
-  const handleSignOut = useCallback(async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast.error('Failed to log out. Please try again.');
-      return;
-    }
-    navigate('/login');
-  }, [navigate, signOut]);
+  const handleSignOut = useCallback(
+    async (event?: Event) => {
+      event?.preventDefault();
+      event?.stopPropagation();
+      const { error } = await signOut();
+      if (error) {
+        toast.error('Failed to log out. Please try again.');
+        return;
+      }
+      navigate('/login');
+    },
+    [navigate, signOut]
+  );
 
   return (
     <header className="editorial-header">
@@ -74,11 +74,6 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={handleNavigateSettings}>
-                <Settings size={16} strokeWidth={1.75} />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="editorial-user__logout"
                 onSelect={handleSignOut}
