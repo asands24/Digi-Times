@@ -38,6 +38,20 @@ supabase db push
 3. Try accessing `/read/:id` for a private story while logged out - should fail
 4. Log in as the story owner and access a private story - should work
 
+### `20250322_migrate_story_archives_owner.sql`
+
+**Purpose:** Backfills the `created_by` column on `story_archives`, drops the legacy `user_id` column, and recreates the supporting index. This keeps the database in sync with the updated application code and prevents timeouts caused by full table scans.
+
+**What it does:**
+- Adds `created_by` if it does not exist.
+- Copies any existing `user_id` values into `created_by`.
+- Recreates the owner index on `created_by` and removes the old `user_id` column.
+
+**How to test:**
+1. Run the migration.
+2. Verify `created_by` is populated by running `select created_by from story_archives limit 5;`.
+3. Confirm the new index appears via `select indexname from pg_indexes where tablename = 'story_archives';`.
+
 ## Important Notes
 
 - **Do not modify existing migration files** - create new ones instead
