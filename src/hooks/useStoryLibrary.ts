@@ -151,7 +151,11 @@ export async function persistStory(params: {
 export type { ArchiveItem } from '../types/story';
 
 const STORIES_LIMIT = 50;
-const QUERY_TIMEOUT_MS = 10000;
+const DEFAULT_QUERY_TIMEOUT_MS = 10000;
+const ENV_TIMEOUT_MS = Number(process.env.REACT_APP_STORY_QUERY_TIMEOUT_MS);
+const QUERY_TIMEOUT_MS =
+  Number.isFinite(ENV_TIMEOUT_MS) && ENV_TIMEOUT_MS > 0 ? ENV_TIMEOUT_MS : DEFAULT_QUERY_TIMEOUT_MS;
+const MAX_QUERY_ATTEMPTS = 2;
 
 /**
  * Load stories list without large text fields (article, prompt) for performance.
@@ -170,52 +174,11 @@ export async function loadStories(userId?: string | null, limit: number = STORIE
   });
 
   const supabase = getSupabase();
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  // Lightweight query - exclude large text fields for better performance
-  let query = supabase
-    .from('story_archives')
-    .select(
-      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,is_public',
-    )
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (controller) {
-    query = query.abortSignal(controller.signal);
-    timeout = setTimeout(() => {
-      console.warn('[StoryLibrary] ⏱️ Query timeout reached, aborting...');
-      controller.abort();
-    }, QUERY_TIMEOUT_MS);
-    console.log('[StoryLibrary] ⏱️ Query timeout set to', QUERY_TIMEOUT_MS, 'ms');
-  }
 
   try {
-    console.log('[StoryLibrary] 🌐 Fetching stories list from Supabase...');
-    const queryStartTime = Date.now();
-    const { data, error } = await query;
-    const queryDuration = Date.now() - queryStartTime;
-
-    if (error) {
-      console.error('[StoryLibrary] ❌ Query error', {
-        error,
-        errorMessage: error.message,
-        errorCode: error.code,
-        duration: queryDuration,
-      });
-      throw error;
-    }
-
-    console.log('[StoryLibrary] ✅ Query successful', {
-      rowCount: data?.length ?? 0,
-      duration: queryDuration,
-    });
-
-    const rows = data ?? [];
+    const rows = await fetchStoriesWithRetries({ supabase, userId, limit });
     console.log('[StoryLibrary] 🔗 Generating public URLs for images...', {
-      rowsWithImages: rows.filter(r => r.image_path).length,
+      rowsWithImages: rows.filter((r) => r.image_path).length,
     });
 
     const mapped: ArchiveItem[] = rows.map((r) => {
@@ -270,6 +233,109 @@ export async function loadStories(userId?: string | null, limit: number = STORIE
       throw new Error('Loading saved stories timed out. Please try again.');
     }
     throw new Error("We couldn't load your archive. Please refresh and try again.");
+  }
+}
+
+async function fetchStoriesWithRetries({
+  supabase,
+  userId,
+  limit,
+}: {
+  supabase: ReturnType<typeof getSupabase>;
+  userId: string;
+  limit: number;
+}): Promise<StoryArchiveRow[]> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= MAX_QUERY_ATTEMPTS; attempt += 1) {
+    try {
+      return await fetchStoriesAttempt({ supabase, userId, limit, attempt });
+    } catch (error) {
+      lastError = error;
+      const isAbortError = error instanceof Error && error.name === 'AbortError';
+      console.warn('[StoryLibrary] ⚠️ Stories query attempt failed', {
+        attempt,
+        maxAttempts: MAX_QUERY_ATTEMPTS,
+        isAbortError,
+      });
+      if (isAbortError && attempt < MAX_QUERY_ATTEMPTS) {
+        console.log('[StoryLibrary] 🔁 Retrying stories query...', {
+          nextAttempt: attempt + 1,
+          timeoutMs: QUERY_TIMEOUT_MS,
+        });
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError ?? new Error('Failed to load stories due to unknown error');
+}
+
+async function fetchStoriesAttempt({
+  supabase,
+  userId,
+  limit,
+  attempt,
+}: {
+  supabase: ReturnType<typeof getSupabase>;
+  userId: string;
+  limit: number;
+  attempt: number;
+}): Promise<StoryArchiveRow[]> {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  let query = supabase
+    .from('story_archives')
+    .select(
+      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,is_public',
+    )
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (controller) {
+    query = query.abortSignal(controller.signal);
+    timeout = setTimeout(() => {
+      console.warn('[StoryLibrary] ⏱️ Query timeout reached, aborting...', {
+        attempt,
+        timeoutMs: QUERY_TIMEOUT_MS,
+      });
+      controller.abort();
+    }, QUERY_TIMEOUT_MS);
+    console.log('[StoryLibrary] ⏱️ Query timeout set', {
+      timeoutMs: QUERY_TIMEOUT_MS,
+      attempt,
+      maxAttempts: MAX_QUERY_ATTEMPTS,
+    });
+  }
+
+  try {
+    console.log('[StoryLibrary] 🌐 Fetching stories list from Supabase...', {
+      attempt,
+      limit,
+    });
+    const queryStartTime = Date.now();
+    const { data, error } = await query;
+    const queryDuration = Date.now() - queryStartTime;
+
+    if (error) {
+      console.error('[StoryLibrary] ❌ Query error', {
+        attempt,
+        error,
+        errorMessage: error.message,
+        errorCode: error.code,
+        duration: queryDuration,
+      });
+      throw error;
+    }
+
+    console.log('[StoryLibrary] ✅ Query successful', {
+      attempt,
+      rowCount: data?.length ?? 0,
+      duration: queryDuration,
+    });
+
+    return (data ?? []) as StoryArchiveRow[];
   } finally {
     if (timeout) {
       clearTimeout(timeout);
