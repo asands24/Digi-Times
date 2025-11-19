@@ -150,8 +150,8 @@ CREATE TABLE IF NOT EXISTS story_archives (
 
 CREATE INDEX IF NOT EXISTS idx_story_archives_user_id ON story_archives(user_id);
 CREATE INDEX IF NOT EXISTS idx_story_archives_updated_at ON story_archives(updated_at);
-CREATE INDEX IF NOT EXISTS idx_story_archives_user_created_at_desc
-  ON story_archives (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_story_archives_created_by_created_at_desc
+  ON story_archives (created_by, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_story_archives_template_id ON story_archives(template_id);
 CREATE INDEX IF NOT EXISTS idx_story_archives_is_public ON story_archives(is_public);
 CREATE INDEX IF NOT EXISTS idx_story_archives_image_path ON story_archives(image_path);

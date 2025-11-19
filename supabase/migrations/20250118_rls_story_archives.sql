@@ -16,23 +16,23 @@ USING (is_public = true);
 CREATE POLICY "Users can read their own stories"
 ON public.story_archives
 FOR SELECT
-USING (auth.uid() = user_id);
+USING (auth.uid() = created_by);
 
 -- Policy: Users can insert their own stories
 CREATE POLICY "Users can create their own stories"
 ON public.story_archives
 FOR INSERT
-WITH CHECK (auth.uid() = user_id);
+WITH CHECK (auth.uid() = created_by);
 
 -- Policy: Users can update their own stories
 CREATE POLICY "Users can update their own stories"
 ON public.story_archives
 FOR UPDATE
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+USING (auth.uid() = created_by)
+WITH CHECK (auth.uid() = created_by);
 
 -- Policy: Users can delete their own stories
 CREATE POLICY "Users can delete their own stories"
 ON public.story_archives
 FOR DELETE
-USING (auth.uid() = user_id);
+USING (auth.uid() = created_by);

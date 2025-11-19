@@ -12,6 +12,9 @@ create table if not exists templates (
   updated_at timestamptz default timezone('utc', now()) not null
 );
 
+alter table templates
+  add column if not exists owner uuid references auth.users(id) on delete cascade;
+
 alter table templates enable row level security;
 
 drop policy if exists "read system templates" on templates;

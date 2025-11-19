@@ -29,13 +29,9 @@ This will create all the necessary tables:
 
 ### 2. Apply Row Level Security Policies
 
-**IMPORTANT:** Use the fixed version to avoid infinite recursion errors!
-
 1. In the **SQL Editor**, create another new query
-2. Copy the contents of `rls-policies-fixed.sql` and paste it
+2. Copy the contents of `rls-policies.sql` and paste it
 3. Click **Run** to execute
-
-> **Note:** If you already ran `rls-policies.sql` and got "infinite recursion" errors, run `rls-policies-fixed.sql` which drops and recreates all policies correctly.
 
 This sets up security policies ensuring:
 - Users can only see groups they're members of
@@ -148,16 +144,9 @@ All tables have RLS enabled with policies that ensure:
 ## Troubleshooting
 
 ### "infinite recursion detected in policy" errors
-**This is the most common error!**
-- You need to use `rls-policies-fixed.sql` instead of `rls-policies.sql`
-- The fixed version prevents policies from referencing themselves
-- Run the fixed SQL file to drop and recreate all policies correctly
-
-To fix:
-```sql
--- In Supabase SQL Editor, run the contents of:
--- rls-policies-fixed.sql
-```
+- Make sure you ran the latest `rls-policies.sql`
+- The current file drops/recreates policies in the correct order to avoid recursion loops
+- Re-run the script to ensure every policy is reset cleanly
 
 ### "relation does not exist" errors
 - Make sure you ran the schema.sql file completely
