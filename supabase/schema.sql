@@ -136,7 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_photos_uploaded_by ON photos(uploaded_by);
 -- =============================================
 CREATE TABLE IF NOT EXISTS story_archives (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT,
   article TEXT,
   prompt TEXT,
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS story_archives (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_story_archives_user_id ON story_archives(user_id);
+CREATE INDEX IF NOT EXISTS idx_story_archives_created_by ON story_archives(created_by);
 CREATE INDEX IF NOT EXISTS idx_story_archives_updated_at ON story_archives(updated_at);
 CREATE INDEX IF NOT EXISTS idx_story_archives_created_by_created_at_desc
   ON story_archives (created_by, created_at DESC);

@@ -14,7 +14,7 @@ interface StoryWithImage extends StoryRow {
 }
 
 const STORY_COLUMNS =
-  'id,title,article,prompt,image_path,photo_id,template_id,created_at,updated_at,is_public,user_id';
+  'id,title,article,prompt,image_path,photo_id,template_id,created_at,updated_at,is_public,created_by';
 const UUID_MATCH =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -96,7 +96,7 @@ export default function NewspaperPage() {
         if (!user?.id) {
           return false;
         }
-        return story.user_id === user.id;
+        return story.created_by === user.id;
       });
 
       if (available.length === 0) {

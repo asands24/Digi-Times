@@ -254,7 +254,7 @@ export interface Database {
       story_archives: {
       Row: {
         id: string;
-        user_id: string;
+        created_by: string;
         title: Nullable<string>;
         prompt: Nullable<string>;
           article: Nullable<string>;
@@ -267,7 +267,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          user_id: string;
+          created_by: string;
           title?: Nullable<string>;
           prompt?: Nullable<string>;
           article?: Nullable<string>;
@@ -280,7 +280,7 @@ export interface Database {
         };
         Update: {
           id?: string;
-          user_id?: string;
+          created_by?: string;
           title?: Nullable<string>;
           prompt?: Nullable<string>;
           article?: Nullable<string>;

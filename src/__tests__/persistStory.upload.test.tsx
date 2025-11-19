@@ -53,7 +53,7 @@ describe('persistStory upload', () => {
     const singleMock = jest.fn().mockResolvedValue({
       data: {
         id: 'story-1',
-        user_id: 'user-1',
+        created_by: 'user-1',
         title: 'Smoke Test',
         article: '<p>Body</p>',
         prompt: 'Prompt',

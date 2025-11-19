@@ -78,7 +78,7 @@ export async function persistStory(params: {
     prompt: meta.prompt ?? null,
     image_path: filePath,
     template_id: templateId,
-    user_id: userId,
+    created_by: userId,
   };
 
   console.log('[StoryLibrary] 📝 Inserting story archive record...', {
@@ -96,7 +96,7 @@ export async function persistStory(params: {
     .from('story_archives')
     .insert(payload)
     .select(
-      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
+      'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
     )
     .single();
   const insertDuration = Date.now() - insertStartTime;
@@ -121,7 +121,7 @@ export async function persistStory(params: {
 
   const normalized: ArchiveItem = {
     ...inserted,
-    user_id: inserted.user_id ?? userId,
+    created_by: inserted.created_by ?? userId,
     photo_id: inserted.photo_id ?? null,
     imageUrl: null,
   };
@@ -287,9 +287,9 @@ async function fetchStoriesAttempt({
   let query = supabase
     .from('story_archives')
     .select(
-      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,is_public',
+      'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,is_public',
     )
-    .eq('user_id', userId)
+    .eq('created_by', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -360,10 +360,10 @@ export async function loadStoryDetails(storyId: string, userId: string): Promise
   const { data, error } = await supabase
     .from('story_archives')
     .select(
-      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
+      'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
     )
     .eq('id', storyId)
-    .eq('user_id', userId)
+    .eq('created_by', userId)
     .single();
 
   const queryDuration = Date.now() - queryStartTime;
@@ -425,9 +425,9 @@ export async function loadStoriesWithDetails(
   const { data, error } = await supabase
     .from('story_archives')
     .select(
-      'id,user_id,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
+      'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
     )
-    .eq('user_id', userId)
+    .eq('created_by', userId)
     .in('id', storyIds);
 
   const queryDuration = Date.now() - queryStartTime;

@@ -14,7 +14,7 @@ export function buildStarterStory(userId: string): ArchiveItem {
 
   return {
     id: `starter-${userId}`,
-    user_id: userId,
+    created_by: userId,
     title: 'Sample Feature: Family Newsroom',
     prompt: 'See how a polished article could look in your edition.',
     article: SAMPLE_BODY.trim(),

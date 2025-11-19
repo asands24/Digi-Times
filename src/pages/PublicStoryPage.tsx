@@ -12,12 +12,12 @@ interface StoryWithImage {
   image_path: string | null;
   created_at: string;
   is_public: boolean | null;
-  user_id: string | null;
+  created_by: string | null;
   imageUrl?: string | null;
 }
 
 const STORY_FIELDS =
-  'id,title,article,prompt,image_path,created_at,is_public,user_id';
+  'id,title,article,prompt,image_path,created_at,is_public,created_by';
 
 function getImageUrl(imagePath?: string | null) {
   if (!imagePath) {
@@ -73,7 +73,7 @@ export default function PublicStoryPage() {
       }
 
       const canView =
-        Boolean(data.is_public) || (user?.id ? data.user_id === user.id : false);
+        Boolean(data.is_public) || (user?.id ? data.created_by === user.id : false);
 
       if (!canView) {
         setError('This story is not available');
