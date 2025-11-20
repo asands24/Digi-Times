@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 import type { ArchiveItem } from '../types/story';
-import { cacheStories, cacheStory, getCachedStories } from '../utils/storyCache';
-import { buildStarterStory } from '../utils/storySeeds';
+import { cacheStory } from '../utils/storyCache';
 
 const DEBUG_STORY_LIBRARY = process.env.NODE_ENV !== 'production';
 
@@ -155,27 +154,10 @@ export type StoryLibraryStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
 export type LoadStoriesResult = {
   stories: ArchiveItem[];
-  error?: Error | null;
+  error: Error | null;
 };
 
 const STORIES_LIMIT = 50;
-const DEFAULT_QUERY_TIMEOUT_MS = 10000;
-const ENV_TIMEOUT_MS = Number(process.env.REACT_APP_STORY_QUERY_TIMEOUT_MS);
-const QUERY_TIMEOUT_MS =
-  Number.isFinite(ENV_TIMEOUT_MS) && ENV_TIMEOUT_MS > 0 ? ENV_TIMEOUT_MS : DEFAULT_QUERY_TIMEOUT_MS;
-const MAX_QUERY_ATTEMPTS = 2;
-
-function normalizeLoadError(error: unknown): Error {
-  if (error instanceof Error && error.name === 'AbortError') {
-    const timeoutError = new Error('Stories are taking too long to load. Please try again.');
-    timeoutError.name = 'AbortError';
-    return timeoutError;
-  }
-  if (error instanceof Error) {
-    return error;
-  }
-  return new Error("We couldn't load your archive. Please refresh and try again.");
-}
 
 /**
  * Load stories list without large text fields (article, prompt) for performance.
@@ -183,184 +165,52 @@ function normalizeLoadError(error: unknown): Error {
  */
 export async function loadStories(
   userId?: string | null,
-  limit: number = STORIES_LIMIT,
 ): Promise<LoadStoriesResult> {
   if (!userId) {
     console.log('[StoryLibrary] ⚠️ loadStories called without userId, returning empty array');
-    return { stories: [] };
+    return { stories: [], error: null };
   }
 
-  console.log('[StoryLibrary] 📚 Loading stories list for user', {
+  const supabase = getSupabase();
+  console.log('[StoryLibrary] 🌐 Fetching stories list from Supabase...', {
     userId,
-    limit,
-    timestamp: new Date().toISOString(),
+    limit: STORIES_LIMIT,
   });
 
-  const supabase = getSupabase();
-
   try {
-    const rows = await fetchStoriesWithRetries({ supabase, userId, limit });
-    console.log('[StoryLibrary] 🔗 Generating public URLs for images...', {
-      rowsWithImages: rows.filter((r) => r.image_path).length,
-    });
+    const { data, error } = await supabase
+      .from('story_archives')
+      .select(
+        'id,created_by,title,article,prompt,image_path,photo_id,template_id,created_at,is_public',
+      )
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false })
+      .limit(STORIES_LIMIT);
 
-    const mapped: ArchiveItem[] = rows.map((r) => {
-      const item: ArchiveItem = {
-        ...r,
-        article: null,
-        prompt: null,
-      };
-      if (r.image_path) {
-        const { data: pub } = supabase.storage.from('photos').getPublicUrl(r.image_path);
+    if (error) {
+      console.error('[StoryLibrary] ❌ Supabase error loading stories', error);
+      return { stories: [], error };
+    }
+
+    const rows = (data ?? []) as StoryArchiveRow[];
+    const mapped: ArchiveItem[] = rows.map((row) => {
+      const item: ArchiveItem = { ...row, imageUrl: null };
+      if (row.image_path) {
+        const { data: pub } = supabase.storage.from('photos').getPublicUrl(row.image_path);
         item.imageUrl = pub?.publicUrl ?? null;
       }
       return item;
     });
 
-    if (mapped.length === 0) {
-      console.log('[StoryLibrary] ℹ️ No stories found, creating starter story');
-      const starter = buildStarterStory(userId);
-      cacheStories(userId, [starter]);
-      console.log('[StoryLibrary] ✅ Starter story created and cached');
-      return { stories: [starter] };
-    }
-
-    cacheStories(userId, mapped);
-    console.log('[StoryLibrary] ✅ Stories loaded and cached', {
+    console.log('[StoryLibrary] ✅ Loaded stories', {
       count: mapped.length,
-      stories: mapped.map((s) => ({ id: s.id, title: s.title, templateId: s.template_id })),
-    });
-    return { stories: mapped };
-  } catch (error) {
-    console.error('[StoryLibrary] ❌ Failed to load stories', {
-      error,
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      isAbortError: error instanceof Error && error.name === 'AbortError',
     });
 
-    const normalizedError = normalizeLoadError(error);
-    const cached = getCachedStories(userId);
-    if (cached.length > 0) {
-      console.warn('[StoryLibrary] ⚠️ Falling back to cached stories', {
-        cachedCount: cached.length,
-      });
-      return { stories: cached, error: normalizedError };
-    }
-
-    console.log('[StoryLibrary] ⚠️ No cached stories, creating starter story');
-    const starter = buildStarterStory(userId);
-    cacheStories(userId, [starter]);
-    console.log('[StoryLibrary] ✅ Starter story created after error');
-
-    return { stories: [starter], error: normalizedError };
-  }
-}
-
-async function fetchStoriesWithRetries({
-  supabase,
-  userId,
-  limit,
-}: {
-  supabase: ReturnType<typeof getSupabase>;
-  userId: string;
-  limit: number;
-}): Promise<StoryArchiveRow[]> {
-  let lastError: unknown = null;
-  for (let attempt = 1; attempt <= MAX_QUERY_ATTEMPTS; attempt += 1) {
-    try {
-      return await fetchStoriesAttempt({ supabase, userId, limit, attempt });
-    } catch (error) {
-      lastError = error;
-      const isAbortError = error instanceof Error && error.name === 'AbortError';
-      console.warn('[StoryLibrary] ⚠️ Stories query attempt failed', {
-        attempt,
-        maxAttempts: MAX_QUERY_ATTEMPTS,
-        isAbortError,
-      });
-      if (isAbortError && attempt < MAX_QUERY_ATTEMPTS) {
-        console.log('[StoryLibrary] 🔁 Retrying stories query...', {
-          nextAttempt: attempt + 1,
-          timeoutMs: QUERY_TIMEOUT_MS,
-        });
-        continue;
-      }
-      throw error;
-    }
-  }
-  throw lastError ?? new Error('Failed to load stories due to unknown error');
-}
-
-async function fetchStoriesAttempt({
-  supabase,
-  userId,
-  limit,
-  attempt,
-}: {
-  supabase: ReturnType<typeof getSupabase>;
-  userId: string;
-  limit: number;
-  attempt: number;
-}): Promise<StoryArchiveRow[]> {
-  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  let query = supabase
-    .from('story_archives')
-    .select(
-      'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,is_public',
-    )
-    .eq('created_by', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (controller) {
-    query = query.abortSignal(controller.signal);
-    timeout = setTimeout(() => {
-      console.warn('[StoryLibrary] ⏱️ Query timeout reached, aborting...', {
-        attempt,
-        timeoutMs: QUERY_TIMEOUT_MS,
-      });
-      controller.abort();
-    }, QUERY_TIMEOUT_MS);
-    console.log('[StoryLibrary] ⏱️ Query timeout set', {
-      timeoutMs: QUERY_TIMEOUT_MS,
-      attempt,
-      maxAttempts: MAX_QUERY_ATTEMPTS,
-    });
-  }
-
-  try {
-    console.log('[StoryLibrary] 🌐 Fetching stories list from Supabase...', {
-      attempt,
-      limit,
-    });
-    const queryStartTime = Date.now();
-    const { data, error } = await query;
-    const queryDuration = Date.now() - queryStartTime;
-
-    if (error) {
-      console.error('[StoryLibrary] ❌ Query error', {
-        attempt,
-        error,
-        errorMessage: error.message,
-        errorCode: error.code,
-        duration: queryDuration,
-      });
-      throw error;
-    }
-
-    console.log('[StoryLibrary] ✅ Query successful', {
-      attempt,
-      rowCount: data?.length ?? 0,
-      duration: queryDuration,
-    });
-
-    return (data ?? []) as StoryArchiveRow[];
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
+    return { stories: mapped, error: null };
+  } catch (err) {
+    console.error('[StoryLibrary] 💥 Unexpected exception loading stories', err);
+    const normalizedError = err instanceof Error ? err : new Error('Unexpected error loading stories.');
+    return { stories: [], error: normalizedError };
   }
 }
 
@@ -510,11 +360,7 @@ export function useStoryLibraryArchive(userId?: string | null) {
       return;
     }
 
-    const cached = getCachedStories(userId);
-    if (cached.length > 0) {
-      setStories(cached);
-    }
-
+    setStories([]);
     setStatus('loading');
     setErrorMessage(null);
     console.log('[StoryLibrary] 🔄 Refreshing stories list', {
@@ -524,32 +370,19 @@ export function useStoryLibraryArchive(userId?: string | null) {
 
     try {
       const result = await loadStories(userId);
-      setStories(result.stories);
 
       if (result.error) {
-        if (result.error.name === 'AbortError') {
-          console.warn('[StoryLibrary] ⏱️ Fetch aborted due to timeout', {
-            userId,
-            timeoutMs: QUERY_TIMEOUT_MS,
-          });
-        } else {
-          console.error('[StoryLibrary] ❌ Supabase error loading stories', {
-            error: result.error,
-            userId,
-          });
-        }
+        setStories([]);
         setStatus('error');
         setErrorMessage(result.error.message);
         return;
       }
 
+      setStories(result.stories);
       setStatus('loaded');
-      console.log('[StoryLibrary] ✅ Loaded stories', {
-        count: result.stories.length,
-        userId,
-      });
     } catch (refreshError) {
       console.error('[StoryLibrary] ❌ Unexpected error while refreshing stories', refreshError);
+      setStories([]);
       setStatus('error');
       setErrorMessage(
         refreshError instanceof Error
