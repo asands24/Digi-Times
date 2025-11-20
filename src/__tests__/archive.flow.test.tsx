@@ -5,7 +5,14 @@ import { EventBuilder } from '../components/EventBuilder';
 
 jest.mock('../hooks/useStoryLibrary', () => ({
   persistStory: jest.fn().mockResolvedValue({ filePath: 'stories/user/file.jpg' }),
-  loadStories: jest.fn(),
+  loadStories: jest.fn().mockResolvedValue({ stories: [] }),
+  useStoryLibraryArchive: jest.fn().mockReturnValue({
+    stories: [],
+    status: 'loaded',
+    errorMessage: null,
+    refresh: jest.fn(),
+    updateStories: jest.fn(),
+  }),
 }));
 
 jest.mock('../components/TemplatesGallery', () => ({

@@ -6,7 +6,14 @@ jest.mock('../providers/AuthProvider', () => ({
 }));
 
 jest.mock('../hooks/useStoryLibrary', () => ({
-  loadStories: jest.fn(),
+  loadStories: jest.fn().mockResolvedValue({ stories: [] }),
+  useStoryLibraryArchive: jest.fn().mockReturnValue({
+    stories: [],
+    status: 'loaded',
+    errorMessage: null,
+    refresh: jest.fn(),
+    updateStories: jest.fn(),
+  }),
 }));
 
 const useAuth = jest.requireMock('../providers/AuthProvider').useAuth as jest.Mock;

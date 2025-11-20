@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 import type { ArchiveItem } from '../types/story';
@@ -150,6 +151,13 @@ export async function persistStory(params: {
 
 export type { ArchiveItem } from '../types/story';
 
+export type StoryLibraryStatus = 'idle' | 'loading' | 'loaded' | 'error';
+
+export type LoadStoriesResult = {
+  stories: ArchiveItem[];
+  error?: Error | null;
+};
+
 const STORIES_LIMIT = 50;
 const DEFAULT_QUERY_TIMEOUT_MS = 10000;
 const ENV_TIMEOUT_MS = Number(process.env.REACT_APP_STORY_QUERY_TIMEOUT_MS);
@@ -157,14 +165,29 @@ const QUERY_TIMEOUT_MS =
   Number.isFinite(ENV_TIMEOUT_MS) && ENV_TIMEOUT_MS > 0 ? ENV_TIMEOUT_MS : DEFAULT_QUERY_TIMEOUT_MS;
 const MAX_QUERY_ATTEMPTS = 2;
 
+function normalizeLoadError(error: unknown): Error {
+  if (error instanceof Error && error.name === 'AbortError') {
+    const timeoutError = new Error('Stories are taking too long to load. Please try again.');
+    timeoutError.name = 'AbortError';
+    return timeoutError;
+  }
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error("We couldn't load your archive. Please refresh and try again.");
+}
+
 /**
  * Load stories list without large text fields (article, prompt) for performance.
  * Use loadStoryDetails() to fetch full story content when needed.
  */
-export async function loadStories(userId?: string | null, limit: number = STORIES_LIMIT): Promise<ArchiveItem[]> {
+export async function loadStories(
+  userId?: string | null,
+  limit: number = STORIES_LIMIT,
+): Promise<LoadStoriesResult> {
   if (!userId) {
     console.log('[StoryLibrary] ⚠️ loadStories called without userId, returning empty array');
-    return [];
+    return { stories: [] };
   }
 
   console.log('[StoryLibrary] 📚 Loading stories list for user', {
@@ -199,15 +222,15 @@ export async function loadStories(userId?: string | null, limit: number = STORIE
       const starter = buildStarterStory(userId);
       cacheStories(userId, [starter]);
       console.log('[StoryLibrary] ✅ Starter story created and cached');
-      return [starter];
+      return { stories: [starter] };
     }
 
     cacheStories(userId, mapped);
     console.log('[StoryLibrary] ✅ Stories loaded and cached', {
       count: mapped.length,
-      stories: mapped.map(s => ({ id: s.id, title: s.title, templateId: s.template_id })),
+      stories: mapped.map((s) => ({ id: s.id, title: s.title, templateId: s.template_id })),
     });
-    return mapped;
+    return { stories: mapped };
   } catch (error) {
     console.error('[StoryLibrary] ❌ Failed to load stories', {
       error,
@@ -216,12 +239,13 @@ export async function loadStories(userId?: string | null, limit: number = STORIE
       isAbortError: error instanceof Error && error.name === 'AbortError',
     });
 
+    const normalizedError = normalizeLoadError(error);
     const cached = getCachedStories(userId);
     if (cached.length > 0) {
       console.warn('[StoryLibrary] ⚠️ Falling back to cached stories', {
         cachedCount: cached.length,
       });
-      return cached;
+      return { stories: cached, error: normalizedError };
     }
 
     console.log('[StoryLibrary] ⚠️ No cached stories, creating starter story');
@@ -229,10 +253,7 @@ export async function loadStories(userId?: string | null, limit: number = STORIE
     cacheStories(userId, [starter]);
     console.log('[StoryLibrary] ✅ Starter story created after error');
 
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Loading saved stories timed out. Please try again.');
-    }
-    throw new Error("We couldn't load your archive. Please refresh and try again.");
+    return { stories: [starter], error: normalizedError };
   }
 }
 
@@ -474,4 +495,80 @@ export async function updateStoryVisibility(id: string, nextValue: boolean): Pro
   if (DEBUG_STORY_LIBRARY) {
     console.log('[StoryLibrary] Updated visibility successfully', { id });
   }
+}
+
+export function useStoryLibraryArchive(userId?: string | null) {
+  const [stories, setStories] = useState<ArchiveItem[]>([]);
+  const [status, setStatus] = useState<StoryLibraryStatus>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!userId) {
+      setStories([]);
+      setStatus('idle');
+      setErrorMessage(null);
+      return;
+    }
+
+    const cached = getCachedStories(userId);
+    if (cached.length > 0) {
+      setStories(cached);
+    }
+
+    setStatus('loading');
+    setErrorMessage(null);
+    console.log('[StoryLibrary] 🔄 Refreshing stories list', {
+      userId,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const result = await loadStories(userId);
+      setStories(result.stories);
+
+      if (result.error) {
+        if (result.error.name === 'AbortError') {
+          console.warn('[StoryLibrary] ⏱️ Fetch aborted due to timeout', {
+            userId,
+            timeoutMs: QUERY_TIMEOUT_MS,
+          });
+        } else {
+          console.error('[StoryLibrary] ❌ Supabase error loading stories', {
+            error: result.error,
+            userId,
+          });
+        }
+        setStatus('error');
+        setErrorMessage(result.error.message);
+        return;
+      }
+
+      setStatus('loaded');
+      console.log('[StoryLibrary] ✅ Loaded stories', {
+        count: result.stories.length,
+        userId,
+      });
+    } catch (refreshError) {
+      console.error('[StoryLibrary] ❌ Unexpected error while refreshing stories', refreshError);
+      setStatus('error');
+      setErrorMessage(
+        refreshError instanceof Error
+          ? refreshError.message
+          : "We couldn't load your stories right now. Please try again.",
+      );
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const updateStories = useCallback(
+    (updater: (items: ArchiveItem[]) => ArchiveItem[]) => {
+      setStories((current) => updater(current));
+    },
+    [],
+  );
+
+  return { stories, status, errorMessage, refresh, updateStories };
 }

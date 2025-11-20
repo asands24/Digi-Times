@@ -1,5 +1,5 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
 import { EventBuilder } from './components/EventBuilder';
@@ -7,7 +7,11 @@ import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { OnboardingBanner } from './components/OnboardingBanner';
-import { loadStories, type ArchiveItem, updateStoryVisibility } from './hooks/useStoryLibrary';
+import {
+  type ArchiveItem,
+  updateStoryVisibility,
+  useStoryLibraryArchive,
+} from './hooks/useStoryLibrary';
 import Logout from './pages/Logout';
 import TemplatesPage from './pages/Templates';
 import UploadPhoto from './components/UploadPhoto';
@@ -19,50 +23,24 @@ import AuthCallback from './pages/AuthCallback';
 import DebugTemplates from './pages/DebugTemplates';
 import PublicStoryPage from './pages/PublicStoryPage';
 import NewspaperPage from './pages/NewspaperPage';
-import { getCachedStories } from './utils/storyCache';
-
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 function HomePage() {
-  const [stories, setStories] = useState<ArchiveItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
   const { user } = useAuth();
-
-  const refreshArchive = useCallback(async () => {
-    if (!user) {
-      setStories([]);
-      setLoading(false);
-      return;
-    }
-
-    const cached = getCachedStories(user.id);
-    if (cached.length > 0) {
-      setStories(cached);
-    }
-
-    setLoading(true);
-    try {
-      const items = await loadStories(user.id);
-      setStories(items ?? []);
-    } catch (error) {
-      console.error('Failed to load archive', error);
-      setStories(getCachedStories(user.id));
-      const message =
-        error instanceof Error
-          ? error.message
-          : "We couldn't load your archive. Please try again.";
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const {
+    stories,
+    status,
+    errorMessage,
+    refresh: refreshArchive,
+    updateStories,
+  } = useStoryLibraryArchive(user?.id);
+  const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
 
   const handleToggleShare = useCallback(
     async (storyId: string, nextValue: boolean) => {
       try {
         await updateStoryVisibility(storyId, nextValue);
-        setStories((prev) =>
+        updateStories((prev) =>
           prev.map((story) =>
             story.id === storyId ? { ...story, is_public: nextValue } : story,
           ),
@@ -73,12 +51,8 @@ function HomePage() {
         toast.error('Could not update sharing setting.');
       }
     },
-    [],
+    [updateStories],
   );
-
-  useEffect(() => {
-    void refreshArchive();
-  }, [refreshArchive]);
 
   return (
     <div className="app-shell">
@@ -93,7 +67,8 @@ function HomePage() {
         />
         <StoryArchive
           stories={stories}
-          loading={loading}
+          status={status}
+          errorMessage={errorMessage}
           onPreview={(story) => setPreviewStory(story)}
           onRefresh={refreshArchive}
           onToggleShare={handleToggleShare}

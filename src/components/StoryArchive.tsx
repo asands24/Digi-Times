@@ -3,14 +3,19 @@ import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper } 
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { loadStoriesWithDetails, type ArchiveItem } from '../hooks/useStoryLibrary';
+import {
+  loadStoriesWithDetails,
+  type ArchiveItem,
+  type StoryLibraryStatus,
+} from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
 import { useAuth } from '../providers/AuthProvider';
 import toast from 'react-hot-toast';
 
 interface StoryArchiveProps {
   stories: ArchiveItem[];
-  loading: boolean;
+  status: StoryLibraryStatus;
+  errorMessage?: string | null;
   onPreview: (story: ArchiveItem) => void;
   onRefresh: () => void;
   onToggleShare: (storyId: string, nextValue: boolean) => void;
@@ -170,7 +175,8 @@ const openEditionPreview = async (storyIds: string[], userId: string) => {
 
 export function StoryArchive({
   stories,
-  loading,
+  status,
+  errorMessage,
   onPreview,
   onRefresh,
   onToggleShare,
@@ -178,11 +184,13 @@ export function StoryArchive({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [exportLoading, setExportLoading] = useState(false);
+  const isLoading = status === 'loading' || status === 'idle';
+  const isError = status === 'error';
   const hasStories = stories.length > 0;
   // Filter out sample stories and stories without titles for export
   const exportableStories = stories.filter((story) => !story.isSample && story.title);
   const canExportEdition = exportableStories.length > 0;
-  const showExportHint = !loading && !canExportEdition;
+  const showExportHint = !isLoading && !isError && !canExportEdition;
 
   const handleBuildNewspaper = () => {
     const ids = exportableStories.map((story) => story.id).join(',');
@@ -218,7 +226,7 @@ export function StoryArchive({
           </p>
         </div>
         <div className="story-archive__header-actions">
-          <Button type="button" variant="outline" onClick={onRefresh} disabled={loading}>
+          <Button type="button" variant="outline" onClick={onRefresh} disabled={isLoading}>
             <RefreshCcw size={16} strokeWidth={1.75} />
             Refresh
           </Button>
@@ -226,7 +234,7 @@ export function StoryArchive({
             type="button"
             variant="outline"
             onClick={handleBuildNewspaper}
-            disabled={!canExportEdition}
+            disabled={!canExportEdition || isLoading}
           >
             <Newspaper size={16} strokeWidth={1.75} />
             Build Newspaper
@@ -234,7 +242,7 @@ export function StoryArchive({
           <Button
             type="button"
             onClick={handleExportEdition}
-            disabled={!canExportEdition || exportLoading}
+            disabled={!canExportEdition || exportLoading || isLoading}
           >
             <ArchiveIcon size={16} strokeWidth={1.75} />
             {exportLoading ? 'Loading...' : 'Export edition'}
@@ -245,9 +253,24 @@ export function StoryArchive({
         </div>
       </header>
 
-      {loading ? (
-        <div className="story-archive__empty">
-          <p>Loading your saved stories…</p>
+      {isLoading ? (
+        <div className="story-archive__empty" role="status" aria-live="polite">
+          <p>
+            Loading your stories...
+            <span className="story-archive__loading-icon" aria-hidden="true">
+              ⏳
+            </span>
+          </p>
+        </div>
+      ) : isError ? (
+        <div className="story-archive__empty story-archive__error" role="alert" aria-live="assertive">
+          <h3>We couldn't load your stories right now.</h3>
+          {errorMessage ? (
+            <p className="story-archive__error-message">{errorMessage}</p>
+          ) : null}
+          <Button type="button" variant="outline" onClick={onRefresh}>
+            Retry
+          </Button>
         </div>
       ) : hasStories ? (
         <div className="story-archive__grid">
@@ -322,10 +345,7 @@ export function StoryArchive({
         </div>
       ) : (
         <div className="story-archive__empty">
-          <p>
-            You haven’t saved any stories yet. Archive a generated article to see it
-            appear here, or refresh if you recently saved one on another device.
-          </p>
+          <p>No stories yet. Start by adding a photo and story idea.</p>
           <Button type="button" variant="outline" onClick={onRefresh}>
             Refresh archive
           </Button>
