@@ -756,33 +756,41 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
                           type="button"
                           size="sm"
                           onClick={async () => {
-                            console.log('[SaveToArchive] 🟡 Clicked', {
+                            console.log('[EventBuilder] Save button clicked', {
                               entryId: entry.id,
                               hasArticle: !!entry.article,
-                              selectedTemplateId: selectedTemplate?.id ?? null,
-                              userId: user?.id ?? null,
+                              hasUser: !!user?.id,
+                              selectedTemplate,
                             });
 
                             if (!entry.article) {
-                              console.warn('[SaveToArchive] No article on entry, not saving');
+                              console.error('[EventBuilder] saveDraftToArchive was NOT called');
+                              console.warn('[SaveToArchive] ⚠️ No article on entry, not saving');
                               return;
                             }
                             if (!user?.id) {
-                              console.warn('[SaveToArchive] No user id present, require login to save');
+                              console.error('[EventBuilder] saveDraftToArchive was NOT called');
+                              console.warn('[SaveToArchive] ⚠️ No user id present, require login to save');
                               toast.error('Sign in to save drafts to your archive.');
                               return;
                             }
 
-                            const savedStory = await saveDraftToArchive({
+                            const payloadPrompt = getEffectivePrompt(entry, globalPrompt);
+                            const result = await saveDraftToArchive({
                               entry,
                               template: selectedTemplate,
                               userId: user.id,
                               headline: entry.article.headline,
                               bodyHtml: buildBodyHtml(entry.article),
-                              prompt: getEffectivePrompt(entry, globalPrompt),
+                              prompt: payloadPrompt,
                             });
 
-                            if (!savedStory) {
+                            if (result.error) {
+                              toast.error(`Could not save story: ${result.error.message}`);
+                              return;
+                            }
+
+                            if (!result.story) {
                               toast.error('Could not save to archive.');
                               return;
                             }

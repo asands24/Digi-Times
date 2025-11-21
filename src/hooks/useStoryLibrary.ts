@@ -3,6 +3,7 @@ import { getSupabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 import type { ArchiveItem, DraftEntry, StoryTemplate } from '../types/story';
 import { cacheStory } from '../utils/storyCache';
+import { persistStory } from '../utils/persistStory';
 
 const DEBUG_STORY_LIBRARY = process.env.NODE_ENV !== 'production';
 
@@ -11,138 +12,6 @@ export type PersistMeta = {
   bodyHtml: string;
   prompt?: string;
 };
-
-type StoryArchiveRow = Database['public']['Tables']['story_archives']['Row'];
-type StoryArchiveInsert = Database['public']['Tables']['story_archives']['Insert'];
-
-export async function persistStory(params: {
-  file: File;
-  meta: PersistMeta;
-  templateId: string | null;
-  userId: string;
-}) {
-  const supabase = getSupabase();
-  const { file, meta, templateId, userId } = params;
-
-  console.log('[StoryLibrary] 💾 Starting story persistence', {
-    templateId,
-    userId,
-    fileName: file.name,
-    fileSize: file.size,
-    fileType: file.type,
-    headlineLength: meta.headline.length,
-    bodyHtmlLength: meta.bodyHtml.length,
-    promptLength: (meta.prompt ?? '').length,
-    timestamp: new Date().toISOString(),
-  });
-
-  const filePath = `stories/${userId}/${Date.now()}-${file.name}`;
-
-  console.log('[StoryLibrary] 📤 Uploading image to storage...', {
-    bucket: 'photos',
-    filePath,
-    fileSize: file.size,
-  });
-
-  const uploadStartTime = Date.now();
-  const up = await supabase.storage.from('photos').upload(filePath, file, {
-    cacheControl: '3600',
-    upsert: false,
-  });
-  const uploadDuration = Date.now() - uploadStartTime;
-
-  if (up.error) {
-    console.error('[StoryLibrary] ❌ Image upload failed', {
-      error: up.error,
-      errorMessage: up.error.message,
-      filePath,
-      duration: uploadDuration,
-    });
-    throw up.error;
-  }
-
-  console.log('[StoryLibrary] ✅ Image uploaded successfully', {
-    filePath,
-    duration: uploadDuration,
-    uploadedPath: up.data?.path,
-  });
-
-  const payload: StoryArchiveInsert = {
-    title: meta.headline,
-    article: meta.bodyHtml,
-    prompt: meta.prompt ?? null,
-    image_path: filePath,
-    template_id: templateId ?? null,
-    created_by: userId,
-  };
-
-  console.log('[StoryLibrary] 📝 Inserting story archive record...', {
-    title: payload.title,
-    templateId: payload.template_id,
-    hasPrompt: !!payload.prompt,
-    articleLength: payload.article?.length ?? 0,
-  });
-
-  const insertStartTime = Date.now();
-  const {
-    data: inserted,
-    error: insErr,
-  } = await supabase
-    .from('story_archives')
-    .insert(payload)
-    .select(
-      'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public',
-    )
-    .single();
-  const insertDuration = Date.now() - insertStartTime;
-
-  if (insErr || !inserted) {
-    console.error('[StoryLibrary] ❌ Database insert failed', {
-      error: insErr,
-      errorMessage: insErr?.message,
-      errorCode: insErr?.code,
-      duration: insertDuration,
-    });
-    throw insErr ?? new Error('Failed to save story.');
-  }
-
-  console.log('[StoryLibrary] ✅ Story archive record created', {
-    id: inserted.id,
-    templateId: inserted.template_id,
-    isPublic: inserted.is_public,
-    duration: insertDuration,
-    createdAt: inserted.created_at,
-  });
-
-  const normalized: ArchiveItem = {
-    ...inserted,
-    created_by: inserted.created_by ?? userId,
-    photo_id: inserted.photo_id ?? null,
-    imageUrl: null,
-  };
-
-  if (inserted.image_path) {
-    console.log('[StoryLibrary] 🔗 Getting public URL for image...', {
-      imagePath: inserted.image_path,
-    });
-    const { data: pub } = supabase.storage.from('photos').getPublicUrl(inserted.image_path);
-    normalized.imageUrl = pub?.publicUrl ?? null;
-    console.log('[StoryLibrary] ✅ Public URL generated', {
-      imageUrl: normalized.imageUrl,
-    });
-  }
-
-  cacheStory(userId, normalized);
-  console.log('[StoryLibrary] ✅ Story cached locally');
-
-  console.log('[StoryLibrary] 🎉 Story persistence complete!', {
-    storyId: inserted.id,
-    totalDuration: uploadDuration + insertDuration,
-  });
-
-  return { filePath, story: normalized };
-}
-
 export type SaveDraftToArchiveOptions = {
   entry: DraftEntry;
   template: StoryTemplate | null;
@@ -152,6 +21,11 @@ export type SaveDraftToArchiveOptions = {
   prompt: string | null;
 };
 
+export type SaveDraftToArchiveResult = {
+  story: ArchiveItem | null;
+  error: Error | null;
+};
+
 export async function saveDraftToArchive({
   entry,
   template,
@@ -159,18 +33,26 @@ export async function saveDraftToArchive({
   headline,
   bodyHtml,
   prompt,
-}: SaveDraftToArchiveOptions): Promise<ArchiveItem | null> {
-  console.log('[StoryLibrary] 💾 saveDraftToArchive called', {
+}: SaveDraftToArchiveOptions): Promise<SaveDraftToArchiveResult> {
+  console.log('[Archive] saveDraftToArchive called', {
     entryId: entry.id,
     hasArticle: Boolean(entry.article),
-    templateId: template?.id ?? null,
     userId,
   });
 
   if (!entry.article) {
-    console.warn('[StoryLibrary] ⚠️ No article on entry, skipping save');
-    return null;
+    console.warn('[Archive] ⚠️ No article on entry, skipping save');
+    return { story: null, error: new Error('No article to save') };
   }
+
+  const draftPayload = {
+    headline,
+    bodyHtml,
+    prompt: prompt ?? null,
+    templateId: template?.id ?? null,
+    userId,
+  };
+  console.log('[Archive] Draft payload before persist', draftPayload);
 
   try {
     const result = await persistStory({
@@ -178,17 +60,18 @@ export async function saveDraftToArchive({
       meta: {
         headline,
         bodyHtml,
-        prompt: prompt || null,
+        prompt: prompt ?? null,
       },
       templateId: template?.id ?? null,
       userId,
     });
 
-    console.log('[StoryLibrary] 💾 insert response', result);
-    return result.story;
+    console.log('[Archive] persistStory result', { story: result.story });
+    return { story: result.story, error: null };
   } catch (error) {
-    console.error('[StoryLibrary] ❌ Error saving story', error);
-    return null;
+    const normalizedError = error instanceof Error ? error : new Error('Unknown error saving story');
+    console.error('[Archive] persistStory result', { error: normalizedError });
+    return { story: null, error: normalizedError };
   }
 }
 
