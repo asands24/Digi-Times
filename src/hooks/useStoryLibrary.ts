@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
-import type { ArchiveItem } from '../types/story';
+import type { ArchiveItem, DraftEntry, StoryTemplate } from '../types/story';
 import { cacheStory } from '../utils/storyCache';
 
 const DEBUG_STORY_LIBRARY = process.env.NODE_ENV !== 'production';
@@ -18,7 +18,7 @@ type StoryArchiveInsert = Database['public']['Tables']['story_archives']['Insert
 export async function persistStory(params: {
   file: File;
   meta: PersistMeta;
-  templateId: string;
+  templateId: string | null;
   userId: string;
 }) {
   const supabase = getSupabase();
@@ -35,11 +35,6 @@ export async function persistStory(params: {
     promptLength: (meta.prompt ?? '').length,
     timestamp: new Date().toISOString(),
   });
-
-  if (!templateId) {
-    console.error('[StoryLibrary] ❌ No template ID provided');
-    throw new Error('Pick a template before saving');
-  }
 
   const filePath = `stories/${userId}/${Date.now()}-${file.name}`;
 
@@ -77,7 +72,7 @@ export async function persistStory(params: {
     article: meta.bodyHtml,
     prompt: meta.prompt ?? null,
     image_path: filePath,
-    template_id: templateId,
+    template_id: templateId ?? null,
     created_by: userId,
   };
 
@@ -146,6 +141,55 @@ export async function persistStory(params: {
   });
 
   return { filePath, story: normalized };
+}
+
+export type SaveDraftToArchiveOptions = {
+  entry: DraftEntry;
+  template: StoryTemplate | null;
+  userId: string;
+  headline: string;
+  bodyHtml: string;
+  prompt: string | null;
+};
+
+export async function saveDraftToArchive({
+  entry,
+  template,
+  userId,
+  headline,
+  bodyHtml,
+  prompt,
+}: SaveDraftToArchiveOptions): Promise<ArchiveItem | null> {
+  console.log('[StoryLibrary] 💾 saveDraftToArchive called', {
+    entryId: entry.id,
+    hasArticle: Boolean(entry.article),
+    templateId: template?.id ?? null,
+    userId,
+  });
+
+  if (!entry.article) {
+    console.warn('[StoryLibrary] ⚠️ No article on entry, skipping save');
+    return null;
+  }
+
+  try {
+    const result = await persistStory({
+      file: entry.file,
+      meta: {
+        headline,
+        bodyHtml,
+        prompt: prompt || null,
+      },
+      templateId: template?.id ?? null,
+      userId,
+    });
+
+    console.log('[StoryLibrary] 💾 insert response', result);
+    return result.story;
+  } catch (error) {
+    console.error('[StoryLibrary] ❌ Error saving story', error);
+    return null;
+  }
 }
 
 export type { ArchiveItem } from '../types/story';

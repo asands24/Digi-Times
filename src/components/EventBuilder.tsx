@@ -27,11 +27,11 @@ import {
   generateStoryFromPrompt,
   GeneratedArticle,
 } from '../utils/storyGenerator';
-import { persistStory } from '../hooks/useStoryLibrary';
-import { getSupabase } from '../lib/supabaseClient';
+import { persistStory, saveDraftToArchive } from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
 import type { StoryTemplate } from '../types/story';
 import { getLocalTemplates } from '../lib/templates';
+import { useAuth } from '../providers/AuthProvider';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -137,6 +137,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
     return firstTemplate ?? null;
   });
   const shareUrlRef = useRef<string | null>(null);
+  const { user } = useAuth();
 
   const handleFiles = useCallback(
     async (list: FileList | null) => {
@@ -454,15 +455,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         return;
       }
 
-      const supabase = getSupabase();
-      const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr) {
-        toast.error('Failed to confirm your session.');
-        return;
-      }
-
-      const userId = userRes?.user?.id;
-      if (!userId) {
+      if (!user?.id) {
         toast.error('You need to sign in before saving.');
         return;
       }
@@ -476,7 +469,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
             prompt: getEffectivePrompt(entry, globalPrompt),
           },
           templateId: selectedTemplate.id,
-          userId,
+          userId: user.id,
         });
 
         toast.success('Story archived in your edition.');
@@ -489,7 +482,7 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
         toast.error('Could not save to archive.');
       }
     },
-    [entries, globalPrompt, onArchiveSaved, removeEntry, selectedTemplate],
+    [entries, globalPrompt, onArchiveSaved, removeEntry, selectedTemplate, user],
   );
 
   const hasEntries = entries.length > 0;
@@ -762,8 +755,45 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
                         <Button
                           type="button"
                           size="sm"
-                          onClick={() => archiveStory(entry.id)}
-                          disabled={!selectedTemplate}
+                          onClick={async () => {
+                            console.log('[SaveToArchive] 🟡 Clicked', {
+                              entryId: entry.id,
+                              hasArticle: !!entry.article,
+                              selectedTemplateId: selectedTemplate?.id ?? null,
+                              userId: user?.id ?? null,
+                            });
+
+                            if (!entry.article) {
+                              console.warn('[SaveToArchive] No article on entry, not saving');
+                              return;
+                            }
+                            if (!user?.id) {
+                              console.warn('[SaveToArchive] No user id present, require login to save');
+                              toast.error('Sign in to save drafts to your archive.');
+                              return;
+                            }
+
+                            const savedStory = await saveDraftToArchive({
+                              entry,
+                              template: selectedTemplate,
+                              userId: user.id,
+                              headline: entry.article.headline,
+                              bodyHtml: buildBodyHtml(entry.article),
+                              prompt: getEffectivePrompt(entry, globalPrompt),
+                            });
+
+                            if (!savedStory) {
+                              toast.error('Could not save to archive.');
+                              return;
+                            }
+
+                            toast.success('Story archived in your edition.');
+                            removeEntry(entry.id);
+                            if (onArchiveSaved) {
+                              await onArchiveSaved();
+                            }
+                          }}
+                          disabled={!entry.article || !user}
                         >
                           <Archive size={14} strokeWidth={1.75} />
                           Save to archive

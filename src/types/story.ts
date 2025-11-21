@@ -43,3 +43,10 @@ export interface StoryArchive {
   version: number;
   stories: StoryRecord[];
 }
+
+export interface DraftEntry {
+  id: string;
+  file: File;
+  prompt: string;
+  article?: GeneratedArticle;
+}
