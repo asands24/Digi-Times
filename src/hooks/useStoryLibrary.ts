@@ -26,6 +26,8 @@ export type SaveDraftToArchiveResult = {
   error: Error | null;
 };
 
+type StoryArchiveRow = Database['public']['Tables']['story_archives']['Row'];
+
 export async function saveDraftToArchive({
   entry,
   template,
@@ -76,6 +78,7 @@ export async function saveDraftToArchive({
 }
 
 export type { ArchiveItem } from '../types/story';
+export { persistStory } from '../utils/persistStory';
 
 export type StoryLibraryStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
