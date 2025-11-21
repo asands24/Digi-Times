@@ -27,7 +27,7 @@ import {
   generateStoryFromPrompt,
   GeneratedArticle,
 } from '../utils/storyGenerator';
-import { persistStory, saveDraftToArchive } from '../hooks/useStoryLibrary';
+import { saveDraftToArchive } from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
 import type { StoryTemplate } from '../types/story';
 import { getLocalTemplates } from '../lib/templates';
@@ -441,49 +441,6 @@ export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: Eve
     });
     toast.success('Generating newsroom drafts for every photo…');
   }, [entries, generateStory, globalPrompt]);
-
-  const archiveStory = useCallback(
-    async (id: string) => {
-      const entry = entries.find((item) => item.id === id);
-      if (!entry || entry.status !== 'ready' || !entry.article) {
-        toast.error('Generate the story before archiving.');
-        return;
-      }
-
-      if (!selectedTemplate) {
-        toast.error('Choose a layout template before saving.');
-        return;
-      }
-
-      if (!user?.id) {
-        toast.error('You need to sign in before saving.');
-        return;
-      }
-
-      try {
-        await persistStory({
-          file: entry.file,
-          meta: {
-            headline: entry.article.headline,
-            bodyHtml: buildBodyHtml(entry.article),
-            prompt: getEffectivePrompt(entry, globalPrompt),
-          },
-          templateId: selectedTemplate.id,
-          userId: user.id,
-        });
-
-        toast.success('Story archived in your edition.');
-        removeEntry(entry.id);
-        if (onArchiveSaved) {
-          await onArchiveSaved();
-        }
-      } catch (error) {
-        console.error('Failed to save:', error);
-        toast.error('Could not save to archive.');
-      }
-    },
-    [entries, globalPrompt, onArchiveSaved, removeEntry, selectedTemplate, user],
-  );
 
   const hasEntries = entries.length > 0;
   const hasDraftsWithoutPrompt = useMemo(

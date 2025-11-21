@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 import type { ArchiveItem, DraftEntry, StoryTemplate } from '../types/story';
-import { cacheStory } from '../utils/storyCache';
 import { persistStory } from '../utils/persistStory';
 
 const DEBUG_STORY_LIBRARY = process.env.NODE_ENV !== 'production';
