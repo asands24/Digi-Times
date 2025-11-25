@@ -46,35 +46,45 @@ export async function saveDraftToArchive({
     return { story: null, error: new Error('No article to save') };
   }
 
+  const payloadForPersist = {
+    created_by: userId,
+    template_id: template?.id ?? null,
+    prompt: prompt ?? null,
+  };
+
   console.log('[Archive] Draft payload before persist', {
     headline,
-    templateId: template?.id ?? null,
-    prompt: prompt ?? null,
+    templateId: payloadForPersist.template_id,
+    prompt: payloadForPersist.prompt,
   });
+  console.log('[Archive] persistStory payload', payloadForPersist);
+
+  const persistPayload = {
+    file: entry.file,
+    meta: {
+      headline,
+      bodyHtml,
+      prompt: payloadForPersist.prompt,
+    },
+    templateId: payloadForPersist.template_id,
+    userId: payloadForPersist.created_by,
+  };
 
   try {
-    const persistPayload = {
-      file: entry.file,
-      meta: {
-        headline,
-        bodyHtml,
-        prompt: prompt ?? null,
-      },
-      templateId: template?.id ?? null,
-      userId,
-    };
-    console.log('[Archive] persistStory payload', {
-      user_id: userId,
-      template_id: template?.id ?? null,
-      prompt: prompt ?? null,
-    });
-
     const result = await persistStory(persistPayload);
 
     console.log('[Archive] persistStory result', {
       mode: result.mode,
       storyId: result.id,
     });
+
+    if (result.story) {
+      console.log('[Archive] persistStory saved payload', {
+        title: result.story.title,
+        articleLength: result.story.article?.length ?? 0,
+        image_path: result.story.image_path,
+      });
+    }
 
     try {
       const refreshResult = await refreshStories(userId);
@@ -92,7 +102,7 @@ export async function saveDraftToArchive({
     return { story: result.story, error: null };
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error('Unknown error saving story');
-    console.error('[Archive] persistStory result', { error: normalizedError });
+    console.error('[Archive] ❌ Failed to persist story', normalizedError);
     return { story: null, error: normalizedError };
   }
 }

@@ -184,7 +184,7 @@ export function StoryArchive({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [exportLoading, setExportLoading] = useState(false);
-  const isLoading = status === 'loading' || status === 'idle';
+  const isLoading = status === 'loading';
   const isError = status === 'error';
   const hasStories = stories.length > 0;
   // Filter out sample stories and stories without titles for export

@@ -1,11 +1,11 @@
-import type { PostgrestError } from '@supabase/supabase-js';
-import { getSupabase } from './supabaseClient';
+import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
+import { getSupabase, supabaseClient } from './supabaseClient';
 import { SUPABASE_ANON, SUPABASE_URL } from './config';
-import type { ArchiveItem } from '../types/story';
+import type { ArchiveItem, StoryArchiveRow } from '../types/story';
 
 export type PersistStoryMode = 'insert' | 'update';
 
-type Payload = {
+type StoryInsertPayload = {
   created_by: string;
   article: string;
   title: string;
@@ -52,7 +52,14 @@ const sanitizeFileName = (value: string) =>
     .replace(/-+/g, '-');
 
 const buildImagePath = (userId: string, file: File) =>
-  `stories/${userId}/${Date.now().toString(36)}-${sanitizeFileName(file.name)}`;
+  `stories/${userId}/${Date.now()}-${sanitizeFileName(file.name)}`;
+
+type PersistStoryArgs = {
+  supabase: SupabaseClient;
+  mode: PersistStoryMode;
+  storyId?: string | null;
+  payload: StoryInsertPayload;
+};
 
 export async function persistStory(
   params: PersistStoryParams,
@@ -64,7 +71,7 @@ export async function persistStory(
 
   const mode: PersistStoryMode = storyId ? 'update' : 'insert';
   const filePath = buildImagePath(userId, file);
-  const payload: Payload = {
+  const payload: StoryInsertPayload = {
     created_by: userId,
     article: meta.bodyHtml,
     title: meta.headline,
@@ -73,8 +80,13 @@ export async function persistStory(
     template_id: templateId ?? null,
   };
 
-  const supabase = getSupabase();
+  const supabase = supabaseClient ?? getSupabase();
   console.log('[persistStory] Supabase client exists?', !!supabase);
+  if (!supabase) {
+    console.error('[persistStory] ❌ No Supabase client – aborting');
+    throw new Error('[persistStory] Supabase client is unavailable');
+  }
+
   console.log('[persistStory] starting', { mode, storyId, payload });
 
   const uploadStart = Date.now();
@@ -95,41 +107,30 @@ export async function persistStory(
   }
 
   const mutationStart = Date.now();
-  const table = supabase.from(STORY_TABLE);
-  const mutator =
-    mode === 'insert'
-      ? table.insert(payload)
-      : table.update(payload).eq('id', storyId ?? '');
-  const { data, error } = await mutator.select('*').single();
+  const savedRow = await persistStoryRecord({
+    supabase,
+    mode,
+    storyId,
+    payload,
+  });
   console.log('[persistStory] mutation duration ms', Date.now() - mutationStart, {
     mode,
     storyId,
-    error,
-    data,
+    savedRowId: savedRow.id,
   });
   console.log('[persistStory] Supabase mutation response', {
     mode,
     storyId,
-    dataId: data?.id,
-    errorCode: error?.code ?? null,
+    dataId: savedRow.id,
   });
 
-  if (error) {
-    logSupabaseError(error, { mode, storyId, payload });
-    throw new Error(`${mode === 'insert' ? 'Insert' : 'Update'} failed: ${error.message}`);
-  }
-
-  if (!data) {
-    throw new Error('Supabase did not return a story record after saving.');
-  }
-
   const normalized: ArchiveItem = {
-    ...data,
+    ...savedRow,
     imageUrl: null,
   };
 
-  if (data.image_path) {
-    const { data: publicUrl } = supabase.storage.from('photos').getPublicUrl(data.image_path);
+  if (savedRow.image_path) {
+    const { data: publicUrl } = supabase.storage.from('photos').getPublicUrl(savedRow.image_path);
     normalized.imageUrl = publicUrl?.publicUrl ?? null;
   }
 
@@ -144,7 +145,7 @@ export async function persistStory(
 
 const logSupabaseError = (
   error: PostgrestError,
-  context: { mode: PersistStoryMode; storyId?: string | null; payload: Payload },
+  context: { mode: PersistStoryMode; storyId?: string | null; payload: StoryInsertPayload },
 ) => {
   console.error('[persistStory] Supabase mutation failed', {
     ...context,
@@ -159,6 +160,55 @@ const logSupabaseError = (
   if (error.message?.toLowerCase().includes('column') || error.message?.toLowerCase().includes('not-null')) {
     console.warn('[persistStory] Schema mismatch detected', error.message);
   }
+};
+
+const persistStoryRecord = async ({
+  supabase,
+  mode,
+  storyId,
+  payload,
+}: PersistStoryArgs): Promise<StoryArchiveRow> => {
+  console.log('[persistStory] Supabase mutation payload', {
+    mode,
+    storyId,
+    payload,
+  });
+
+  if (mode === 'update' && storyId) {
+    const { data, error } = await supabase
+      .from(STORY_TABLE)
+      .update(payload)
+      .eq('id', storyId)
+      .select('*')
+      .single();
+
+    console.log('[persistStory] Supabase update response', { data, error });
+
+    if (error) {
+      logSupabaseError(error, { mode, storyId, payload });
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('Supabase update returned no story data.');
+    }
+
+    return data as StoryArchiveRow;
+  }
+
+  const { data, error } = await supabase.from(STORY_TABLE).insert(payload).select('*').single();
+  console.log('[persistStory] Supabase insert response', { data, error });
+
+  if (error) {
+    logSupabaseError(error, { mode, storyId, payload });
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error('Supabase insert returned no story data.');
+  }
+
+  return data as StoryArchiveRow;
 };
 
 let diagnosticsRan = false;
