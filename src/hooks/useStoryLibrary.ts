@@ -53,7 +53,7 @@ export async function saveDraftToArchive({
   });
 
   try {
-    const result = await persistStory({
+    const persistPayload = {
       file: entry.file,
       meta: {
         headline,
@@ -62,7 +62,14 @@ export async function saveDraftToArchive({
       },
       templateId: template?.id ?? null,
       userId,
+    };
+    console.log('[Archive] persistStory payload', {
+      user_id: userId,
+      template_id: template?.id ?? null,
+      prompt: prompt ?? null,
     });
+
+    const result = await persistStory(persistPayload);
 
     console.log('[Archive] persistStory result', {
       mode: result.mode,
@@ -70,7 +77,7 @@ export async function saveDraftToArchive({
     });
 
     try {
-      const refreshResult = await loadStories(userId);
+      const refreshResult = await refreshStories(userId);
       if (refreshResult.error) {
         console.warn('[Archive] Could not refresh stories after save', refreshResult.error);
       } else {
@@ -155,6 +162,11 @@ export async function loadStories(
     const normalizedError = err instanceof Error ? err : new Error('Unexpected error loading stories.');
     return { stories: [], error: normalizedError };
   }
+}
+
+export async function refreshStories(userId?: string | null): Promise<LoadStoriesResult> {
+  console.log('[StoryLibrary] 🔁 refreshStories helper triggered', { userId });
+  return loadStories(userId);
 }
 
 /**

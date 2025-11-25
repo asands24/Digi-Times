@@ -422,7 +422,8 @@ CREATE POLICY "Users can insert their stories"
 DROP POLICY IF EXISTS "Users can update their stories" ON story_archives;
 CREATE POLICY "Users can update their stories"
   ON story_archives FOR UPDATE
-  USING (auth.uid() = created_by);
+  USING (auth.uid() = created_by)
+  WITH CHECK (auth.uid() = created_by);
 
 DROP POLICY IF EXISTS "Users can delete their stories" ON story_archives;
 CREATE POLICY "Users can delete their stories"

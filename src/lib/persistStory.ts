@@ -34,8 +34,6 @@ export type PersistStoryResult = {
 };
 
 const STORY_TABLE = 'story_archives';
-const STORY_SELECT_COLUMNS =
-  'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public';
 const DIAGNOSTIC_REQUIRED_COLUMNS = [
   'created_by',
   'title',
@@ -76,6 +74,7 @@ export async function persistStory(
   };
 
   const supabase = getSupabase();
+  console.log('[persistStory] Supabase client exists?', !!supabase);
   console.log('[persistStory] starting', { mode, storyId, payload });
 
   const uploadStart = Date.now();
@@ -101,12 +100,18 @@ export async function persistStory(
     mode === 'insert'
       ? table.insert(payload)
       : table.update(payload).eq('id', storyId ?? '');
-  const { data, error } = await mutator.select(STORY_SELECT_COLUMNS).single();
+  const { data, error } = await mutator.select('*').single();
   console.log('[persistStory] mutation duration ms', Date.now() - mutationStart, {
     mode,
     storyId,
     error,
     data,
+  });
+  console.log('[persistStory] Supabase mutation response', {
+    mode,
+    storyId,
+    dataId: data?.id,
+    errorCode: error?.code ?? null,
   });
 
   if (error) {
