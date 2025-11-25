@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabase } from '../lib/supabaseClient';
 import type { Database } from '../types/supabase';
 import type { ArchiveItem, DraftEntry, StoryTemplate } from '../types/story';
-import { persistStory } from '../utils/persistStory';
+import { persistStory } from '../lib/persistStory';
 
 const DEBUG_STORY_LIBRARY = process.env.NODE_ENV !== 'production';
 
@@ -46,14 +46,11 @@ export async function saveDraftToArchive({
     return { story: null, error: new Error('No article to save') };
   }
 
-  const draftPayload = {
+  console.log('[Archive] Draft payload before persist', {
     headline,
-    bodyHtml,
-    prompt: prompt ?? null,
     templateId: template?.id ?? null,
-    userId,
-  };
-  console.log('[Archive] Draft payload before persist', draftPayload);
+    prompt: prompt ?? null,
+  });
 
   try {
     const result = await persistStory({
@@ -67,7 +64,24 @@ export async function saveDraftToArchive({
       userId,
     });
 
-    console.log('[Archive] persistStory result', { story: result.story });
+    console.log('[Archive] persistStory result', {
+      mode: result.mode,
+      storyId: result.id,
+    });
+
+    try {
+      const refreshResult = await loadStories(userId);
+      if (refreshResult.error) {
+        console.warn('[Archive] Could not refresh stories after save', refreshResult.error);
+      } else {
+        console.log('[Archive] Stories refreshed after save', {
+          count: refreshResult.stories.length,
+        });
+      }
+    } catch (refreshError) {
+      console.warn('[Archive] Failed to refresh stories after save', refreshError);
+    }
+
     return { story: result.story, error: null };
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error('Unknown error saving story');
@@ -77,7 +91,7 @@ export async function saveDraftToArchive({
 }
 
 export type { ArchiveItem } from '../types/story';
-export { persistStory } from '../utils/persistStory';
+export { persistStory, validateStoryPersistenceSetup } from '../lib/persistStory';
 
 export type StoryLibraryStatus = 'idle' | 'loading' | 'loaded' | 'error';
 
