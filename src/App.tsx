@@ -10,7 +10,7 @@ import { OnboardingBanner } from './components/OnboardingBanner';
 import {
   type ArchiveItem,
   updateStoryVisibility,
-  useStoryLibraryArchive,
+  useStoryLibrary,
 } from './hooks/useStoryLibrary';
 import Logout from './pages/Logout';
 import TemplatesPage from './pages/Templates';
@@ -29,23 +29,19 @@ function HomePage() {
   const { user } = useAuth();
   const {
     stories,
-    status,
+    isLoading,
     errorMessage,
-    refresh: refreshArchive,
-    updateStories,
-  } = useStoryLibraryArchive(user?.id);
+    refreshStories: refreshArchive,
+    saveDraftToArchive,
+  } = useStoryLibrary(user?.id);
   const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
 
   const handleToggleShare = useCallback(
     async (storyId: string, nextValue: boolean) => {
       try {
-        await updateStoryVisibility(storyId, nextValue);
-        updateStories((prev) =>
-          prev.map((story) =>
-            story.id === storyId ? { ...story, is_public: nextValue } : story,
-          ),
-        );
-        toast.success(nextValue ? 'Story is now public.' : 'Story set to private.');
+    await updateStoryVisibility(storyId, nextValue);
+    await refreshArchive();
+    toast.success(nextValue ? 'Story is now public.' : 'Story set to private.');
       } catch (error) {
         console.error('Failed to update visibility', error);
         toast.error('Could not update sharing setting.');
@@ -64,10 +60,11 @@ function HomePage() {
             await refreshArchive();
           }}
           hasArchivedStories={stories.length > 0}
+          saveDraftToArchive={saveDraftToArchive}
         />
         <StoryArchive
           stories={stories}
-          status={status}
+          isLoading={isLoading}
           errorMessage={errorMessage}
           onPreview={(story) => setPreviewStory(story)}
           onRefresh={refreshArchive}

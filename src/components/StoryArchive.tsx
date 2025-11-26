@@ -6,7 +6,6 @@ import { Badge } from './ui/badge';
 import {
   loadStoriesWithDetails,
   type ArchiveItem,
-  type StoryLibraryStatus,
 } from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
 import { useAuth } from '../providers/AuthProvider';
@@ -14,7 +13,7 @@ import toast from 'react-hot-toast';
 
 interface StoryArchiveProps {
   stories: ArchiveItem[];
-  status: StoryLibraryStatus;
+  isLoading: boolean;
   errorMessage?: string | null;
   onPreview: (story: ArchiveItem) => void;
   onRefresh: () => void;
@@ -175,7 +174,7 @@ const openEditionPreview = async (storyIds: string[], userId: string) => {
 
 export function StoryArchive({
   stories,
-  status,
+  isLoading,
   errorMessage,
   onPreview,
   onRefresh,
@@ -184,8 +183,7 @@ export function StoryArchive({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [exportLoading, setExportLoading] = useState(false);
-  const isLoading = status === 'loading';
-  const isError = status === 'error';
+  const isError = Boolean(errorMessage);
   const hasStories = stories.length > 0;
   // Filter out sample stories and stories without titles for export
   const exportableStories = stories.filter((story) => !story.isSample && story.title);

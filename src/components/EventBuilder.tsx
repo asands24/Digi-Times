@@ -27,7 +27,10 @@ import {
   generateStoryFromPrompt,
   GeneratedArticle,
 } from '../utils/storyGenerator';
-import { saveDraftToArchive } from '../hooks/useStoryLibrary';
+import type {
+  SaveDraftToArchiveOptions,
+  SaveDraftToArchiveResult,
+} from '../hooks/useStoryLibrary';
 import { escapeHtml } from '../utils/sanitizeHtml';
 import type { StoryTemplate } from '../types/story';
 import { getLocalTemplates } from '../lib/templates';
@@ -51,6 +54,7 @@ interface StoryEntry {
 interface EventBuilderProps {
   onArchiveSaved?: () => Promise<unknown> | unknown;
   hasArchivedStories?: boolean;
+  saveDraftToArchive: (options: SaveDraftToArchiveOptions) => Promise<SaveDraftToArchiveResult>;
 }
 
 const createId = () =>
@@ -125,7 +129,11 @@ const getEffectivePrompt = (entry: StoryEntry, globalPrompt: string) => {
 const hasEffectivePrompt = (entry: StoryEntry, globalPrompt: string) =>
   getEffectivePrompt(entry, globalPrompt).length > 0;
 
-export function EventBuilder({ onArchiveSaved, hasArchivedStories = false }: EventBuilderProps) {
+export function EventBuilder({
+  onArchiveSaved,
+  hasArchivedStories = false,
+  saveDraftToArchive,
+}: EventBuilderProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);

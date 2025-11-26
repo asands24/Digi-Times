@@ -3,18 +3,6 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { EventBuilder } from '../components/EventBuilder';
 
-jest.mock('../hooks/useStoryLibrary', () => ({
-  persistStory: jest.fn().mockResolvedValue({ filePath: 'stories/user/file.jpg' }),
-  loadStories: jest.fn().mockResolvedValue({ stories: [] }),
-  useStoryLibraryArchive: jest.fn().mockReturnValue({
-    stories: [],
-    status: 'loaded',
-    errorMessage: null,
-    refresh: jest.fn(),
-    updateStories: jest.fn(),
-  }),
-}));
-
 jest.mock('../components/TemplatesGallery', () => ({
   TemplatesGallery: ({ onSelect }: { onSelect: (template: any) => void }) => (
     <button
@@ -40,11 +28,10 @@ jest.mock('../utils/storyGenerator', () => ({
   generateArticle: jest.fn(),
 }));
 
-const persistStoryMock = jest.requireMock('../hooks/useStoryLibrary')
-  .persistStory as jest.Mock;
-
 const generateArticleMock = jest.requireMock('../utils/storyGenerator')
   .generateArticle as jest.Mock;
+
+const saveDraftToArchiveMock = jest.fn().mockResolvedValue({ story: null, error: null });
 
 jest.mock('../lib/supabaseClient', () => {
   const mockSupabase = {
@@ -89,6 +76,7 @@ const setupUser = () =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  saveDraftToArchiveMock.mockClear();
   mockGetSupabase.mockReturnValue(mockSupabase);
 
   generateArticleMock.mockReturnValue({
@@ -135,7 +123,9 @@ describe('EventBuilder archive flow', () => {
   it('requires a template before enabling save and persists with template id', async () => {
     const user = setupUser();
 
-    const { container } = render(<EventBuilder onArchiveSaved={jest.fn()} />);
+    const { container } = render(
+      <EventBuilder onArchiveSaved={jest.fn()} saveDraftToArchive={saveDraftToArchiveMock} />,
+    );
 
     const promptBox = screen.getByPlaceholderText(
       "e.g. Sunset picnic celebrating grandma's 80th birthday",
@@ -186,9 +176,9 @@ describe('EventBuilder archive flow', () => {
       await user.click(saveButton);
     });
 
-    await waitFor(() => expect(persistStoryMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(saveDraftToArchiveMock).toHaveBeenCalledTimes(1));
     expect(mockGetUser).toHaveBeenCalled();
-    const callArgs = persistStoryMock.mock.calls[0][0];
-    expect(callArgs.templateId).toBe('template-123');
+    const callArgs = saveDraftToArchiveMock.mock.calls[0][0];
+    expect(callArgs.template?.id).toBe('template-123');
   });
 });

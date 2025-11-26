@@ -8,12 +8,12 @@ jest.mock('../providers/AuthProvider', () => ({
 jest.mock('../hooks/useStoryLibrary', () => ({
   loadStories: jest.fn().mockResolvedValue({ stories: [] }),
   updateStoryVisibility: jest.fn(),
-  useStoryLibraryArchive: jest.fn().mockReturnValue({
+  useStoryLibrary: jest.fn().mockReturnValue({
     stories: [],
-    status: 'loaded',
+    isLoading: false,
     errorMessage: null,
-    refresh: jest.fn(),
-    updateStories: jest.fn(),
+    refreshStories: jest.fn(),
+    saveDraftToArchive: jest.fn(),
   }),
 }));
 
