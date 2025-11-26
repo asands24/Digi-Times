@@ -47,7 +47,7 @@ function HomePage() {
         toast.error('Could not update sharing setting.');
       }
     },
-    [updateStories],
+    [refreshArchive],
   );
 
   return (
