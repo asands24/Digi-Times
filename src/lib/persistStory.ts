@@ -11,7 +11,8 @@ type StoryInsertPayload = {
   title: string;
   prompt: string | null;
   image_path: string;
-  template_id: string | null;
+  template_id?: string | null;
+  is_public?: boolean;
 };
 
 export type PersistStoryParams = {
@@ -77,8 +78,15 @@ export async function persistStory(
     title: meta.headline,
     prompt: meta.prompt ?? null,
     image_path: filePath,
-    template_id: templateId ?? null,
   };
+
+  if (templateId) {
+    payload.template_id = templateId;
+  }
+
+  if (mode === 'insert') {
+    payload.is_public = false;
+  }
 
   const supabase = supabaseClient ?? getSupabase();
   console.log('[persistStory] Supabase client exists?', !!supabase);

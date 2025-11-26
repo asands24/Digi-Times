@@ -228,13 +228,11 @@ export function useStoryLibrary(userId?: string | null) {
           bodyHtml: options.bodyHtml,
           prompt: options.prompt ?? null,
         },
-        templateId: options.template?.id ?? null,
         userId: options.userId,
       };
 
       console.log('[Archive] Draft payload before persist', {
         headline: options.headline,
-        templateId: draftPayload.templateId,
         prompt: draftPayload.meta.prompt,
       });
 
