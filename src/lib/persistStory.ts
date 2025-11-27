@@ -212,15 +212,37 @@ const persistStoryRecord = async ({
     payload,
   });
 
-  if (mode === 'update' && storyId) {
+  const runMutation = async (): Promise<StoryArchiveRow> => {
+    if (mode === 'update' && storyId) {
+      const { data, error } = await supabase
+        .from(STORY_TABLE)
+        .update(payload)
+        .eq('id', storyId)
+        .select('*')
+        .single();
+
+      console.log('[persistStory] Supabase update response', { data, error });
+
+      if (error) {
+        logSupabaseError(error, { mode, storyId, payload });
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Supabase update returned no story data.');
+      }
+
+      return data as StoryArchiveRow;
+    }
+
+    // 🔥 INSERT PATH
     const { data, error } = await supabase
       .from(STORY_TABLE)
-      .update(payload)
-      .eq('id', storyId)
+      .insert(payload) // if this is the problem, we’ll see it now
       .select('*')
       .single();
 
-    console.log('[persistStory] Supabase update response', { data, error });
+    console.log('[persistStory] Supabase insert response', { data, error });
 
     if (error) {
       logSupabaseError(error, { mode, storyId, payload });
@@ -228,25 +250,26 @@ const persistStoryRecord = async ({
     }
 
     if (!data) {
-      throw new Error('Supabase update returned no story data.');
+      throw new Error('Supabase insert returned no story data.');
     }
 
     return data as StoryArchiveRow;
-  }
+  };
 
-  const { data, error } = await supabase.from(STORY_TABLE).insert(payload).select('*').single();
-  console.log('[persistStory] Supabase insert response', { data, error });
+  // ⏱️ 10s timeout so it can’t hang forever silently
+  const timeoutMs = 10000;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      console.error('[persistStory] ❌ Supabase mutation timed out', {
+        mode,
+        storyId,
+        payload,
+      });
+      reject(new Error('Supabase mutation timed out'));
+    }, timeoutMs);
+  });
 
-  if (error) {
-    logSupabaseError(error, { mode, storyId, payload });
-    throw error;
-  }
-
-  if (!data) {
-    throw new Error('Supabase insert returned no story data.');
-  }
-
-  return data as StoryArchiveRow;
+  return Promise.race([runMutation(), timeoutPromise]);
 };
 
 let diagnosticsRan = false;
