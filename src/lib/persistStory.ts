@@ -101,7 +101,9 @@ export async function persistStory(
     filePath,
     fileName: file.name,
   });
-  const DEBUG_SKIP_UPLOAD = true; // 🔴 TEMPORARY
+  
+  // Storage is fixed, so we can upload now.
+  const DEBUG_SKIP_UPLOAD = false;
 
   const uploadStart = Date.now();
   let uploadError: StorageError | null = null;
