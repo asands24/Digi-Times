@@ -212,37 +212,15 @@ const persistStoryRecord = async ({
     payload,
   });
 
-  const runMutation = async (): Promise<StoryArchiveRow> => {
-    if (mode === 'update' && storyId) {
-      const { data, error } = await supabase
-        .from(STORY_TABLE)
-        .update(payload)
-        .eq('id', storyId)
-        .select('*')
-        .single();
-
-      console.log('[persistStory] Supabase update response', { data, error });
-
-      if (error) {
-        logSupabaseError(error, { mode, storyId, payload });
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('Supabase update returned no story data.');
-      }
-
-      return data as StoryArchiveRow;
-    }
-
-    // 🔥 INSERT PATH
+  if (mode === 'update' && storyId) {
     const { data, error } = await supabase
       .from(STORY_TABLE)
-      .insert(payload) // if this is the problem, we’ll see it now
+      .update(payload)
+      .eq('id', storyId)
       .select('*')
       .single();
 
-    console.log('[persistStory] Supabase insert response', { data, error });
+    console.log('[persistStory] Supabase update response', { data, error });
 
     if (error) {
       logSupabaseError(error, { mode, storyId, payload });
@@ -250,26 +228,30 @@ const persistStoryRecord = async ({
     }
 
     if (!data) {
-      throw new Error('Supabase insert returned no story data.');
+      throw new Error('Supabase update returned no story data.');
     }
 
     return data as StoryArchiveRow;
-  };
+  }
 
-  // ⏱️ 10s timeout so it can’t hang forever silently
-  const timeoutMs = 10000;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      console.error('[persistStory] ❌ Supabase mutation timed out', {
-        mode,
-        storyId,
-        payload,
-      });
-      reject(new Error('Supabase mutation timed out'));
-    }, timeoutMs);
-  });
+  const { data, error } = await supabase
+    .from(STORY_TABLE)
+    .insert(payload)
+    .select('*')
+    .single();
 
-  return Promise.race([runMutation(), timeoutPromise]);
+  console.log('[persistStory] Supabase insert response', { data, error });
+
+  if (error) {
+    logSupabaseError(error, { mode, storyId, payload });
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error('Supabase insert returned no story data.');
+  }
+
+  return data as StoryArchiveRow;
 };
 
 let diagnosticsRan = false;
@@ -282,10 +264,10 @@ export async function validateStoryPersistenceSetup(): Promise<void> {
 
   const missingEnv: string[] = [];
   if (!SUPABASE_URL) {
-    missingEnv.push('REACT_APP_SUPABASE_URL');
+    missingEnv.push('REACT_APP_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL');
   }
   if (!SUPABASE_ANON) {
-    missingEnv.push('REACT_APP_SUPABASE_ANON_KEY');
+    missingEnv.push('REACT_APP_SUPABASE_ANON_KEY / NEXT_PUBLIC_SUPABASE_ANON_KEY');
   }
   if (missingEnv.length > 0) {
     console.warn('[persistStory diagnostics] Missing Supabase env vars', missingEnv);

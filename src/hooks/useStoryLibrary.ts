@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { PostgrestError } from '@supabase/supabase-js';
 import { getSupabase, supabaseClient } from '../lib/supabaseClient';
 import { persistStory } from '../lib/persistStory';
 import type { ArchiveItem, DraftEntry, StoryTemplate, StoryArchiveRow } from '../types/story';
@@ -38,41 +37,34 @@ const toArchiveItems = (rows: StoryArchiveRow[]): ArchiveItem[] =>
     return item;
   });
 
-const fetchStoryRows = async (
+export async function fetchStoryRows(
   userId: string,
-): Promise<{ rows: StoryArchiveRow[]; error: PostgrestError | null }> => {
+): Promise<{ rows: StoryArchiveRow[]; error: Error | null }> {
   const supabase = supabaseClient ?? getSupabase();
   if (!supabase) {
     throw new Error('[StoryLibrary] No Supabase client available for fetching stories');
   }
 
-  const runSelect = async (): Promise<{ rows: StoryArchiveRow[]; error: PostgrestError | null }> => {
-    const { data, error } = await supabase
-      .from('story_archives')
-      .select(STORY_COLUMNS)
-      .eq('created_by', userId)
-      .order('created_at', { ascending: false })
-      .limit(STORIES_LIMIT);
-    console.log('[StoryLibrary] Supabase raw select response', { data, error });
-    return {
-      rows: (data ?? []) as StoryArchiveRow[],
-      error,
-    };
-  };
-
-  const timeoutMs = 10000;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      console.error('[StoryLibrary] ❌ Supabase fetch timed out', { userId });
-      reject(new Error('Supabase fetch timed out'));
-    }, timeoutMs);
+  console.log('[StoryLibrary] 🔍 Running Supabase select for stories', {
+    userId,
+    limit: STORIES_LIMIT,
   });
 
-  return Promise.race([runSelect(), timeoutPromise]) as Promise<{
-    rows: StoryArchiveRow[];
-    error: PostgrestError | null;
-  }>;
-};
+  const { data, error } = await supabase
+    .from('story_archives')
+    .select(STORY_COLUMNS)
+    .eq('created_by', userId)
+    .order('created_at', { ascending: false })
+    .limit(STORIES_LIMIT);
+
+  console.log('[StoryLibrary] Supabase raw select response', { data, error });
+
+  if (error) {
+    return { rows: [], error: new Error(error.message ?? 'Unexpected Supabase error loading stories.') };
+  }
+
+  return { rows: (data ?? []) as StoryArchiveRow[], error: null };
+}
 
 export async function loadStories(userId?: string | null): Promise<LoadStoriesResult> {
   if (!userId) {
