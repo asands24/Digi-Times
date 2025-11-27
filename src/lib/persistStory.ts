@@ -110,17 +110,30 @@ export async function persistStory(
     console.error('[persistStory] image upload failed', {
       error: uploadError,
       path: filePath,
+      userId,
     });
     throw new Error(`Image upload failed: ${uploadError.message}`);
   }
 
   const mutationStart = Date.now();
-  const savedRow = await persistStoryRecord({
-    supabase,
-    mode,
-    storyId,
-    payload,
-  });
+  let savedRow: StoryArchiveRow;
+  try {
+    savedRow = await persistStoryRecord({
+      supabase,
+      mode,
+      storyId,
+      payload,
+    });
+  } catch (error) {
+    console.error('[persistStory] failed to persist story record', {
+      error,
+      mode,
+      storyId,
+      userId,
+      payload,
+    });
+    throw error;
+  }
   console.log('[persistStory] mutation duration ms', Date.now() - mutationStart, {
     mode,
     storyId,

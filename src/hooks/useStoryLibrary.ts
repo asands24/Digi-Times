@@ -25,6 +25,9 @@ export type LoadStoriesResult = {
   error: Error | null;
 };
 
+const STORY_COLUMNS =
+  'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public';
+
 const toArchiveItems = (rows: StoryArchiveRow[]): ArchiveItem[] =>
   rows.map((row) => {
     const item: ArchiveItem = { ...row, imageUrl: null };
@@ -40,7 +43,7 @@ const fetchStoryRows = async (
 ): Promise<{ rows: StoryArchiveRow[]; error: PostgrestError | null }> => {
   const { data, error } = await supabaseClient
     .from('story_archives')
-    .select('*')
+    .select(STORY_COLUMNS)
     .eq('created_by', userId)
     .order('created_at', { ascending: false })
     .limit(STORIES_LIMIT);
@@ -219,6 +222,15 @@ export function useStoryLibrary(userId?: string | null) {
       if (!options.entry.article) {
         console.warn('[Archive] ⚠️ No article on entry, skipping save');
         return { story: null, error: new Error('No article to save') };
+      }
+
+      if (!options.entry.file) {
+        const missingFileError = new Error('Missing image file for story archive entry.');
+        console.error('[Archive] ⚠️ Entry file missing', {
+          entryId: options.entry.id,
+          userId: options.userId,
+        });
+        return { story: null, error: missingFileError };
       }
 
       const draftPayload = {
