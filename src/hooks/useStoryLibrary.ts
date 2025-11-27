@@ -216,6 +216,7 @@ export function useStoryLibrary(userId?: string | null) {
       console.log('[Archive] saveDraftToArchive called', {
         entryId: options.entry.id,
         hasArticle: Boolean(options.entry.article),
+        hasFile: Boolean(options.entry.file),
         userId: options.userId,
       });
 
@@ -225,8 +226,8 @@ export function useStoryLibrary(userId?: string | null) {
       }
 
       if (!options.entry.file) {
-        const missingFileError = new Error('Missing image file for story archive entry.');
-        console.error('[Archive] ⚠️ Entry file missing', {
+        const missingFileError = new Error('No image file to save');
+        console.warn('[Archive] ⚠️ No file attached to entry, cannot save image', {
           entryId: options.entry.id,
           userId: options.userId,
         });

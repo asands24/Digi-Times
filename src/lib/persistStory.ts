@@ -96,15 +96,31 @@ export async function persistStory(
   }
 
   console.log('[persistStory] starting', { mode, storyId, payload });
+  console.log('[persistStory] about to upload image', {
+    filePath,
+    fileName: file.name,
+  });
+  const DEBUG_SKIP_UPLOAD = true; // 🔴 TEMPORARY
 
   const uploadStart = Date.now();
-  const { error: uploadError } = await supabase.storage
-    .from('photos')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false,
+  let uploadError: PostgrestError | null = null;
+  if (!DEBUG_SKIP_UPLOAD) {
+    const { error } = await supabase.storage
+      .from('photos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+    uploadError = error;
+  } else {
+    console.warn('[persistStory] ⚠️ DEBUG: Skipping image upload, using filePath anyway', {
+      filePath,
     });
-  console.log('[persistStory] upload duration ms', Date.now() - uploadStart);
+  }
+  console.log('[persistStory] upload finished', {
+    durationMs: Date.now() - uploadStart,
+    hasError: Boolean(uploadError),
+  });
 
   if (uploadError) {
     console.error('[persistStory] image upload failed', {
