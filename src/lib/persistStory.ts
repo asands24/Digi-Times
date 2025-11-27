@@ -1,4 +1,5 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
+import type { StorageError } from '@supabase/storage-js';
 import { getSupabase, supabaseClient } from './supabaseClient';
 import { SUPABASE_ANON, SUPABASE_URL } from './config';
 import type { ArchiveItem, StoryArchiveRow } from '../types/story';
@@ -103,7 +104,7 @@ export async function persistStory(
   const DEBUG_SKIP_UPLOAD = true; // 🔴 TEMPORARY
 
   const uploadStart = Date.now();
-  let uploadError: PostgrestError | null = null;
+  let uploadError: StorageError | null = null;
   if (!DEBUG_SKIP_UPLOAD) {
     const { error } = await supabase.storage
       .from('photos')
