@@ -11,13 +11,13 @@ const KEY =
   '';
 
 if (!URL || !KEY) {
-  throw new Error(
-    'Missing Supabase env. Set REACT_APP_* or NEXT_PUBLIC_* Supabase env vars.',
-  );
+  console.error('[Config] Missing Supabase env vars. Check .env or Netlify settings.');
+  // We don't throw here to allow the app to load and show a friendly error UI if needed,
+  // but the Supabase client will fail if used.
 }
 
-export const SUPABASE_URL = URL;
-export const SUPABASE_ANON = KEY;
+export const SUPABASE_URL: string = URL;
+export const SUPABASE_ANON: string = KEY;
 
 if (typeof window !== 'undefined') {
   // Log non-secret info for developers

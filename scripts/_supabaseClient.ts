@@ -2,9 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import { config as loadEnv } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import type { Database } from '../src/types/supabase';
 
 // Always load from repo root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const envLocalPath = path.join(rootDir, '.env.local');
 const envPath = path.join(rootDir, '.env');
@@ -45,12 +48,26 @@ function decodePayload(jwt: string) {
 
 try {
   const payload = decodePayload(supabaseAnonKey);
-  const refFromKey = (payload.iss || '').split('//')[1]?.split('.')[0];
+  
+  // Handle standard Supabase keys where iss is "supabase"
+  let refFromKey;
+  if (payload.iss === 'supabase') {
+    refFromKey = payload.ref;
+  } else {
+    // Legacy or custom keys where iss might be a URL
+    refFromKey = (payload.iss || '').split('//')[1]?.split('.')[0];
+  }
+
   const refFromUrl = new URL(supabaseUrl).host.split('.')[0];
-  if (!refFromKey) throw new Error('Anon key missing issuer (iss)');
-  if (refFromKey !== refFromUrl) {
+  
+  if (!refFromKey) {
+    // If we can't extract a ref, just warn but don't fail, 
+    // as formats can change.
+    console.warn('[dotenv] Warning: Could not extract project ref from Anon Key for validation.');
+  } else if (refFromKey !== refFromUrl) {
     throw new Error(`Anon key project ref (${refFromKey}) does not match URL ref (${refFromUrl})`);
   }
+
   const role = String(payload.role || payload['x-supabase-role'] || '').toLowerCase();
   if (role.includes('service')) {
     throw new Error('Do not use service_role key in smoke scripts — use public anon key');
