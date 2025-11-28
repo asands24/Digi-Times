@@ -1,5 +1,5 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState, type RefObject } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
 import { EventBuilder } from './components/EventBuilder';
@@ -7,6 +7,7 @@ import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { OnboardingBanner } from './components/OnboardingBanner';
+import { Button } from './components/ui/button';
 import {
   type ArchiveItem,
   updateStoryVisibility,
@@ -14,7 +15,6 @@ import {
 } from './hooks/useStoryLibrary';
 import Logout from './pages/Logout';
 import TemplatesPage from './pages/Templates';
-import UploadPhoto from './components/UploadPhoto';
 import PhotoGallery from './components/PhotoGallery';
 import { useAuth } from './providers/AuthProvider';
 import LoginPage from './pages/LoginPage';
@@ -36,6 +36,9 @@ function HomePage() {
     saveDraftToArchive,
   } = useStoryLibrary(user?.id);
   const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
+  // Anchor points for the guided flow
+  const builderRef = useRef<HTMLElement | null>(null);
+  const archiveRef = useRef<HTMLElement | null>(null);
 
   const handleToggleShare = useCallback(
     async (storyId: string, nextValue: boolean) => {
@@ -51,26 +54,83 @@ function HomePage() {
     [refreshArchive],
   );
 
+  const scrollToSection = useCallback((ref: RefObject<HTMLElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   return (
     <div className="app-shell">
       <Header />
       <main className="editorial-main">
+        <section className="welcome-hero">
+          <div className="welcome-hero__logo">DT</div>
+          <div>
+            <p className="welcome-hero__kicker">DigiTimes</p>
+            <h1 className="welcome-hero__title">
+              Turn Your Moments into Front-Page Stories
+            </h1>
+            <p className="welcome-hero__subtitle">
+              Upload a photo → we turn it into a newspaper-style story you can save, print, or share.
+              Story · Newspaper · Issue — all in one guided flow.
+            </p>
+            <div className="welcome-hero__actions">
+              <Button size="lg" onClick={() => scrollToSection(builderRef)}>
+                Create a Story
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => scrollToSection(archiveRef)}
+              >
+                View My Stories
+              </Button>
+            </div>
+          </div>
+          <div className="welcome-hero__pillars">
+            <div className="welcome-hero__pillar">
+              <span className="welcome-hero__pillar-icon">📰</span>
+              <div>
+                <h3>Front Page Ready</h3>
+                <p>Serif headlines, print-worthy layouts, and a cozy masthead vibe.</p>
+              </div>
+            </div>
+            <div className="welcome-hero__pillar">
+              <span className="welcome-hero__pillar-icon">✨</span>
+              <div>
+                <h3>Guided in 3 Steps</h3>
+                <p>Add photo, tell the story, review &amp; save — no guesswork.</p>
+              </div>
+            </div>
+            <div className="welcome-hero__pillar">
+              <span className="welcome-hero__pillar-icon">📦</span>
+              <div>
+                <h3>Issues to Share</h3>
+                <p>Bundle stories into an issue for printing or sending to family.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <OnboardingBanner />
-        <EventBuilder
-          onArchiveSaved={async () => {
-            await refreshArchive();
-          }}
-          hasArchivedStories={stories.length > 0}
-          saveDraftToArchive={saveDraftToArchive}
-        />
-        <StoryArchive
-          stories={stories}
-          isLoading={isLoading}
-          errorMessage={errorMessage}
-          onPreview={(story) => setPreviewStory(story)}
-          onRefresh={refreshArchive}
-          onToggleShare={handleToggleShare}
-        />
+        <section ref={builderRef} className="creation-section">
+          <EventBuilder
+            onArchiveSaved={async () => {
+              await refreshArchive();
+            }}
+            hasArchivedStories={stories.length > 0}
+            saveDraftToArchive={saveDraftToArchive}
+          />
+        </section>
+        <section ref={archiveRef} className="archive-section">
+          <StoryArchive
+            stories={stories}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
+            onPreview={(story) => setPreviewStory(story)}
+            onRefresh={refreshArchive}
+            onToggleShare={handleToggleShare}
+          />
+        </section>
       </main>
       <StoryPreviewDialog
         story={previewStory}
@@ -115,7 +175,6 @@ export default function App() {
       <nav style={{ display: 'flex', gap: 12, padding: 12, flexWrap: 'wrap' }}>
         <Link to="/">Home</Link>
         <Link to="/templates">Templates</Link>
-        <Link to="/upload">Upload</Link>
         <Link to="/gallery">Gallery</Link>
         {IS_DEV ? <Link to="/debug/templates">Template Debug</Link> : null}
       </nav>
@@ -123,7 +182,6 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/templates" element={<TemplatesPage />} />
         {IS_DEV ? <Route path="/debug/templates" element={<DebugTemplates />} /> : null}
-        <Route path="/upload" element={<UploadPhoto />} />
         <Route path="/gallery" element={<PhotoGallery />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />

@@ -11,6 +11,8 @@ import { escapeHtml } from '../utils/sanitizeHtml';
 import { useAuth } from '../providers/AuthProvider';
 import toast from 'react-hot-toast';
 
+type StorySection = 'family' | 'travel' | 'holidays' | 'everyday';
+
 interface StoryArchiveProps {
   stories: ArchiveItem[];
   isLoading: boolean;
@@ -72,6 +74,32 @@ const buildArticleHtml = (story: ArchiveItem) => {
     return `<p>${escapeHtml(story.prompt.trim())}</p>`;
   }
   return '<p>This story is still drafting.</p>';
+};
+
+const deriveSection = (story: ArchiveItem): StorySection => {
+  const source = `${story.title ?? ''} ${story.prompt ?? ''}`.toLowerCase();
+  if (source.match(/holiday|christmas|hanukkah|thanksgiving|halloween/)) {
+    return 'holidays';
+  }
+  if (source.match(/trip|travel|journey|flight|airport|beach|mountain/)) {
+    return 'travel';
+  }
+  if (source.match(/family|grandma|grandpa|kids|mom|dad|cousin/)) {
+    return 'family';
+  }
+  return 'everyday';
+};
+
+const getWordCount = (story: ArchiveItem) => {
+  const source = [story.article, story.prompt, story.title].filter(Boolean).join(' ');
+  return source.split(/\s+/).filter(Boolean).length || 0;
+};
+
+const getExcerpt = (story: ArchiveItem) => {
+  const html = buildArticleHtml(story);
+  const stripped = html.replace(/<[^>]+>/g, ' ');
+  const words = stripped.split(/\s+/).filter(Boolean);
+  return words.slice(0, 24).join(' ') + (words.length > 24 ? '…' : '');
 };
 
 const openEditionPreview = async (storyIds: string[], userId: string) => {
@@ -183,10 +211,31 @@ export function StoryArchive({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [exportLoading, setExportLoading] = useState(false);
+  const [sectionFilter, setSectionFilter] = useState<StorySection | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'length'>('newest');
+
+  const decoratedStories = stories.map(
+    (story) =>
+      ({
+        ...story,
+        section: deriveSection(story),
+        wordCount: getWordCount(story),
+      } as ArchiveItem & { section: StorySection; wordCount: number }),
+  );
+  const sortedStories = [...decoratedStories].sort((a, b) => {
+    const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+    if (sortBy === 'oldest') return aDate - bDate;
+    if (sortBy === 'length') return b.wordCount - a.wordCount;
+    return bDate - aDate;
+  });
+  const filteredStories = sortedStories.filter((story) =>
+    sectionFilter === 'all' ? true : story.section === sectionFilter,
+  );
   const isError = Boolean(errorMessage);
-  const hasStories = stories.length > 0;
+  const hasStories = filteredStories.length > 0;
   // Filter out sample stories and stories without titles for export
-  const exportableStories = stories.filter((story) => !story.isSample && story.title);
+  const exportableStories = filteredStories.filter((story) => !story.isSample && story.title);
   const canExportEdition = exportableStories.length > 0;
   const showExportHint = !isLoading && !isError && !canExportEdition;
 
@@ -222,6 +271,45 @@ export function StoryArchive({
             Every saved story is kept here with its photo and article so you can
             edit, preview, and publish a polished newspaper spread.
           </p>
+          <div className="story-archive__filters">
+            <div>
+              <p className="story-archive__filter-label">Filter by section</p>
+              <div className="story-archive__chips" role="group" aria-label="Filter stories">
+                {[
+                  { label: 'All', value: 'all' as const },
+                  { label: 'Family', value: 'family' as const },
+                  { label: 'Trips', value: 'travel' as const },
+                  { label: 'Holidays', value: 'holidays' as const },
+                  { label: 'Everyday', value: 'everyday' as const },
+                ].map((chip) => (
+                  <button
+                    key={chip.value}
+                    className={`story-archive__chip ${
+                      sectionFilter === chip.value ? 'is-active' : ''
+                    }`}
+                    onClick={() => setSectionFilter(chip.value)}
+                    type="button"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="story-archive__sort">
+              <label htmlFor="sortStories">Sort by</label>
+              <select
+                id="sortStories"
+                value={sortBy}
+                onChange={(event) =>
+                  setSortBy(event.target.value as 'newest' | 'oldest' | 'length')
+                }
+              >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="length">Story length</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div className="story-archive__header-actions">
           <Button type="button" variant="outline" onClick={onRefresh} disabled={isLoading}>
@@ -272,71 +360,91 @@ export function StoryArchive({
         </div>
       ) : hasStories ? (
         <div className="story-archive__grid">
-          {stories.map((story) => (
-            <article key={story.id} className="story-archive__card">
-              <div className="story-archive__image">
-                {story.imageUrl ? (
-                  <img
-                    src={story.imageUrl}
-                    alt={story.title ?? 'Archived story image'}
-                  />
-                ) : null}
-              </div>
-              <div className="story-archive__content">
-                <header>
-                  <h3>{story.title ?? 'Untitled story'}</h3>
-                  <span className="story-archive__template">
-                    Layout: {story.template_id ? `Template ${story.template_id}` : 'Unassigned'}
-                  </span>
-                  {story.isSample ? (
-                    <Badge variant="secondary" className="story-archive__sample-badge">
-                      Starter example
-                    </Badge>
-                  ) : null}
-                </header>
-                <footer>
-                  <div className="story-archive__details">
+          {filteredStories.map((story) => (
+            <article key={story.id} className="story-archive__card story-archive__card--front">
+              <div className="story-archive__front">
+                <div className="story-archive__front-masthead">
+                  <div className="story-archive__front-mark">DT</div>
+                  <div>
+                    <p className="story-archive__front-kicker">{story.section}</p>
+                    <h3>{story.title ?? 'Untitled story'}</h3>
                     <span className="story-archive__dateline">
                       <Calendar size={14} strokeWidth={1.75} />
                       {formatTimestamp(story.created_at)}
                     </span>
                   </div>
-                  <div className="story-archive__buttons">
-                    <label className="story-archive__share-toggle">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(story.is_public)}
-                        onChange={(event) => onToggleShare(story.id, event.target.checked)}
-                        disabled={Boolean(story.isSample)}
-                        title={
-                          story.isSample
-                            ? 'Archive your own story to enable sharing.'
-                            : 'Toggle sharing'
-                        }
+                  {story.isSample ? (
+                    <Badge variant="secondary" className="story-archive__sample-badge">
+                      Starter example
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="story-archive__section-badge">
+                      {story.section}
+                    </Badge>
+                  )}
+                </div>
+                <div className="story-archive__front-body">
+                  <div className="story-archive__image">
+                    {story.imageUrl ? (
+                      <img
+                        src={story.imageUrl}
+                        alt={story.title ?? 'Archived story image'}
                       />
-                      Public
-                    </label>
-                    {story.is_public && !story.isSample && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleShareStory(story.id)}
-                      >
-                        <Share2 size={14} strokeWidth={1.75} />
-                        Share
-                      </Button>
+                    ) : (
+                      <div className="story-archive__image--placeholder">📰</div>
                     )}
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => onPreview(story)}
-                    >
-                      <Eye size={14} strokeWidth={1.75} />
-                      Preview
-                    </Button>
                   </div>
-                </footer>
+                  <div className="story-archive__front-text">
+                    <p className="story-archive__excerpt">{getExcerpt(story)}</p>
+                    <p className="story-archive__meta">
+                      ~{story.wordCount} words · Layout {story.template_id ?? 'unassigned'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="story-archive__buttons story-archive__buttons--row">
+                <label className="story-archive__share-toggle">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(story.is_public)}
+                    onChange={(event) => onToggleShare(story.id, event.target.checked)}
+                    disabled={Boolean(story.isSample)}
+                    title={
+                      story.isSample
+                        ? 'Archive your own story to enable sharing.'
+                        : 'Toggle sharing'
+                    }
+                  />
+                  Public
+                </label>
+                {story.is_public && !story.isSample && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleShareStory(story.id)}
+                  >
+                    <Share2 size={14} strokeWidth={1.75} />
+                    Share
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate(`/newspaper?ids=${story.id}`)}
+                >
+                  <Newspaper size={14} strokeWidth={1.75} />
+                  Add to Issue
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => onPreview(story)}
+                >
+                  <Eye size={14} strokeWidth={1.75} />
+                  View
+                </Button>
               </div>
             </article>
           ))}

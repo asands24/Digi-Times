@@ -49,6 +49,10 @@ interface StoryEntry {
   status: 'idle' | 'generating' | 'ready';
   article?: GeneratedArticle;
   generationId: number;
+  loadingLabel?: string;
+  headlineDraft?: string;
+  subheadlineDraft?: string;
+  bodyDraft?: string;
 }
 
 interface EventBuilderProps {
@@ -115,6 +119,24 @@ const toStoryParagraphs = (value: string) =>
     .map((paragraph) => paragraph.trim())
     .filter((paragraph) => paragraph.length > 0);
 
+const toEditableBody = (article: GeneratedArticle | undefined) =>
+  article ? article.body.join('\n\n') : '';
+
+const LOADING_MESSAGES = [
+  'Drafting your headline…',
+  'Polishing the feature story…',
+  'Laying out the front page…',
+  'Checking columns & kerning…',
+];
+
+const parseBodyDraft = (value: string | undefined, fallback: string[]) => {
+  if (!value) {
+    return fallback;
+  }
+  const paragraphs = toStoryParagraphs(value);
+  return paragraphs.length > 0 ? paragraphs : fallback;
+};
+
 const normalizePrompt = (value: string) => value.trim();
 
 const getEffectivePrompt = (entry: StoryEntry, globalPrompt: string) => {
@@ -128,6 +150,19 @@ const getEffectivePrompt = (entry: StoryEntry, globalPrompt: string) => {
 
 const hasEffectivePrompt = (entry: StoryEntry, globalPrompt: string) =>
   getEffectivePrompt(entry, globalPrompt).length > 0;
+
+const getEditableArticle = (entry: StoryEntry): GeneratedArticle | null => {
+  if (!entry.article) {
+    return null;
+  }
+
+  return {
+    ...entry.article,
+    headline: entry.headlineDraft?.trim() || entry.article.headline,
+    subheadline: entry.subheadlineDraft?.trim() || entry.article.subheadline,
+    body: parseBodyDraft(entry.bodyDraft, entry.article.body),
+  };
+};
 
 export function EventBuilder({
   onArchiveSaved,
@@ -371,6 +406,7 @@ export function EventBuilder({
 
       const entryIndex = Math.max(entries.findIndex((entry) => entry.id === id), 0);
       const nextGenerationId = target.generationId + 1;
+      const loadingLabel = LOADING_MESSAGES[nextGenerationId % LOADING_MESSAGES.length];
 
       setEntries((prev) =>
         prev.map((entry) =>
@@ -381,6 +417,10 @@ export function EventBuilder({
                 status: 'generating',
                 article: undefined,
                 generationId: nextGenerationId,
+                loadingLabel,
+                headlineDraft: undefined,
+                subheadlineDraft: undefined,
+                bodyDraft: undefined,
               }
             : entry,
         ),
@@ -416,6 +456,9 @@ export function EventBuilder({
                   ...entry,
                   status: 'ready',
                   article: resolvedArticle,
+                  headlineDraft: resolvedArticle.headline,
+                  subheadlineDraft: resolvedArticle.subheadline,
+                  bodyDraft: toEditableBody(resolvedArticle),
                 }
               : entry,
           ),
@@ -476,29 +519,64 @@ export function EventBuilder({
           <Sparkles size={16} strokeWidth={1.75} />
           <span>Front Page Studio</span>
         </div>
-        <h1>Transform every snapshot into a headline-worthy event.</h1>
+        <h1>Build tomorrow’s front page in three guided steps.</h1>
         <p>
-          Start with an idea, add a photo, and let the newsroom generator craft
-          rich editorial coverage ready for your family chronicle.
+          Add your photo, tell us what’s happening, then review and tweak the article before saving
+          it to your newspaper issue.
         </p>
       </header>
 
+      <div className="story-steps">
+        <div
+          className={`story-step ${hasEntries ? 'story-step--done' : 'story-step--active'}`}
+        >
+          <span className="story-step__number">1</span>
+          <div>
+            <p className="story-step__label">Add your photo</p>
+            <small>Drop a favorite moment or snap a new one.</small>
+          </div>
+        </div>
+        <div
+          className={`story-step ${
+            hasDraftWithArticle ? 'story-step--done' : hasEntries ? 'story-step--active' : ''
+          }`}
+        >
+          <span className="story-step__number">2</span>
+          <div>
+            <p className="story-step__label">Tell us what’s happening</p>
+            <small>Share the context and pick a layout vibe.</small>
+          </div>
+        </div>
+        <div className={`story-step ${hasDraftWithArticle ? 'story-step--active' : ''}`}>
+          <span className="story-step__number">3</span>
+          <div>
+            <p className="story-step__label">Review &amp; edit</p>
+            <small>Edit headline, body, then save to your archive.</small>
+          </div>
+        </div>
+      </div>
+
       <div className="story-builder__controls">
-        <label className="story-builder__label" htmlFor="globalPrompt">
-          Story idea (optional)
-        </label>
+        <div className="story-step-label">
+          <Badge variant="secondary">Step 2 · Story idea</Badge>
+          <div>
+            <p className="story-step-label__title">Tell us what&rsquo;s happening</p>
+            <p className="story-step-label__hint">
+              This pre-fills every upload so the newsroom tone and template match your vibe.
+            </p>
+          </div>
+        </div>
         <textarea
           id="globalPrompt"
           className="story-builder__textarea"
-          placeholder="e.g. Sunset picnic celebrating grandma's 80th birthday"
+          placeholder="Halloween in Navy Yard with the kids…"
           value={globalPrompt}
           onChange={(event) => setGlobalPrompt(event.target.value)}
           rows={3}
         />
         <div className="story-builder__control-actions">
           <span className="story-builder__control-hint">
-            We&apos;ll pre-fill new uploads with this idea, and it shapes the
-            tone of each article.
+            Drop a photo below and tweak each prompt as you go.
           </span>
           <Button
             type="button"
@@ -551,6 +629,10 @@ export function EventBuilder({
           onChange={onFileInputChange}
         />
 
+        <div className="story-dropzone__header">
+          <Badge variant="outline">Step 1 · Add your photo</Badge>
+          <p>Drop a photo here or click to upload — we’ll treat it like a front-page hero image.</p>
+        </div>
         <div className="story-dropzone__icon">
           <Upload size={28} strokeWidth={1.75} />
         </div>
@@ -598,193 +680,232 @@ export function EventBuilder({
           </div>
 
           <div className="story-grid">
-            {entries.map((entry) => (
-              <article key={entry.id} className="story-card">
-                <div className="story-card__media">
-                  <img
-                    src={entry.previewUrl}
-                    alt={entry.file.name}
-                    className="story-card__image"
-                  />
-                  <div className="story-card__file">
-                    <ImageIcon size={14} strokeWidth={1.6} />
-                    <span>{entry.file.name}</span>
-                  </div>
-                </div>
+            {entries.map((entry) => {
+              const editableArticle = getEditableArticle(entry);
+              const bodyDraft = entry.bodyDraft ?? toEditableBody(entry.article);
+              const wordCount = bodyDraft
+                ? bodyDraft.split(/\s+/).filter(Boolean).length
+                : 0;
 
-                <div className="story-card__body">
-                  <label className="story-builder__label" htmlFor={entry.id}>
-                    Story angle
-                  </label>
-                  <textarea
-                    id={entry.id}
-                    className="story-builder__textarea story-card__textarea"
-                    placeholder="Describe the scene so we can write the perfect article."
-                    value={entry.prompt}
-                    rows={3}
-                    onChange={(event) =>
-                      updatePrompt(entry.id, event.target.value)
-                    }
-                  />
-                  <p className="story-card__hint">
-                    Tell us what makes this photo special, then press Generate to draft the story.
-                  </p>
-
-                  <div className="story-card__controls">
-                    <Button
-                      type="button"
-                      onClick={() => generateStory(entry.id)}
-                      disabled={
-                        entry.status === 'generating' ||
-                        !hasEffectivePrompt(entry, globalPrompt)
-                      }
-                    >
-                      {entry.status === 'generating' ? (
-                        <>
-                          <Loader2
-                            className="story-card__spinner"
-                            size={16}
-                            strokeWidth={1.75}
-                          />
-                          Writing article...
-                        </>
-                      ) : entry.status === 'ready' ? (
-                        <>
-                          <RefreshCcw size={16} strokeWidth={1.75} />
-                          Regenerate article
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles size={16} strokeWidth={1.75} />
-                          Generate article
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="story-card__remove"
-                      onClick={() => removeEntry(entry.id)}
-                    >
-                      <Trash2 size={16} strokeWidth={1.75} />
-                      Remove photo
-                    </Button>
-                  </div>
-
-                  {entry.status === 'ready' && entry.article ? (
-                    <div className="story-article">
-                      <div className="story-article__status">
-                        <Badge variant="secondary">Draft ready</Badge>
-                        <span>
-                          Generated{' '}
-                          {entry.createdAt.toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <div className="story-article__template">
-                        <span>Template:</span>
-                        <strong>{selectedTemplate?.title ?? 'Choose a template above'}</strong>
-                      </div>
-                      <div className="story-article__meta">
-                        <span className="story-article__dateline">
-                          {entry.article.dateline}
-                        </span>
-                        <span className="story-article__byline">
-                          {entry.article.byline}
-                        </span>
-                      </div>
-                      <h2 className="story-article__headline">
-                        {entry.article.headline}
-                      </h2>
-                      <p className="story-article__subheadline">
-                        {entry.article.subheadline}
-                      </p>
-                      <blockquote className="story-article__quote">
-                        {entry.article.quote}
-                      </blockquote>
-                      <div className="story-article__body">
-                        {entry.article.body.map((paragraph, index) => (
-                          <p key={index}>{paragraph}</p>
-                        ))}
-                      </div>
-                      <div className="story-article__tags">
-                        {entry.article.tags.map((tag) => (
-                          <Badge key={tag} variant="outline">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="story-article__actions">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={async () => {
-                            console.log('[EventBuilder] Save button clicked', {
-                              entryId: entry.id,
-                              hasArticle: !!entry.article,
-                              hasUser: !!user?.id,
-                              selectedTemplate,
-                            });
-
-                            if (!entry.article) {
-                              console.error('[EventBuilder] saveDraftToArchive was NOT called');
-                              console.warn('[SaveToArchive] ⚠️ No article on entry, not saving');
-                              return;
-                            }
-                            if (!user?.id) {
-                              console.error('[EventBuilder] saveDraftToArchive was NOT called');
-                              console.warn('[SaveToArchive] ⚠️ No user id present, require login to save');
-                              toast.error('Sign in to save drafts to your archive.');
-                              return;
-                            }
-
-                            const payloadPrompt = getEffectivePrompt(entry, globalPrompt);
-                            const result = await saveDraftToArchive({
-                              entry,
-                              template: selectedTemplate,
-                              userId: user.id,
-                              headline: entry.article.headline,
-                              bodyHtml: buildBodyHtml(entry.article),
-                              prompt: payloadPrompt,
-                            });
-
-                            if (result.error) {
-                              toast.error(`Could not save story: ${result.error.message}`);
-                              return;
-                            }
-
-                            if (!result.story) {
-                              toast.error('Could not save to archive.');
-                              return;
-                            }
-
-                            toast.success('Story archived in your edition.');
-                            removeEntry(entry.id);
-                            if (onArchiveSaved) {
-                              await onArchiveSaved();
-                            }
-                          }}
-                          disabled={!entry.article || !user}
-                        >
-                          <Archive size={14} strokeWidth={1.75} />
-                          Save to archive
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => removeEntry(entry.id)}
-                        >
-                          Discard draft
-                        </Button>
-                      </div>
+              return (
+                <article key={entry.id} className="story-card">
+                  <div className="story-card__media">
+                    <img
+                      src={entry.previewUrl}
+                      alt={entry.file.name}
+                      className="story-card__image"
+                    />
+                    <div className="story-card__file">
+                      <ImageIcon size={14} strokeWidth={1.6} />
+                      <span>{entry.file.name}</span>
                     </div>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+                  </div>
+
+                  <div className="story-card__body">
+                    <div className="story-step-label story-step-label--inline">
+                      <Badge variant="outline">Step 2 · Describe the moment</Badge>
+                      <p className="story-card__hint">
+                        Tell us what makes this photo special so we can draft the perfect feature.
+                      </p>
+                    </div>
+                    <textarea
+                      id={entry.id}
+                      className="story-builder__textarea story-card__textarea"
+                      placeholder="“Halloween in Navy Yard with the kids…”"
+                      value={entry.prompt}
+                      rows={3}
+                      onChange={(event) =>
+                        updatePrompt(entry.id, event.target.value)
+                      }
+                    />
+
+                    <div className="story-card__controls">
+                      <Button
+                        type="button"
+                        onClick={() => generateStory(entry.id)}
+                        disabled={
+                          entry.status === 'generating' ||
+                          !hasEffectivePrompt(entry, globalPrompt)
+                        }
+                      >
+                        {entry.status === 'generating' ? (
+                          <>
+                            <Loader2
+                              className="story-card__spinner"
+                              size={16}
+                              strokeWidth={1.75}
+                            />
+                            {entry.loadingLabel || 'Drafting your headline…'}
+                          </>
+                        ) : entry.status === 'ready' ? (
+                          <>
+                            <RefreshCcw size={16} strokeWidth={1.75} />
+                            Regenerate story
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={16} strokeWidth={1.75} />
+                            Generate story
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="story-card__remove"
+                        onClick={() => removeEntry(entry.id)}
+                      >
+                        <Trash2 size={16} strokeWidth={1.75} />
+                        Remove photo
+                      </Button>
+                    </div>
+
+                    {entry.status === 'ready' && editableArticle ? (
+                      <div className="story-article">
+                        <div className="story-article__status">
+                          <Badge variant="secondary">Step 3 · Review &amp; edit</Badge>
+                          <span>
+                            Generated{' '}
+                            {entry.createdAt.toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <div className="story-article__template">
+                          <span>Template:</span>
+                          <strong>{selectedTemplate?.title ?? 'Choose a template above'}</strong>
+                        </div>
+                        <div className="story-article__meta">
+                          <span className="story-article__dateline">
+                            {editableArticle.dateline}
+                          </span>
+                          <span className="story-article__byline">
+                            {editableArticle.byline}
+                          </span>
+                        </div>
+                        <input
+                          className="story-article__input"
+                          value={entry.headlineDraft ?? editableArticle.headline}
+                          onChange={(event) =>
+                            setEntries((prev) =>
+                              prev.map((draft) =>
+                                draft.id === entry.id
+                                  ? { ...draft, headlineDraft: event.target.value }
+                                  : draft,
+                              ),
+                            )
+                          }
+                          aria-label="Headline"
+                        />
+                        <input
+                          className="story-article__input story-article__input--subhead"
+                          value={entry.subheadlineDraft ?? editableArticle.subheadline}
+                          onChange={(event) =>
+                            setEntries((prev) =>
+                              prev.map((draft) =>
+                                draft.id === entry.id
+                                  ? { ...draft, subheadlineDraft: event.target.value }
+                                  : draft,
+                              ),
+                            )
+                          }
+                          aria-label="Subheadline"
+                        />
+                        <blockquote className="story-article__quote">
+                          {editableArticle.quote}
+                        </blockquote>
+                        <div className="story-article__body">
+                          <textarea
+                            className="story-article__textarea"
+                            value={bodyDraft || ''}
+                            onChange={(event) =>
+                              setEntries((prev) =>
+                                prev.map((draft) =>
+                                  draft.id === entry.id
+                                    ? { ...draft, bodyDraft: event.target.value }
+                                    : draft,
+                                ),
+                              )
+                            }
+                            rows={8}
+                          />
+                          <p className="story-article__note">
+                            ~{wordCount || 0} words — perfect for a feature. You can tweak anything before saving.
+                          </p>
+                        </div>
+                        <div className="story-article__tags">
+                          {editableArticle.tags.map((tag) => (
+                            <Badge key={tag} variant="outline">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="story-article__actions">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={async () => {
+                              const articleForSave = getEditableArticle(entry);
+
+                              if (!articleForSave) {
+                                console.error('[EventBuilder] saveDraftToArchive was NOT called');
+                                console.warn('[SaveToArchive] ⚠️ No article on entry, not saving');
+                                return;
+                              }
+                              if (!user?.id) {
+                                console.error('[EventBuilder] saveDraftToArchive was NOT called');
+                                console.warn('[SaveToArchive] ⚠️ No user id present, require login to save');
+                                toast.error('Sign in to save drafts to your archive.');
+                                return;
+                              }
+
+                              const payloadPrompt = getEffectivePrompt(entry, globalPrompt);
+                              const result = await saveDraftToArchive({
+                                entry,
+                                template: selectedTemplate,
+                                userId: user.id,
+                                headline: articleForSave.headline,
+                                bodyHtml: buildBodyHtml(articleForSave),
+                                prompt: payloadPrompt,
+                              });
+
+                              if (result.error) {
+                                toast.error(`Could not save story: ${result.error.message}`);
+                                return;
+                              }
+
+                              if (!result.story) {
+                                toast.error('Could not save to archive.');
+                                return;
+                              }
+
+                              toast.success('Story archived in your edition.');
+                              removeEntry(entry.id);
+                              if (onArchiveSaved) {
+                                await onArchiveSaved();
+                              }
+                            }}
+                            disabled={!editableArticle || !user}
+                          >
+                            <Archive size={14} strokeWidth={1.75} />
+                            Save to archive
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removeEntry(entry.id)}
+                          >
+                            Discard draft
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
           </div>
 
           <div className="story-bulk-actions">
