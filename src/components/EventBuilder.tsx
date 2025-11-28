@@ -526,6 +526,11 @@ export function EventBuilder({
         </p>
       </header>
 
+      <p className="story-builder__guide">
+        Upload a photo, describe what&apos;s happening, and tap Generate to see a newsroom-ready
+        feature appear.
+      </p>
+
       <div className="story-steps">
         <div
           className={`story-step ${hasEntries ? 'story-step--done' : 'story-step--active'}`}
@@ -940,10 +945,7 @@ export function EventBuilder({
       ) : (
         <div className="story-builder__empty">
           <ImageIcon size={48} strokeWidth={1.4} />
-          <p>
-            Upload a photo, describe what&apos;s happening, and tap Generate
-            to see a newsroom-ready feature appear.
-          </p>
+          <p>Drop a photo to start your first draft.</p>
         </div>
       )}
     </section>

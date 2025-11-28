@@ -367,6 +367,16 @@ a {
   font-size: 0.95rem;
 }
 
+.story-builder__guide {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--accent-border);
+  border-radius: 12px;
+  background: var(--paper);
+  font-family: var(--font-sans);
+  color: var(--ink-soft);
+}
+
 .story-builder__controls {
   display: flex;
   flex-direction: column;
