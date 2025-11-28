@@ -286,16 +286,22 @@ export function useStoryLibrary(userId?: string | null) {
         throw new Error('Must be signed in to delete a story.');
       }
 
-      console.log('[Archive] 🗑️ Deleting story', { storyId, userId });
-      const { error } = await supabaseClient
-        .from('story_archives')
-        .delete()
-        .eq('id', storyId)
-        .eq('created_by', userId);
+      console.log('[Archive] 🗑️ Deleting story via REST', { storyId, userId });
 
-      if (error) {
+      const query = new URLSearchParams({
+        id: `eq.${storyId}`,
+        created_by: `eq.${userId}`,
+      });
+
+      try {
+        await supaRest(
+          'DELETE',
+          `/rest/v1/story_archives?${query.toString()}`,
+          { headers: { Prefer: 'return=minimal' } },
+        );
+      } catch (error) {
         console.error('[Archive] ❌ Failed to delete story', error);
-        throw error;
+        throw error instanceof Error ? error : new Error('Failed to delete story');
       }
 
       await refreshStories();
