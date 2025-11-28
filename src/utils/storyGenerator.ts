@@ -507,3 +507,20 @@ export async function generateStoryFromPrompt(prompt: string): Promise<string> {
     return fallbackArticle;
   }
 }
+
+export const toStoryParagraphs = (text: string): string[] => {
+  return text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+};
+
+export const toEditableBody = (article: GeneratedArticle): string => {
+  return article.body.join('\n\n');
+};
+
+export const parseBodyDraft = (draft: string | undefined, originalBody: string[]): string[] => {
+  if (!draft) return originalBody;
+  return toStoryParagraphs(draft);
+};
+
+export const buildBodyHtml = (article: GeneratedArticle): string => {
+  return article.body.map(p => `<p>${p}</p>`).join('');
+};

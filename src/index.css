@@ -1,33 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
 :root {
-  /* Color Palette - "Subtle, Not Loud" */
-  --paper: #F9F7F1;
+  /* Color Palette - "Deep Navy & Newsprint" */
+  --paper: #FAF8F5;
+  /* Off-white newsprint */
   --paper-soft: #F2EFE9;
   --paper-white: #FFFFFF;
 
-  --ink: #2C2C2C;
-  --ink-soft: #595959;
-  --ink-muted: #8C8C8C;
-  --ink-black: #111111;
+  --ink: #0B1D36;
+  /* Deep Navy Primary */
+  --ink-soft: #4A5568;
+  /* Softer navy/gray for secondary text */
+  --ink-muted: #718096;
+  --ink-black: #0B1D36;
+  /* Using Deep Navy as black equivalent */
 
   --accent-gold: #C5A065;
   --accent-gold-dark: #A68550;
-  --accent-border: #E0D8CC;
-  --accent-highlight: rgba(197, 160, 101, 0.12);
+  --accent-border: #E2E8F0;
+  --accent-highlight: rgba(11, 29, 54, 0.05);
 
   --surface: #FFFFFF;
-  --surface-alt: #F7F5F0;
+  --surface-alt: #F7FAFC;
 
-  /* Typography - "Make It Feel Like a Newspaper" */
+  /* Typography */
   --font-display: 'Playfair Display', serif;
   --font-serif: 'Libre Baskerville', serif;
-  --font-sans: 'Source Sans 3', sans-serif;
+  --font-sans: 'Inter', sans-serif;
 
-  /* Spacing & Layout */
-  --radius-soft: 16px;
+  /* Spacing & Layout (8px grid) */
+  --radius-soft: 12px;
   --radius-pill: 999px;
   --transition-base: 200ms cubic-bezier(0.2, 0.0, 0.2, 1);
+  --shadow-soft: 0 4px 12px rgba(11, 29, 54, 0.08);
+  --shadow-hard: 0 8px 24px rgba(11, 29, 54, 0.12);
 
   --header-height: 72px;
 }
@@ -39,7 +45,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
+  /* Inter for body */
   background-color: var(--paper);
   color: var(--ink);
   line-height: 1.6;
@@ -540,12 +547,13 @@ button {
 }
 
 .story-archive__excerpt {
-  font-size: 0.9rem;
-  color: var(--ink-soft);
-  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ink-muted);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
 }
 
@@ -775,9 +783,6 @@ button {
   padding: 4rem 0;
   color: var(--ink-muted);
   font-family: var(--font-sans);
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
 }
 
 /* Utilities */
@@ -804,7 +809,8 @@ button {
   border: 1px solid var(--accent-border);
   border-radius: var(--radius-soft);
   padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  /* Enhanced shadow */
 }
 
 .grid {

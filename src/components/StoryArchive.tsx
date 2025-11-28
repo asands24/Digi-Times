@@ -362,13 +362,15 @@ export function StoryArchive({
       ) : hasStories ? (
         <div className="story-archive__grid">
           {filteredStories.map((story) => (
-            <article key={story.id} className="story-archive__card story-archive__card--front">
+            <article
+              key={story.id}
+              className="story-archive__card story-archive__card--front group hover:shadow-hard transition-all duration-300 hover:-translate-y-1"
+            >
               <div className="story-archive__front">
                 <div className="story-archive__front-masthead">
-                  <div className="story-archive__front-mark">DT</div>
                   <div>
                     <p className="story-archive__front-kicker">{story.section}</p>
-                    <h3>{story.title ?? 'Untitled story'}</h3>
+                    <h3 className="group-hover:text-ink-black transition-colors">{story.title ?? 'Untitled story'}</h3>
                     <span className="story-archive__dateline">
                       <Calendar size={14} strokeWidth={1.75} />
                       {formatTimestamp(story.created_at)}
@@ -385,11 +387,12 @@ export function StoryArchive({
                   )}
                 </div>
                 <div className="story-archive__front-body">
-                  <div className="story-archive__image">
+                  <div className="story-archive__image overflow-hidden">
                     {story.imageUrl ? (
                       <img
                         src={story.imageUrl}
                         alt={story.title ?? 'Archived story image'}
+                        className="transition-transform duration-700 group-hover:scale-105"
                       />
                     ) : (
                       <div className="story-archive__image--placeholder">📰</div>
@@ -474,7 +477,7 @@ export function StoryArchive({
         </div>
       ) : (
         <div className="story-archive__empty">
-          <p>No stories yet. Start by adding a photo and story idea.</p>
+          <p>You don’t have stories yet — let’s turn your first moment into a feature!</p>
           <Button type="button" variant="outline" onClick={onRefresh}>
             Refresh archive
           </Button>
