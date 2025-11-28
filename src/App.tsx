@@ -2,7 +2,7 @@ import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { useCallback, useRef, useState, type RefObject } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
-import { EventBuilder } from './components/EventBuilder';
+import EventBuilder from './components/EventBuilder';
 import { StoryArchive } from './components/StoryArchive';
 import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
@@ -121,13 +121,7 @@ function HomePage() {
 
         <OnboardingBanner />
         <section ref={builderRef} className="creation-section">
-          <EventBuilder
-            onArchiveSaved={async () => {
-              await refreshArchive();
-            }}
-            hasArchivedStories={stories.length > 0}
-            saveDraftToArchive={saveDraftToArchive}
-          />
+          <EventBuilder />
         </section>
         <section ref={archiveRef} className="archive-section">
           <StoryArchive
