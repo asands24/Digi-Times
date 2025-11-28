@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Printer } from 'lucide-react';
+import { Printer, Download } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabaseClient';
 import { supaRest } from '../lib/supaRest';
@@ -150,6 +150,12 @@ export default function NewspaperPage() {
     window.print();
   };
 
+  const handleExport = () => {
+    // Trigger print dialog with instructions to save as PDF
+    alert('To save as PDF:\n\n1. Click "Print" or press Ctrl/Cmd+P\n2. Select "Save as PDF" as the printer\n3. Click "Save"\n\nYour newspaper will be saved as a PDF file!');
+    window.print();
+  };
+
   if (loading) {
     return (
       <div className="newspaper-page">
@@ -194,6 +200,10 @@ export default function NewspaperPage() {
             <Button onClick={handlePrint} size="lg">
               <Printer size={18} strokeWidth={1.75} />
               Print
+            </Button>
+            <Button onClick={handleExport} size="lg" variant="outline">
+              <Download size={18} strokeWidth={1.75} />
+              Export PDF
             </Button>
             <Link to="/" className="newspaper-back-link">
               ← Back to DigiTimes

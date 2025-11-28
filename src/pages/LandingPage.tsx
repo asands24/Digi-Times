@@ -35,21 +35,21 @@ export default function LandingPage() {
 
                     <div className="landing-actions">
                         <Button
-                            onClick={() => navigate('/')}
+                            onClick={() => navigate('/login')}
                             className="landing-cta landing-cta--primary"
                             size="lg"
                         >
                             <Newspaper size={20} />
-                            Create a Story
+                            Get Started
                         </Button>
                         <Button
-                            onClick={() => navigate('/')}
+                            onClick={() => navigate('/login')}
                             className="landing-cta landing-cta--secondary"
                             size="lg"
                             variant="outline"
                         >
                             <BookOpen size={20} />
-                            View My Stories
+                            Sign In
                         </Button>
                     </div>
 
