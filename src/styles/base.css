@@ -47,6 +47,10 @@ button {
   cursor: pointer;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .container {
   width: min(100% - 2rem, var(--container));
   margin-inline: auto;
