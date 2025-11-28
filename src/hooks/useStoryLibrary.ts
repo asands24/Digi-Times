@@ -280,12 +280,37 @@ export function useStoryLibrary(userId?: string | null) {
     [refreshStories],
   );
 
+  const deleteStory = useCallback(
+    async (storyId: string) => {
+      if (!userId) {
+        throw new Error('Must be signed in to delete a story.');
+      }
+
+      console.log('[Archive] 🗑️ Deleting story', { storyId, userId });
+      const { error } = await supabaseClient
+        .from('story_archives')
+        .delete()
+        .eq('id', storyId)
+        .eq('created_by', userId);
+
+      if (error) {
+        console.error('[Archive] ❌ Failed to delete story', error);
+        throw error;
+      }
+
+      await refreshStories();
+      console.log('[Archive] ✅ Story deleted', { storyId });
+    },
+    [refreshStories, userId],
+  );
+
   return {
     stories,
     isLoading,
     errorMessage,
     refreshStories,
     saveDraftToArchive,
+    deleteStory,
   };
 }
 

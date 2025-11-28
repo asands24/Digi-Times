@@ -34,6 +34,7 @@ function HomePage() {
     errorMessage,
     refreshStories: refreshArchive,
     saveDraftToArchive,
+    deleteStory,
   } = useStoryLibrary(user?.id);
   const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
   // Anchor points for the guided flow
@@ -58,12 +59,19 @@ function HomePage() {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
+  const handleDeleteStory = useCallback(
+    async (storyId: string) => {
+      await deleteStory(storyId);
+    },
+    [deleteStory],
+  );
+
   return (
     <div className="app-shell">
       <Header />
       <main className="editorial-main">
         <section className="welcome-hero">
-          <div className="welcome-hero__logo">DT</div>
+
           <div>
             <p className="welcome-hero__kicker">DigiTimes</p>
             <h1 className="welcome-hero__title">
@@ -129,6 +137,7 @@ function HomePage() {
             onPreview={(story) => setPreviewStory(story)}
             onRefresh={refreshArchive}
             onToggleShare={handleToggleShare}
+            onDelete={handleDeleteStory}
           />
         </section>
       </main>
@@ -172,7 +181,7 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      <nav style={{ display: 'flex', gap: 12, padding: 12, flexWrap: 'wrap' }}>
+      <nav className="app-nav">
         <Link to="/">Home</Link>
         <Link to="/templates">Templates</Link>
         <Link to="/gallery">Gallery</Link>

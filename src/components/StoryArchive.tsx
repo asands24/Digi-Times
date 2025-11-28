@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper } from 'lucide-react';
+import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -20,6 +20,7 @@ interface StoryArchiveProps {
   onPreview: (story: ArchiveItem) => void;
   onRefresh: () => void;
   onToggleShare: (storyId: string, nextValue: boolean) => void;
+  onDelete: (storyId: string) => Promise<void> | void;
 }
 
 const formatTimestamp = (value: string | null) => {
@@ -207,6 +208,7 @@ export function StoryArchive({
   onPreview,
   onRefresh,
   onToggleShare,
+  onDelete,
 }: StoryArchiveProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -216,11 +218,11 @@ export function StoryArchive({
 
   const decoratedStories = stories.map(
     (story) =>
-      ({
-        ...story,
-        section: deriveSection(story),
-        wordCount: getWordCount(story),
-      } as ArchiveItem & { section: StorySection; wordCount: number }),
+    ({
+      ...story,
+      section: deriveSection(story),
+      wordCount: getWordCount(story),
+    } as ArchiveItem & { section: StorySection; wordCount: number }),
   );
   const sortedStories = [...decoratedStories].sort((a, b) => {
     const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -284,9 +286,8 @@ export function StoryArchive({
                 ].map((chip) => (
                   <button
                     key={chip.value}
-                    className={`story-archive__chip ${
-                      sectionFilter === chip.value ? 'is-active' : ''
-                    }`}
+                    className={`story-archive__chip ${sectionFilter === chip.value ? 'is-active' : ''
+                      }`}
                     onClick={() => setSectionFilter(chip.value)}
                     type="button"
                   >
@@ -444,6 +445,28 @@ export function StoryArchive({
                 >
                   <Eye size={14} strokeWidth={1.75} />
                   View
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="story-archive__remove"
+                  onClick={async () => {
+                    const confirmed = window.confirm(
+                      'Delete this story from your archive? This cannot be undone.',
+                    );
+                    if (!confirmed) return;
+                    try {
+                      await onDelete(story.id);
+                      toast.success('Story deleted from your archive.');
+                    } catch (error) {
+                      console.error('[StoryArchive] Delete failed', error);
+                      toast.error('Could not delete story. Please try again.');
+                    }
+                  }}
+                >
+                  <Trash2 size={14} strokeWidth={1.75} />
+                  Delete
                 </Button>
               </div>
             </article>

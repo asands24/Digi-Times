@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Newspaper, BookOpen } from 'lucide-react';
-import { Logo } from '../components/ui/Logo';
+
 import { Button } from '../components/ui/button';
 import { useAuth } from '../providers/AuthProvider';
 
@@ -20,7 +20,7 @@ export default function LandingPage() {
         <div className="landing-page">
             <div className="landing-container">
                 <header className="landing-header">
-                    <Logo size="large" />
+                    <span className="landing-brand">DIGITIMES</span>
                 </header>
 
                 <main className="landing-main">
