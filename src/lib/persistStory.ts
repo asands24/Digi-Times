@@ -1,4 +1,4 @@
-import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { StorageError } from '@supabase/storage-js';
 import { supabaseClient } from './supabaseClient';
 import { SUPABASE_ANON, SUPABASE_URL } from './config';
