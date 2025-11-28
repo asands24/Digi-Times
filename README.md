@@ -11,7 +11,7 @@ Craft rich newspaper-style coverage from your everyday photos in minutes. Upload
 - **Share & Print** – Share individual stories via public links (`/read/:id`) or build a printable newspaper layout (`/newspaper`) with multiple stories.
 - **Production-Ready UX** – Comprehensive loading states, error handling, accessibility features, and first-time user onboarding.
 - **Public Template Gallery** – Browse shared templates at `/templates` with no authentication required.
-- **Offline Friendly** – Core newsroom workflows continue to run locally when Supabase or OpenAI are unavailable.
+- **Robust Supabase Integration** – Uses direct REST API calls for reliability and performance.
 
 ## Quick Start
 
@@ -55,10 +55,25 @@ These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_
 - **Lucide Icons** – Newsroom-inspired iconography.
 - **React Hot Toast** – Inline notifications with editorial styling.
 - **Custom Styling** – Tailored newspaper aesthetic in `src/index.css`.
+- **Supabase REST API** – Direct API integration for reliable data operations.
 
-## Supabase Note
+## Supabase Architecture
 
-Legacy Supabase hooks remain (for the original collaborative roadmap) but sit behind configuration guards. If you plan to revive the backend experience, add `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` to `.env.local` and re-enable the associated hooks/pages.
+DigiTimes uses a **Raw REST API** approach for all Supabase interactions to ensure reliability and performance:
+
+### Centralized REST Helper (`src/lib/supaRest.ts`)
+- **`getAccessToken()`** – Retrieves auth tokens directly from `localStorage`, bypassing potentially slow client calls.
+- **`supaRest()`** – Generic helper for authenticated REST requests to Supabase.
+
+### Key Features
+- **File Uploads** – Uses `XMLHttpRequest` for image uploads with progress tracking.
+- **Database Operations** – All `SELECT`, `INSERT`, and `UPDATE` operations use the REST API.
+- **Authentication** – Token-based auth with automatic `localStorage` fallback.
+
+### Configuration
+Set these environment variables in `.env.local` (development) or Netlify (production):
+- `REACT_APP_SUPABASE_URL` – Your Supabase project URL
+- `REACT_APP_SUPABASE_ANON_KEY` – Your Supabase anonymous key
 
 ## Story Generation Pipeline
 
@@ -104,20 +119,43 @@ Every story in DigiTimes has an `is_public` flag that controls visibility:
 
 Users can toggle visibility with the "Public" checkbox in the Story Archive component. Share links are automatically generated when stories are marked public.
 
-### Smoke Script Credentials
+## Development
 
-- Use the **public anon key** from Supabase Project Settings → API (never the `service_role` key).
-- Env vars required locally and in CI:
-  - `REACT_APP_SUPABASE_URL=https://<ref>.supabase.co`
-  - `REACT_APP_SUPABASE_ANON_KEY=<public anon key>`
-  - `SMOKE_TEST_EMAIL=smoke+digitimes@example.com`
-  - `SMOKE_TEST_PASSWORD=TestSmoke123!`
-  - `SECRETS_SCAN_OMIT_KEYS=REACT_APP_SUPABASE_ANON_KEY` (Netlify secret scanning allowlist)
-- Rotate keys in Supabase? Update `.env.local` and hosting env vars before re-running `npm run smoke:*`.
+### Environment Variables
+Required for local development (`.env.local`):
+```
+REACT_APP_SUPABASE_URL=https://<ref>.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=<public anon key>
+OPENAI_API_KEY=<your openai key>
+```
+
+### Smoke Tests
+Run automated tests to verify core functionality:
+```bash
+npm run smoke:archive  # Test story archiving
+npm run smoke:story    # Test story creation
+npm run smoke:newspaper # Test newspaper compilation
+```
+
+Required environment variables for smoke tests:
+- `SMOKE_TEST_EMAIL` – Test user email
+- `SMOKE_TEST_PASSWORD` – Test user password
+
+## Deployment
+
+DigiTimes is optimized for Netlify deployment:
+
+1. **Connect Repository** – Link your GitHub repo to Netlify
+2. **Set Environment Variables** – Add all required env vars in Netlify settings
+3. **Deploy** – Netlify automatically builds and deploys on push to main
+
+See `DEPLOYMENT.md` for detailed deployment instructions.
 
 ## Acceptance Checklist
 
 - `/templates` renders public rows and handles empty/error states without crashing.
-- `/upload` accepts JPG/PNG/WebP images under 10 MB and returns a public URL.
+- `/upload` accepts JPG/PNG/WebP images under 10 MB and returns a public URL.
 - `/gallery` displays files stored under `photos/public/*` with anonymous access.
 - Visiting these routes in a private/incognito window still succeeds (no auth flow).
+- Story creation, saving, and display work reliably.
+- Newspaper compilation loads multiple stories correctly.

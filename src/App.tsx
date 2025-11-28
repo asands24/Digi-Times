@@ -23,6 +23,7 @@ import AuthCallback from './pages/AuthCallback';
 import DebugTemplates from './pages/DebugTemplates';
 import PublicStoryPage from './pages/PublicStoryPage';
 import NewspaperPage from './pages/NewspaperPage';
+import LandingPage from './pages/LandingPage';
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 function HomePage() {
@@ -39,9 +40,9 @@ function HomePage() {
   const handleToggleShare = useCallback(
     async (storyId: string, nextValue: boolean) => {
       try {
-    await updateStoryVisibility(storyId, nextValue);
-    await refreshArchive();
-    toast.success(nextValue ? 'Story is now public.' : 'Story set to private.');
+        await updateStoryVisibility(storyId, nextValue);
+        await refreshArchive();
+        toast.success(nextValue ? 'Story is now public.' : 'Story set to private.');
       } catch (error) {
         console.error('Failed to update visibility', error);
         toast.error('Could not update sharing setting.');
@@ -99,10 +100,11 @@ export default function App() {
     return (
       <AppErrorBoundary>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/read/:id" element={<PublicStoryPage />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppErrorBoundary>
     );

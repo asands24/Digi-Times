@@ -1,7 +1,8 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { StorageError } from '@supabase/storage-js';
-import { getSupabase, supabaseClient } from './supabaseClient';
+import { supabaseClient } from './supabaseClient';
 import { SUPABASE_ANON, SUPABASE_URL } from './config';
+import { supaRest, getAccessToken } from './supaRest';
 import type { ArchiveItem, StoryArchiveRow } from '../types/story';
 
 export type PersistStoryMode = 'insert' | 'update';
@@ -89,7 +90,7 @@ export async function persistStory(
     payload.is_public = false;
   }
 
-  const supabase = supabaseClient ?? getSupabase();
+  const supabase = supabaseClient;
   console.log('[persistStory] Supabase client exists?', !!supabase);
   if (!supabase) {
     console.error('[persistStory] ❌ No Supabase client – aborting');
@@ -108,13 +109,94 @@ export async function persistStory(
   const uploadStart = Date.now();
   let uploadError: StorageError | null = null;
   if (!DEBUG_SKIP_UPLOAD) {
-    const { error } = await supabase.storage
-      .from('photos')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
+    console.log('[persistStory] 🚀 Starting upload await...');
+    
+    // WORKAROUND: Use XHR instead of fetch/Supabase client
+    // because both fetch and Supabase client are hanging
+    try {
+      console.log('[persistStory] VERSION: XHR_WITH_TOKEN_FALLBACK_V2');
+      
+      // Helper to get token with timeout and localStorage fallback
+      const getToken = async () => {
+        console.log('[persistStory] getToken called');
+        
+        // STRATEGY 1: Try localStorage FIRST (fastest, avoids hanging client)
+        const localToken = getAccessToken();
+        if (localToken) {
+          console.log('[persistStory] ✅ Found token in localStorage');
+          return localToken;
+        }
+
+        console.log('[persistStory] ⚠️ No local token, trying getSession (risky)...');
+
+        // STRATEGY 2: Try standard way with timeout
+        try {
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 2000)
+          );
+          
+          const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+          if (session?.access_token) return session.access_token;
+        } catch (e) {
+          console.warn('[persistStory] getSession timed out or failed');
+        }
+
+        return null;
+      };
+
+      const token = await getToken();
+      console.log('[persistStory] 🔑 Token retrieved:', Boolean(token));
+
+      if (!token) {
+        throw new Error('No auth token available');
+      }
+      
+      console.log('[persistStory] 🚀 Starting XHR upload...');
+      
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/photos/${filePath}`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.setRequestHeader('apikey', SUPABASE_ANON);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            console.log(`[persistStory] 📤 Upload progress: ${percent}%`);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            console.log('[persistStory] ✅ XHR Upload success:', xhr.status);
+            resolve(xhr.responseText);
+          } else {
+            console.error('[persistStory] ❌ XHR Upload failed:', xhr.status, xhr.responseText);
+            reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
+          }
+        };
+        
+        xhr.onerror = () => {
+          console.error('[persistStory] ❌ XHR Network error');
+          reject(new Error('Network error during upload'));
+        };
+        
+        xhr.timeout = 30000; // 30s timeout
+        xhr.ontimeout = () => {
+          console.error('[persistStory] ❌ XHR Timeout');
+          reject(new Error('Upload timed out'));
+        };
+        
+        xhr.send(file);
       });
-    uploadError = error;
+      
+      console.log('[persistStory] ✅ Upload await completed');
+    } catch (err) {
+      console.error('[persistStory] 💥 Upload exception:', err);
+      uploadError = { name: 'StorageError', message: String(err) } as StorageError;
+    }
   } else {
     console.warn('[persistStory] ⚠️ DEBUG: Skipping image upload, using filePath anyway', {
       filePath,
@@ -208,52 +290,38 @@ const persistStoryRecord = async ({
   storyId,
   payload,
 }: PersistStoryArgs): Promise<StoryArchiveRow> => {
-  console.log('[persistStory] Supabase mutation payload', {
+  console.log('[persistStory] Supabase mutation payload (RAW FETCH)', {
     mode,
     storyId,
     payload,
   });
 
-  if (mode === 'update' && storyId) {
-    const { data, error } = await supabase
-      .from(STORY_TABLE)
-      .update(payload)
-      .eq('id', storyId)
-      .select('*')
-      .single();
+  // WORKAROUND: Use raw fetch because Supabase client hangs
+  const path = mode === 'update' && storyId
+    ? `/rest/v1/${STORY_TABLE}?id=eq.${storyId}&select=*`
+    : `/rest/v1/${STORY_TABLE}?select=*`;
 
-    console.log('[persistStory] Supabase update response', { data, error });
+  const method = mode === 'update' ? 'PATCH' : 'POST';
 
-    if (error) {
-      logSupabaseError(error, { mode, storyId, payload });
-      throw error;
+  try {
+    const data = await supaRest<StoryArchiveRow[]>(method, path, {
+      headers: {
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    console.log('[persistStory] Raw fetch response', { data });
+
+    if (!data || data.length === 0) {
+      throw new Error('Database mutation returned no data');
     }
 
-    if (!data) {
-      throw new Error('Supabase update returned no story data.');
-    }
-
-    return data as StoryArchiveRow;
+    return data[0];
+  } catch (error) {
+    console.error('[persistStory] Raw fetch failed', error);
+    throw new Error(`Database mutation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
-
-  const { data, error } = await supabase
-    .from(STORY_TABLE)
-    .insert(payload)
-    .select('*')
-    .single();
-
-  console.log('[persistStory] Supabase insert response', { data, error });
-
-  if (error) {
-    logSupabaseError(error, { mode, storyId, payload });
-    throw error;
-  }
-
-  if (!data) {
-    throw new Error('Supabase insert returned no story data.');
-  }
-
-  return data as StoryArchiveRow;
 };
 
 let diagnosticsRan = false;
@@ -275,7 +343,7 @@ export async function validateStoryPersistenceSetup(): Promise<void> {
     console.warn('[persistStory diagnostics] Missing Supabase env vars', missingEnv);
   }
 
-  const supabase = getSupabase();
+  const supabase = supabaseClient;
 
   try {
     const { error: columnError } = await supabase

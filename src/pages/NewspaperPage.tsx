@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, supabaseClient } from '../lib/supabaseClient';
+import { SUPABASE_URL, SUPABASE_ANON } from '../lib/config';
+import { supaRest } from '../lib/supaRest';
 import { useAuth } from '../providers/AuthProvider';
 import type { Database } from '../types/supabase';
 import '../styles/newspaper-print.css';
@@ -77,19 +79,22 @@ export default function NewspaperPage() {
     setNotice(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('story_archives')
-        .select(STORY_COLUMNS)
-        .in('id', ids);
+      console.log('[NewspaperPage] 🔍 Fetching stories (RAW FETCH)', { ids });
 
-      if (fetchError) {
-        console.error('[NewspaperPage] fetch error', fetchError);
-        setError('Unable to load stories right now.');
-        setStories([]);
-        return;
-      }
+      // WORKAROUND: Use raw fetch because Supabase client hangs
+      const idsParam = `(${ids.join(',')})`;
+      const data = await supaRest<StoryRow[]>('GET',
+        `/rest/v1/story_archives?select=${encodeURIComponent(STORY_COLUMNS)}&id=in.${idsParam}`,
+        {
+          headers: {
+            'Prefer': 'count=none'
+          }
+        }
+      );
 
-      const available = (data ?? []).filter((story) => {
+      console.log('[NewspaperPage] Raw fetch response', { count: data.length });
+
+      const available = (data ?? []).filter((story: StoryRow) => {
         if (story.is_public) {
           return true;
         }
@@ -109,14 +114,14 @@ export default function NewspaperPage() {
         setNotice('Some stories were private or missing and were skipped.');
       }
 
-      const withImages = available.map((story) => ({
+      const withImages = available.map((story: StoryRow) => ({
         ...story,
         imageUrl: getPublicImage(story.image_path),
       }));
 
       // Preserve the requested order
       withImages.sort(
-        (a, b) => ids.indexOf(a.id ?? '') - ids.indexOf(b.id ?? '')
+        (a: StoryRow, b: StoryRow) => ids.indexOf(a.id ?? '') - ids.indexOf(b.id ?? '')
       );
 
       setStories(withImages);

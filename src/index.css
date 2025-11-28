@@ -18,6 +18,13 @@
   --accent-shadow: rgba(59, 48, 34, 0.12);
   --accent-highlight: rgba(196, 165, 116, 0.18);
 
+  /* Brand tokens for landing page */
+  --brand-primary: #1a1209;
+  --brand-accent: #c4a574;
+  --brand-accent-dark: #a8874f;
+  --brand-surface: #fdfcfa;
+  --brand-surface-alt: #f7f1e6;
+
   --font-display: 'Playfair Display', 'Times New Roman', serif;
   --font-serif: 'Libre Baskerville', 'Georgia', serif;
   --font-sans: 'Source Sans 3', 'Helvetica Neue', Arial, sans-serif;
@@ -40,11 +47,9 @@ body {
   min-height: 100vh;
   font-family: var(--font-serif);
   background-color: var(--paper);
-  background-image: linear-gradient(
-      135deg,
+  background-image: linear-gradient(135deg,
       rgba(253, 252, 250, 0.94),
-      rgba(247, 241, 230, 0.92)
-    ),
+      rgba(247, 241, 230, 0.92)),
     var(--body-newsprint-image, none);
   background-size: cover;
   background-position: center;
@@ -964,6 +969,7 @@ a {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -1258,11 +1264,9 @@ a {
 
 .login-page__story {
   padding: 3rem;
-  background-image: linear-gradient(
-      180deg,
+  background-image: linear-gradient(180deg,
       rgba(255, 255, 255, 0.86),
-      rgba(247, 241, 230, 0.9)
-    ),
+      rgba(247, 241, 230, 0.9)),
     var(--login-story-image, none);
   background-size: cover;
   background-position: center;
@@ -1911,6 +1915,7 @@ a {
     opacity: 0;
     transform: translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1977,5 +1982,162 @@ a {
 
   .dt-dialog__content {
     padding: 1.75rem;
+  }
+}
+
+/* Landing Page Styles */
+.landing-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, var(--brand-surface) 0%, var(--brand-surface-alt) 100%);
+}
+
+.landing-container {
+  max-width: 900px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+  text-align: center;
+}
+
+.landing-header {
+  display: flex;
+  justify-content: center;
+}
+
+.landing-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.landing-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--brand-primary);
+  margin: 0;
+}
+
+.landing-subtitle {
+  font-family: var(--font-sans);
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.landing-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.landing-cta {
+  min-width: 200px;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+.landing-cta--primary {
+  background: var(--brand-accent);
+  color: var(--ink-black);
+  border-color: var(--brand-accent);
+}
+
+.landing-cta--primary:hover {
+  background: var(--brand-accent-dark);
+  border-color: var(--brand-accent-dark);
+}
+
+.landing-cta--secondary {
+  border-color: var(--accent-border);
+  color: var(--ink-soft);
+}
+
+.landing-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.landing-feature {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
+  background: var(--paper);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-soft);
+  box-shadow: 0 8px 24px rgba(59, 48, 34, 0.08);
+}
+
+.landing-feature-icon {
+  font-size: 2.5rem;
+}
+
+.landing-feature h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin: 0;
+  color: var(--ink);
+}
+
+.landing-feature p {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.landing-footer {
+  padding-top: 2rem;
+  border-top: 1px solid var(--accent-border);
+}
+
+.landing-footer p {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .landing-page {
+    padding: 1.5rem;
+  }
+
+  .landing-container {
+    gap: 3rem;
+  }
+
+  .landing-actions {
+    flex-direction: column;
+  }
+
+  .landing-cta {
+    width: 100%;
+  }
+
+  .landing-features {
+    grid-template-columns: 1fr;
   }
 }

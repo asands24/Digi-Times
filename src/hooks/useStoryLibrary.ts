@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabase, supabaseClient } from '../lib/supabaseClient';
+import { SUPABASE_URL, SUPABASE_ANON } from '../lib/config';
+import { supaRest } from '../lib/supaRest';
 import { persistStory } from '../lib/persistStory';
 import type { ArchiveItem, DraftEntry, StoryTemplate, StoryArchiveRow } from '../types/story';
 
@@ -40,30 +42,29 @@ const toArchiveItems = (rows: StoryArchiveRow[]): ArchiveItem[] =>
 export async function fetchStoryRows(
   userId: string,
 ): Promise<{ rows: StoryArchiveRow[]; error: Error | null }> {
-  const supabase = supabaseClient ?? getSupabase();
-  if (!supabase) {
-    throw new Error('[StoryLibrary] No Supabase client available for fetching stories');
-  }
-
-  console.log('[StoryLibrary] 🔍 Running Supabase select for stories', {
+  console.log('[StoryLibrary] 🔍 Running Supabase select for stories (RAW FETCH)', {
     userId,
     limit: STORIES_LIMIT,
   });
 
-  const { data, error } = await supabase
-    .from('story_archives')
-    .select(STORY_COLUMNS)
-    .eq('created_by', userId)
-    .order('created_at', { ascending: false })
-    .limit(STORIES_LIMIT);
+  try {
+    // WORKAROUND: Use raw fetch because Supabase client hangs
+    const data = await supaRest<StoryArchiveRow[]>('GET', 
+      `/rest/v1/story_archives?select=${encodeURIComponent(STORY_COLUMNS)}&created_by=eq.${userId}&order=created_at.desc&limit=${STORIES_LIMIT}`,
+      {
+        headers: {
+          'Prefer': 'count=none'
+        }
+      }
+    );
 
-  console.log('[StoryLibrary] Supabase raw select response', { data, error });
+    console.log('[StoryLibrary] Supabase raw fetch response', { count: data.length });
+    return { rows: data, error: null };
 
-  if (error) {
-    return { rows: [], error: new Error(error.message ?? 'Unexpected Supabase error loading stories.') };
+  } catch (err) {
+    console.error('[StoryLibrary] ❌ Exception while fetching stories', err);
+    return { rows: [], error: err instanceof Error ? err : new Error('Unknown error fetching stories') };
   }
-
-  return { rows: (data ?? []) as StoryArchiveRow[], error: null };
 }
 
 export async function loadStories(userId?: string | null): Promise<LoadStoriesResult> {

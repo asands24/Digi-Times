@@ -264,22 +264,45 @@ export const AuthProvider = ({ children }) => {
     }
     try {
       setLoading(true)
-      const { error } = await supabase.auth.signOut()
 
-      if (error) {
-        toast.error(error.message)
-        return { error }
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Sign out timed out')), 2000)
+      )
+
+      // Race Supabase signOut against timeout
+      try {
+        await Promise.race([
+          supabase.auth.signOut(),
+          timeoutPromise
+        ])
+      } catch (e) {
+        console.warn('Supabase signOut timed out or failed, forcing local cleanup', e)
       }
 
+      // Force cleanup regardless of Supabase response
       setUser(null)
       setProfile(null)
+
+      // Clear all Supabase data from localStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key)
+        }
+      })
+
       toast.success('Signed out successfully')
       return { error: null }
     } catch (error) {
-      toast.error('Failed to sign out')
+      console.error('Sign out error:', error)
+      // Even on error, we want to clear local state
+      setUser(null)
+      setProfile(null)
       return { error }
     } finally {
       setLoading(false)
+      // Force reload to ensure clean state if needed
+      // window.location.reload() 
     }
   }
 
