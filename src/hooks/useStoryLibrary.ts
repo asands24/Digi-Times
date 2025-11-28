@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getSupabase, supabaseClient } from '../lib/supabaseClient';
-import { SUPABASE_URL, SUPABASE_ANON } from '../lib/config';
+import { supabaseClient } from '../lib/supabaseClient';
 import { supaRest } from '../lib/supaRest';
 import { persistStory } from '../lib/persistStory';
 import type { ArchiveItem, DraftEntry, StoryTemplate, StoryArchiveRow } from '../types/story';

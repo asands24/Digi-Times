@@ -265,25 +265,6 @@ export async function persistStory(
   };
 }
 
-const logSupabaseError = (
-  error: PostgrestError,
-  context: { mode: PersistStoryMode; storyId?: string | null; payload: StoryInsertPayload },
-) => {
-  console.error('[persistStory] Supabase mutation failed', {
-    ...context,
-    message: error.message,
-    code: error.code,
-    hint: error.hint,
-    details: error.details,
-  });
-  if (['42501', 'PGRST301', '403'].includes(error.code ?? '')) {
-    console.warn('[persistStory] RLS or permission issue likely blocking insert/update', error);
-  }
-  if (error.message?.toLowerCase().includes('column') || error.message?.toLowerCase().includes('not-null')) {
-    console.warn('[persistStory] Schema mismatch detected', error.message);
-  }
-};
-
 const persistStoryRecord = async ({
   supabase,
   mode,
