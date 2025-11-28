@@ -116,13 +116,11 @@
   width: 100%;
   height: 4px;
   margin-top: 1rem;
-  background: linear-gradient(
-    to right,
-    transparent,
-    #120b03 10%,
-    #120b03 90%,
-    transparent
-  );
+  background: linear-gradient(to right,
+      transparent,
+      #120b03 10%,
+      #120b03 90%,
+      transparent);
 }
 
 /* Lead story --------------------------------------------------------------- */
@@ -144,6 +142,8 @@
   margin: 0 auto 1.5rem;
   border: 1px solid rgba(18, 11, 3, 0.25);
   overflow: hidden;
+  max-width: 600px;
+  /* Limit image size on screen */
 }
 
 .lead-story-image img {
@@ -151,6 +151,8 @@
   height: auto;
   display: block;
   object-fit: cover;
+  max-height: 400px;
+  /* Prevent overly tall images */
 }
 
 .lead-story-content {
@@ -196,6 +198,8 @@
   height: auto;
   display: block;
   object-fit: cover;
+  max-height: 250px;
+  /* Prevent overly tall images in grid */
 }
 
 .story-content {
