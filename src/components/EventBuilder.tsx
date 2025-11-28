@@ -72,9 +72,8 @@ function EventBuilder() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const entryUrlsRef = useRef<string[]>([]);
 
-  const { saveDraftToArchive, stories } = useStoryLibrary();
+  const { saveDraftToArchive } = useStoryLibrary();
   const { user } = useAuth();
-  const hasArchivedStories = stories.length > 0;
 
   // Helper to save draft to archive
   const handleSaveToArchive = async (params: {
@@ -112,10 +111,6 @@ function EventBuilder() {
       return entry.prompt;
     }
     return global.trim();
-  };
-
-  const hasEffectivePrompt = (entry: StoryEntry, global: string) => {
-    return getEffectivePrompt(entry, global).length > 0;
   };
 
   const getEditableArticle = (entry: StoryEntry) => {
@@ -209,25 +204,6 @@ function EventBuilder() {
   const clearEntries = useCallback(() => {
     entryUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     setEntries([]);
-  }, []);
-
-  const updatePrompt = useCallback((id: string, prompt: string) => {
-    setEntries((prev) =>
-      prev.map((entry) => {
-        if (entry.id !== id) {
-          return entry;
-        }
-        const trimmed = prompt.trim();
-        const nextSource: StoryEntry['promptSource'] = trimmed.length === 0 ? 'global' : 'custom';
-        return {
-          ...entry,
-          prompt,
-          promptSource: nextSource,
-          status: entry.status === 'ready' ? 'idle' : entry.status,
-          article: entry.status === 'ready' ? undefined : entry.article,
-        };
-      }),
-    );
   }, []);
 
   const applyPromptToDrafts = useCallback(() => {
@@ -391,16 +367,10 @@ function EventBuilder() {
       ),
     [entries],
   );
-  const hasDraftWithPrompt = useMemo(
-    () => entries.some((entry) => hasEffectivePrompt(entry, globalPrompt)),
-    [entries, globalPrompt],
-  );
   const hasDraftWithArticle = useMemo(
     () => entries.some((entry) => Boolean(entry.article)),
     [entries],
   );
-  const hasShareableDraft = hasDraftWithPrompt || hasDraftWithArticle;
-  const canShareStories = hasShareableDraft || hasArchivedStories;
 
   const updateEntry = (id: string, updates: Partial<StoryEntry>) => {
     setEntries((prev) =>

@@ -33,7 +33,6 @@ function HomePage() {
     isLoading,
     errorMessage,
     refreshStories: refreshArchive,
-    saveDraftToArchive,
     deleteStory,
   } = useStoryLibrary(user?.id);
   const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
