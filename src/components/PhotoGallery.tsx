@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 import { supaRest } from '../lib/supaRest';
 import { publicPhotoUrl } from '../lib/storage';
 import { Button } from './ui/button';
+import { useAuth } from '../providers/AuthProvider';
 
 type Photo = { name: string; publicUrl: string };
 type StorageObject = { name: string };
@@ -12,8 +13,14 @@ export default function PhotoGallery(): JSX.Element {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const fetchPhotos = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort('Listing photos timed out'), STORAGE_LIST_TIMEOUT_MS);
 
@@ -21,10 +28,10 @@ export default function PhotoGallery(): JSX.Element {
       setLoading(true);
       setError(null);
 
-      // Use REST API to avoid occasional hangs in the JS client when listing storage objects
+      // Fetch user-specific story images from stories/{userId}/ folder
       const response = await supaRest<StorageObject[]>('POST', '/storage/v1/object/list/photos', {
         body: JSON.stringify({
-          prefix: 'anonymous',
+          prefix: `stories/${user.id}`,
           limit: 100,
           offset: 0,
           sortBy: { column: 'updated_at', order: 'desc' },
@@ -35,7 +42,7 @@ export default function PhotoGallery(): JSX.Element {
       const resolved = (response ?? [])
         .filter((entry) => Boolean(entry.name))
         .map((entry) => {
-          const path = `anonymous/${entry.name}`;
+          const path = `stories/${user.id}/${entry.name}`;
           return { name: entry.name, publicUrl: publicPhotoUrl(path) };
         });
       setPhotos(resolved);
@@ -45,13 +52,13 @@ export default function PhotoGallery(): JSX.Element {
       if (message.includes('timed out')) {
         setError('Photo loading is taking too long. Please try again.');
       } else {
-        setError('We could not load the latest photos right now. Please try again.');
+        setError('We could not load your photos right now. Please try again.');
       }
     } finally {
       clearTimeout(timeout);
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     void fetchPhotos();
@@ -70,8 +77,12 @@ export default function PhotoGallery(): JSX.Element {
     </section>
   );
 
+  if (!user) {
+    return renderMessage('Please log in to view your story images.');
+  }
+
   if (loading) {
-    return renderMessage('Loading photos…');
+    return renderMessage('Loading your photos…');
   }
 
   if (error) {
@@ -84,7 +95,7 @@ export default function PhotoGallery(): JSX.Element {
   }
 
   if (photos.length === 0) {
-    return renderMessage('No photos yet.');
+    return renderMessage('No story images yet. Create a story to see your photos here!');
   }
 
   return (

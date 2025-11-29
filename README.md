@@ -38,10 +38,10 @@ DigiTimes follows a simple, delightful workflow designed for families:
 
 - `/templates` – Lists the 50 most recent public templates (`is_public = true`) from Supabase.
 - `/upload` – Anonymous uploader that writes images to the `photos` bucket under the `public/` prefix.
-- `/gallery` – Renders a responsive grid of publicly uploaded images.
+- `/gallery` – Shows the authenticated user's story images (user-specific, requires login).
 - `/issues` – Manage your saved newspaper editions.
 
-These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_SETUP.md` are applied (public read on `public.templates` and the `photos` bucket).
+These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_SETUP.md` are applied (public read on `public.templates` and the `photos` bucket). Note: `/gallery` requires authentication to display user-specific content.
 
 ## Scripts
 
