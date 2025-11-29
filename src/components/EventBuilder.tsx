@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect, ChangeEvent, DragEvent, useMemo } from 'react';
-import { Camera, ImageIcon, Sparkles, Trash2, RefreshCcw, Share2, Archive, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect, ChangeEvent, useMemo } from 'react';
+import { Camera, ImageIcon, Sparkles, Trash2, RefreshCcw, Archive, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import toast from 'react-hot-toast';
@@ -66,7 +66,6 @@ const readFileAsDataUrl = (file: File): Promise<string> => {
 
 function EventBuilder() {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -212,36 +211,6 @@ function EventBuilder() {
       }
       return prev.filter((entry) => entry.id !== id);
     });
-  }, []);
-
-  const handleShareLink = useCallback(async () => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const url =
-      shareUrlRef.current ||
-      (() => {
-        const next = new URL(window.location.href);
-        next.searchParams.set('guest', '1');
-        const result = next.toString();
-        shareUrlRef.current = result;
-        return result;
-      })();
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ url, title: 'DigiTimes Edition' });
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        toast.success('Share link copied');
-      } else {
-        toast.error('Sharing isn’t supported on this browser.');
-      }
-    } catch (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Share failed', error);
-      }
-    }
   }, []);
 
   const clearEntries = useCallback(() => {
@@ -431,14 +400,12 @@ function EventBuilder() {
   );
   const hasDraftWithPrompt = useMemo(
     () => entries.some((entry) => hasEffectivePrompt(entry, globalPrompt)),
-    [entries, globalPrompt],
+    [entries, globalPrompt, hasEffectivePrompt],
   );
   const hasDraftWithArticle = useMemo(
     () => entries.some((entry) => Boolean(entry.article)),
     [entries],
   );
-  const hasShareableDraft = hasDraftWithPrompt || hasDraftWithArticle;
-  const canShareStories = hasShareableDraft || hasArchivedStories;
 
   const updateEntry = (id: string, updates: Partial<StoryEntry>) => {
     setEntries((prev) =>
@@ -684,8 +651,7 @@ function EventBuilder() {
                                 toast.error('Failed to save story');
                               } else {
                                 toast.success('Story saved to archive!');
-                                // We need to remove the entry from the list
-                                setEntries(prev => prev.filter(e => e.id !== entry.id));
+                                removeEntry(entry.id);
                               }
                             })}
                           >

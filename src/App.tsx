@@ -34,7 +34,6 @@ function HomePage() {
     isLoading,
     errorMessage,
     refreshStories: refreshArchive,
-    saveDraftToArchive,
     deleteStory,
     loadMore,
     hasMore,
@@ -62,12 +61,7 @@ function HomePage() {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const handleDeleteStory = useCallback(
-    async (storyId: string) => {
-      await deleteStory(storyId);
-    },
-    [deleteStory],
-  );
+
 
   return (
     <div className="app-shell">

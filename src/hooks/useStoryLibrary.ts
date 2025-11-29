@@ -4,8 +4,6 @@ import { persistStory } from '../lib/persistStory';
 import { fetchStoriesForUser, updateStory, deleteStory as apiDeleteStory } from '../lib/storiesApi';
 import type { 
   ArchiveItem, 
-  DraftEntry, 
-  StoryTemplate, 
   StoryArchiveRow,
   SaveDraftToArchiveOptions,
   SaveDraftToArchiveResult,
@@ -265,18 +263,20 @@ export function useStoryLibrary(userId?: string | null) {
       }
 
       const draftPayload = {
-        file: options.entry.file,
+        file: entry.file,
         meta: {
-          headline: options.headline,
-          bodyHtml: options.bodyHtml,
-          prompt: options.prompt ?? null,
+          headline,
+          bodyHtml,
+          prompt,
         },
-        userId: options.userId,
+        templateId: template?.id,
+        userId,
+        onProgress,
       };
 
       console.log('[Archive] Draft payload before persist', {
-        headline: options.headline,
-        prompt: draftPayload.meta.prompt,
+        headline,
+        prompt,
       });
 
       try {
