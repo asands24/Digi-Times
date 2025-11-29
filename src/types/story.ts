@@ -50,3 +50,22 @@ export interface DraftEntry {
   prompt: string;
   article?: GeneratedArticle;
 }
+
+export type SaveDraftToArchiveOptions = {
+  entry: DraftEntry;
+  template: StoryTemplate | null;
+  userId: string;
+  headline: string;
+  bodyHtml: string;
+  prompt: string | null;
+};
+
+export type SaveDraftToArchiveResult = {
+  story: ArchiveItem | null;
+  error: Error | null;
+};
+
+export type LoadStoriesResult = {
+  stories: ArchiveItem[];
+  error: Error | null;
+};

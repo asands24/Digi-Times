@@ -39,6 +39,7 @@ DigiTimes follows a simple, delightful workflow designed for families:
 - `/templates` – Lists the 50 most recent public templates (`is_public = true`) from Supabase.
 - `/upload` – Anonymous uploader that writes images to the `photos` bucket under the `public/` prefix.
 - `/gallery` – Renders a responsive grid of publicly uploaded images.
+- `/issues` – Manage your saved newspaper editions.
 
 These routes work in incognito mode once the Supabase SQL policies in `SUPABASE_SETUP.md` are applied (public read on `public.templates` and the `photos` bucket).
 
@@ -66,9 +67,10 @@ DigiTimes uses a **Raw REST API** approach for all Supabase interactions to ensu
 - **`supaRest()`** – Generic helper for authenticated REST requests to Supabase.
 
 ### Key Features
-- **File Uploads** – Uses `XMLHttpRequest` for image uploads with progress tracking.
+- **File Uploads** – Uses `XMLHttpRequest` for image uploads with real-time progress tracking.
 - **Database Operations** – All `SELECT`, `INSERT`, and `UPDATE` operations use the REST API.
 - **Authentication** – Token-based auth with automatic `localStorage` fallback.
+- **Optimistic Updates** – Immediate UI feedback for actions like story deletion.
 
 ### Configuration
 Set these environment variables in `.env.local` (development) or Netlify (production):
@@ -119,6 +121,13 @@ Every story in DigiTimes has an `is_public` flag that controls visibility:
 
 Users can toggle visibility with the "Public" checkbox in the Story Archive component. Share links are automatically generated when stories are marked public.
 
+## Newspaper Issues
+
+Users can save their newspaper layouts as "Issues":
+- **Create Issue**: Select stories in the Story Archive and click "Build Newspaper". In the newspaper view, click "Save Issue".
+- **View Issues**: Access your saved editions via the "View Issues" button in the Story Archive or at `/issues`.
+- **Manage**: Delete old issues to keep your library clean.
+
 ## Development
 
 ### Environment Variables
@@ -159,3 +168,4 @@ See `DEPLOYMENT.md` for detailed deployment instructions.
 - Visiting these routes in a private/incognito window still succeeds (no auth flow).
 - Story creation, saving, and display work reliably.
 - Newspaper compilation loads multiple stories correctly.
+

@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect, ChangeEvent, useMemo } from 'react';
-import { Camera, ImageIcon, Sparkles, Trash2, RefreshCcw, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect, ChangeEvent, DragEvent, useMemo } from 'react';
+import { Camera, ImageIcon, Sparkles, Trash2, RefreshCcw, Share2, Archive, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import toast from 'react-hot-toast';
@@ -66,14 +66,19 @@ const readFileAsDataUrl = (file: File): Promise<string> => {
 
 function EventBuilder() {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const entryUrlsRef = useRef<string[]>([]);
+  const shareUrlRef = useRef<string | null>(null);
 
-  const { saveDraftToArchive } = useStoryLibrary();
+  const { saveDraftToArchive, stories } = useStoryLibrary();
   const { user } = useAuth();
+  const hasArchivedStories = stories.length > 0;
+
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   // Helper to save draft to archive
   const handleSaveToArchive = async (params: {
@@ -85,6 +90,7 @@ function EventBuilder() {
     prompt: string;
   }) => {
     try {
+      setUploadProgress(0);
       const { entry, template, userId, headline, bodyHtml, prompt } = params;
       const result = await saveDraftToArchive({
         entry: {
@@ -97,12 +103,15 @@ function EventBuilder() {
         userId,
         headline,
         bodyHtml,
-        prompt
+        prompt,
+        onProgress: (percent) => setUploadProgress(percent),
       });
       return result;
     } catch (error: any) {
       console.error('Save failed', error);
       return { story: null, error };
+    } finally {
+      setUploadProgress(null);
     }
   };
 
@@ -111,6 +120,10 @@ function EventBuilder() {
       return entry.prompt;
     }
     return global.trim();
+  };
+
+  const hasEffectivePrompt = (entry: StoryEntry, global: string) => {
+    return getEffectivePrompt(entry, global).length > 0;
   };
 
   const getEditableArticle = (entry: StoryEntry) => {
@@ -201,9 +214,58 @@ function EventBuilder() {
     });
   }, []);
 
+  const handleShareLink = useCallback(async () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const url =
+      shareUrlRef.current ||
+      (() => {
+        const next = new URL(window.location.href);
+        next.searchParams.set('guest', '1');
+        const result = next.toString();
+        shareUrlRef.current = result;
+        return result;
+      })();
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ url, title: 'DigiTimes Edition' });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast.success('Share link copied');
+      } else {
+        toast.error('Sharing isn’t supported on this browser.');
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Share failed', error);
+      }
+    }
+  }, []);
+
   const clearEntries = useCallback(() => {
     entryUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     setEntries([]);
+  }, []);
+
+  const updatePrompt = useCallback((id: string, prompt: string) => {
+    setEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== id) {
+          return entry;
+        }
+        const trimmed = prompt.trim();
+        const nextSource: StoryEntry['promptSource'] = trimmed.length === 0 ? 'global' : 'custom';
+        return {
+          ...entry,
+          prompt,
+          promptSource: nextSource,
+          status: entry.status === 'ready' ? 'idle' : entry.status,
+          article: entry.status === 'ready' ? undefined : entry.article,
+        };
+      }),
+    );
   }, []);
 
   const applyPromptToDrafts = useCallback(() => {
@@ -367,10 +429,16 @@ function EventBuilder() {
       ),
     [entries],
   );
+  const hasDraftWithPrompt = useMemo(
+    () => entries.some((entry) => hasEffectivePrompt(entry, globalPrompt)),
+    [entries, globalPrompt],
+  );
   const hasDraftWithArticle = useMemo(
     () => entries.some((entry) => Boolean(entry.article)),
     [entries],
   );
+  const hasShareableDraft = hasDraftWithPrompt || hasDraftWithArticle;
+  const canShareStories = hasShareableDraft || hasArchivedStories;
 
   const updateEntry = (id: string, updates: Partial<StoryEntry>) => {
     setEntries((prev) =>
@@ -602,6 +670,8 @@ function EventBuilder() {
                           </Button>
                           <Button
                             size="sm"
+                            disabled={!user || uploadProgress !== null}
+                            className="min-w-[140px]"
                             onClick={() => handleSaveToArchive({
                               entry,
                               template: selectedTemplate,
@@ -614,12 +684,22 @@ function EventBuilder() {
                                 toast.error('Failed to save story');
                               } else {
                                 toast.success('Story saved to archive!');
-                                removeEntry(entry.id);
+                                // We need to remove the entry from the list
+                                setEntries(prev => prev.filter(e => e.id !== entry.id));
                               }
                             })}
-                            disabled={!user}
                           >
-                            Save to Archive
+                            {uploadProgress !== null ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {`Saving ${uploadProgress}%`}
+                              </>
+                            ) : (
+                              <>
+                                <Archive className="mr-2 h-4 w-4" />
+                                Save Story
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -635,9 +715,10 @@ function EventBuilder() {
               );
             })}
           </div>
-        </div>
-      )}
-    </section>
+        </div >
+      )
+      }
+    </section >
   );
 }
 

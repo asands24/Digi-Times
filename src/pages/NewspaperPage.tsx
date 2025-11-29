@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Printer, Download } from 'lucide-react';
+import { Printer, Save } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabaseClient';
 import { supaRest } from '../lib/supaRest';
+import { createIssue, fetchIssueById } from '../lib/storiesApi';
 import { useAuth } from '../providers/AuthProvider';
 import type { Database } from '../types/supabase';
+import toast from 'react-hot-toast';
 import '../styles/newspaper-print.css';
 
 type StoryRow = Database['public']['Tables']['story_archives']['Row'];
 
 interface StoryWithImage extends StoryRow {
-  imageUrl?: string | null;
+  imageUrl: string | null;
 }
 
 const STORY_COLUMNS =
@@ -52,6 +54,7 @@ export default function NewspaperPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const ids = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -66,22 +69,42 @@ export default function NewspaperPage() {
   }, [location.search]);
 
   const loadStories = useCallback(async () => {
-    if (ids.length === 0) {
-      setError('Select at least one story to create a printable page.');
-      setStories([]);
-      setLoading(false);
-      return;
-    }
+    let targetIds = ids;
+    const params = new URLSearchParams(location.search);
+    const issueId = params.get('issueId');
 
     setLoading(true);
     setError(null);
     setNotice(null);
 
     try {
-      console.log('[NewspaperPage] 🔍 Fetching stories (RAW FETCH)', { ids });
+      // If loading from an issue, fetch the issue first to get story IDs
+      if (issueId) {
+        console.log('[NewspaperPage] 🔍 Fetching issue', issueId);
+        const issue = await fetchIssueById(issueId);
+
+        if (!issue) {
+          setError('Issue not found or you do not have permission to view it.');
+          setStories([]);
+          setLoading(false);
+          return;
+        }
+
+        // Extract story IDs from the issue's stories, preserving order
+        targetIds = issue.stories.map(s => s.id);
+      }
+
+      if (targetIds.length === 0) {
+        setError('Select at least one story to create a printable page.');
+        setStories([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('[NewspaperPage] 🔍 Fetching stories (RAW FETCH)', { ids: targetIds });
 
       // WORKAROUND: Use raw fetch because Supabase client hangs
-      const idsParam = `(${ids.join(',')})`;
+      const idsParam = `(${targetIds.join(',')})`;
       const data = await supaRest<StoryRow[]>('GET',
         `/rest/v1/story_archives?select=${encodeURIComponent(STORY_COLUMNS)}&id=in.${idsParam}`,
         {
@@ -103,14 +126,14 @@ export default function NewspaperPage() {
         return story.created_by === user.id;
       });
 
-      if (available.length === 0) {
-        setError('No accessible stories found for this layout.');
-        setStories([]);
-        return;
+      if (available.length < targetIds.length) {
+        setNotice('Some stories could not be loaded (they might be private or deleted).');
       }
 
-      if (available.length < ids.length) {
-        setNotice('Some stories were private or missing and were skipped.');
+      if (available.length === 0) {
+        setError('No stories found. They may have been deleted or are private.');
+        setStories([]);
+        return;
       }
 
       const withImages = available.map((story: StoryRow) => ({
@@ -119,157 +142,166 @@ export default function NewspaperPage() {
       }));
 
       // Preserve the requested order
-      withImages.sort(
-        (a: StoryRow, b: StoryRow) => ids.indexOf(a.id ?? '') - ids.indexOf(b.id ?? '')
-      );
+      const orderedStories = targetIds
+        .map(id => withImages.find(s => s.id === id))
+        .filter((s): s is StoryWithImage => Boolean(s));
 
-      setStories(withImages);
+      setStories(orderedStories);
     } catch (err) {
-      console.error('[NewspaperPage] unexpected error', err);
-      setError('Something went wrong while building your newspaper.');
-      setStories([]);
+      console.error('[NewspaperPage] ❌ Failed to load stories', err);
+      setError('Failed to load stories. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [ids, user?.id]);
+  }, [ids, location.search, user]);
 
   useEffect(() => {
-    void loadStories();
+    loadStories();
   }, [loadStories]);
-
-  const today = useMemo(() => {
-    return new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(new Date());
-  }, []);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const handleExport = () => {
-    // Trigger print dialog with instructions to save as PDF
-    alert('To save as PDF:\n\n1. Click "Print" or press Ctrl/Cmd+P\n2. Select "Save as PDF" as the printer\n3. Click "Save"\n\nYour newspaper will be saved as a PDF file!');
-    window.print();
+  const handleSaveIssue = async () => {
+    if (!user) {
+      toast.error('You must be logged in to save an issue.');
+      return;
+    }
+
+    const title = window.prompt('Name your newspaper issue:', 'My Daily Edition');
+    if (!title) return;
+
+    setIsSaving(true);
+    try {
+      await createIssue({
+        title,
+        storyIds: stories.map(s => s.id),
+      });
+      toast.success('Issue saved successfully!');
+    } catch (err) {
+      console.error('Failed to save issue', err);
+      toast.error('Failed to save issue.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (loading) {
     return (
-      <div className="newspaper-page">
-        <div className="newspaper-container">
-          <div className="newspaper-loading" role="status" aria-live="polite">
-            Building your Gazette…
-          </div>
-        </div>
+      <div className="newspaper-loading">
+        <div className="newspaper-spinner" />
+        <p>Typesetting your edition...</p>
       </div>
     );
   }
 
-  if (error || stories.length === 0) {
+  if (error) {
     return (
-      <div className="newspaper-page">
-        <div className="newspaper-container">
-          <div className="newspaper-error">
-            <h2>{error || 'No stories ready yet.'}</h2>
-            <p>
-              Check that you shared the correct story links or that you are signed in
-              with the right DigiTimes account.
-            </p>
-            <div className="newspaper-error-actions">
-              <Button onClick={loadStories}>Retry</Button>
-              <Link to="/" className="newspaper-link">
-                Go Back
-              </Link>
-            </div>
-          </div>
-        </div>
+      <div className="newspaper-error">
+        <h2>Stopped the presses!</h2>
+        <p>{error}</p>
+        <Link to="/">
+          <Button variant="outline">Return to Newsroom</Button>
+        </Link>
       </div>
     );
   }
 
-  const [leadStory, ...secondaryStories] = stories;
+  const mainStory = stories[0];
+  const sideStories = stories.slice(1, 3);
+  const bottomStories = stories.slice(3);
 
   return (
     <div className="newspaper-page">
-      <div className="newspaper-container">
-        <div className="newspaper-controls no-print">
-          <div className="newspaper-actions">
-            <Button onClick={handlePrint} size="lg">
-              <Printer size={18} strokeWidth={1.75} />
-              Print
-            </Button>
-            <Button onClick={handleExport} size="lg" variant="outline">
-              <Download size={18} strokeWidth={1.75} />
-              Export PDF
-            </Button>
-            <Link to="/" className="newspaper-back-link">
-              ← Back to DigiTimes
-            </Link>
-          </div>
-          {notice && <p className="newspaper-notice">{notice}</p>}
+      <header className="newspaper-actions no-print">
+        <div className="newspaper-actions__left">
+          <Link to="/" className="newspaper-back-link">
+            ← Back to Archive
+          </Link>
+          {notice && <span className="newspaper-notice">{notice}</span>}
         </div>
+        <div className="newspaper-actions__right">
+          <Button variant="outline" onClick={handleSaveIssue} disabled={isSaving}>
+            <Save size={16} className="mr-2" />
+            {isSaving ? 'Saving...' : 'Save Issue'}
+          </Button>
+          <Button onClick={handlePrint}>
+            <Printer size={16} className="mr-2" />
+            Print Newspaper
+          </Button>
+        </div>
+      </header>
 
-        <header className="newspaper-masthead">
-          <p className="masthead-edition">Vol. 1 · Kid Correspondents</p>
-          <h1>DigiTimes Gazette</h1>
-          <p className="masthead-meta">
-            {today} <span className="masthead-separator">•</span> Special Family Edition
-          </p>
-          <div className="masthead-border" />
+      <div className="newspaper-container" id="newspaper-content">
+        <header className="newspaper-header">
+          <div className="newspaper-meta">
+            <span>Vol. 1, No. 1</span>
+            <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <span>$1.00</span>
+          </div>
+          <h1 className="newspaper-title">The Daily Chronicle</h1>
+          <div className="newspaper-tagline">"All the news that's fit to print — and then some."</div>
         </header>
 
-        {leadStory && (
-          <article className="newspaper-lead-story">
-            <h2>{leadStory.title || 'Untitled Adventure'}</h2>
-            {leadStory.imageUrl && (
-              <figure className="lead-story-image">
-                <img
-                  src={leadStory.imageUrl}
-                  alt={leadStory.title || 'Lead story image'}
-                />
-              </figure>
-            )}
-            <div
-              className="lead-story-content"
-              dangerouslySetInnerHTML={{
-                __html:
-                  leadStory.article ||
-                  (leadStory.prompt
-                    ? `<p>${leadStory.prompt}</p>`
-                    : '<p>Story in progress...</p>'),
-              }}
-            />
-          </article>
-        )}
+        <main className="newspaper-layout">
+          {/* Main Feature Story */}
+          {mainStory && (
+            <article className="newspaper-story newspaper-story--main">
+              {mainStory.imageUrl && (
+                <div className="newspaper-story__image-container">
+                  <img src={mainStory.imageUrl} alt={mainStory.title || 'Story image'} className="newspaper-story__image" />
+                  {mainStory.prompt && <figcaption className="newspaper-story__caption">{mainStory.prompt}</figcaption>}
+                </div>
+              )}
+              <div className="newspaper-story__content">
+                <h2 className="newspaper-story__headline">{mainStory.title || 'Untitled Feature'}</h2>
+                <div className="newspaper-story__byline">By DigiTimes Staff</div>
+                <div className="newspaper-story__body">
+                  {mainStory.article ? (
+                    <div dangerouslySetInnerHTML={{ __html: mainStory.article }} />
+                  ) : (
+                    buildPreview(mainStory).map((p, i) => <p key={i}>{p}</p>)
+                  )}
+                </div>
+              </div>
+            </article>
+          )}
 
-        {secondaryStories.length > 0 ? (
-          <section className="newspaper-grid">
-            {secondaryStories.map((story) => (
-              <article key={story.id} className="newspaper-story">
-                <h3>{story.title || 'Untitled Story'}</h3>
-                {story.imageUrl && (
-                  <figure className="story-image">
-                    <img
-                      src={story.imageUrl}
-                      alt={story.title || 'Story image'}
-                    />
-                  </figure>
-                )}
-                <div className="story-content">
-                  {buildPreview(story).map((para, index) => (
-                    <p key={`${story.id}-p-${index}`}>{para}</p>
-                  ))}
+          {/* Sidebar Stories */}
+          {sideStories.length > 0 && (
+            <aside className="newspaper-sidebar">
+              {sideStories.map((story) => (
+                <article key={story.id} className="newspaper-story newspaper-story--side">
+                  <h3 className="newspaper-story__headline">{story.title || 'Untitled Story'}</h3>
+                  {story.imageUrl && (
+                    <img src={story.imageUrl} alt={story.title || 'Story image'} className="newspaper-story__image" />
+                  )}
+                  <div className="newspaper-story__body">
+                    {buildPreview(story).map((p, i) => <p key={i}>{p}</p>)}
+                  </div>
+                </article>
+              ))}
+            </aside>
+          )}
+        </main>
+
+        {/* Bottom Stories Grid */}
+        {bottomStories.length > 0 && (
+          <section className="newspaper-bottom-grid">
+            {bottomStories.map((story) => (
+              <article key={story.id} className="newspaper-story newspaper-story--bottom">
+                <h3 className="newspaper-story__headline">{story.title || 'Untitled Story'}</h3>
+                <div className="newspaper-story__body">
+                  {buildPreview(story).map((p, i) => <p key={i}>{p}</p>)}
                 </div>
               </article>
             ))}
           </section>
-        ) : null}
+        )}
 
         <footer className="newspaper-footer">
-          Created with DigiTimes • Joyful news for young reporters
+          <p>Printed with DigiTimes • Turn your memories into headlines.</p>
         </footer>
       </div>
     </div>

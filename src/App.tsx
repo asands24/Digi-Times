@@ -22,6 +22,7 @@ import { REQUIRE_LOGIN } from './lib/config';
 import AuthCallback from './pages/AuthCallback';
 import DebugTemplates from './pages/DebugTemplates';
 import PublicStoryPage from './pages/PublicStoryPage';
+import { IssuesList } from './components/IssuesList';
 import NewspaperPage from './pages/NewspaperPage';
 import LandingPage from './pages/LandingPage';
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -33,7 +34,10 @@ function HomePage() {
     isLoading,
     errorMessage,
     refreshStories: refreshArchive,
+    saveDraftToArchive,
     deleteStory,
+    loadMore,
+    hasMore,
   } = useStoryLibrary(user?.id);
   const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
   // Anchor points for the guided flow
@@ -127,10 +131,12 @@ function HomePage() {
             stories={stories}
             isLoading={isLoading}
             errorMessage={errorMessage}
-            onPreview={(story) => setPreviewStory(story)}
+            onPreview={setPreviewStory}
             onRefresh={refreshArchive}
             onToggleShare={handleToggleShare}
-            onDelete={handleDeleteStory}
+            onDelete={deleteStory}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
           />
         </section>
       </main>
@@ -165,7 +171,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/read/:id" element={<PublicStoryPage />} />
+          <Route path="/s/:slug" element={<PublicStoryPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppErrorBoundary>
@@ -187,8 +193,21 @@ export default function App() {
         <Route path="/gallery" element={<PhotoGallery />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/read/:id" element={<PublicStoryPage />} />
-        <Route path="/newspaper" element={<NewspaperPage />} />
+        <Route path="/s/:slug" element={<PublicStoryPage />} />
+        <Route
+          path="/issues"
+          element={
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <header className="mb-8">
+                <h1 className="text-3xl font-serif font-bold text-ink mb-2">My Newspaper Issues</h1>
+                <p className="text-ink-muted">View and reprint your saved editions.</p>
+              </header>
+              <IssuesList />
+            </div>
+          }
+        />
+        <Route
+          path="/newspaper" element={<NewspaperPage />} />
         <Route
           path="/login"
           element={user ? <Navigate to="/" replace /> : <LoginPage />}

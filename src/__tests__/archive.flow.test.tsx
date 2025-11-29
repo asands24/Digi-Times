@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import EventBuilder from '../components/EventBuilder';
+import { EventBuilder } from '../components/EventBuilder';
 
 jest.mock('../components/TemplatesGallery', () => ({
   TemplatesGallery: ({ onSelect }: { onSelect: (template: any) => void }) => (
@@ -124,7 +124,7 @@ describe('EventBuilder archive flow', () => {
     const user = setupUser();
 
     const { container } = render(
-      <EventBuilder />,
+      <EventBuilder onArchiveSaved={jest.fn()} saveDraftToArchive={saveDraftToArchiveMock} />,
     );
 
     const promptBox = screen.getByPlaceholderText(

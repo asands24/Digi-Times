@@ -27,6 +27,7 @@ export type PersistStoryParams = {
   templateId?: string | null;
   userId: string;
   storyId?: string | null;
+  onProgress?: (percent: number) => void;
 };
 
 export type PersistStoryResult = {
@@ -67,7 +68,7 @@ type PersistStoryArgs = {
 export async function persistStory(
   params: PersistStoryParams,
 ): Promise<PersistStoryResult> {
-  const { file, meta, templateId = null, userId, storyId } = params;
+  const { file, meta, templateId = null, userId, storyId, onProgress } = params;
   if (!userId) {
     throw new Error('[persistStory] Missing user ID (sign in required to save stories).');
   }
@@ -165,6 +166,9 @@ export async function persistStory(
           if (e.lengthComputable) {
             const percent = Math.round((e.loaded / e.total) * 100);
             console.log(`[persistStory] 📤 Upload progress: ${percent}%`);
+            if (onProgress) {
+              onProgress(percent);
+            }
           }
         };
 

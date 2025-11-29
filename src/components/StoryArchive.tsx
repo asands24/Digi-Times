@@ -21,6 +21,8 @@ interface StoryArchiveProps {
   onRefresh: () => void;
   onToggleShare: (storyId: string, nextValue: boolean) => void;
   onDelete: (storyId: string) => Promise<void> | void;
+  onLoadMore: () => void;
+  hasMore: boolean;
 }
 
 const formatTimestamp = (value: string | null) => {
@@ -209,6 +211,8 @@ export function StoryArchive({
   onRefresh,
   onToggleShare,
   onDelete,
+  onLoadMore,
+  hasMore,
 }: StoryArchiveProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -320,6 +324,15 @@ export function StoryArchive({
           <Button
             type="button"
             variant="outline"
+            onClick={() => navigate('/issues')}
+            disabled={isLoading}
+          >
+            <Newspaper size={16} strokeWidth={1.75} />
+            View Issues
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={handleBuildNewspaper}
             disabled={!canExportEdition || isLoading}
           >
@@ -360,121 +373,142 @@ export function StoryArchive({
           </Button>
         </div>
       ) : hasStories ? (
-        <div className="story-archive__grid">
-          {filteredStories.map((story) => (
-            <article
-              key={story.id}
-              className="story-archive__card story-archive__card--front group hover:shadow-hard transition-all duration-300 hover:-translate-y-1"
-            >
-              <div className="story-archive__front">
-                <div className="story-archive__front-masthead">
-                  <div>
-                    <p className="story-archive__front-kicker">{story.section}</p>
-                    <h3 className="group-hover:text-ink-black transition-colors">{story.title ?? 'Untitled story'}</h3>
-                    <span className="story-archive__dateline">
-                      <Calendar size={14} strokeWidth={1.75} />
-                      {formatTimestamp(story.created_at)}
-                    </span>
-                  </div>
-                  {story.isSample ? (
-                    <Badge variant="secondary" className="story-archive__sample-badge">
-                      Starter example
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="story-archive__section-badge">
-                      {story.section}
-                    </Badge>
-                  )}
-                </div>
-                <div className="story-archive__front-body">
-                  <div className="story-archive__image overflow-hidden">
-                    {story.imageUrl ? (
-                      <img
-                        src={story.imageUrl}
-                        alt={story.title ?? 'Archived story image'}
-                        className="transition-transform duration-700 group-hover:scale-105"
-                      />
+        <>
+          <div className="story-archive__grid">
+            {filteredStories.map((story) => (
+              <article
+                key={story.id}
+                className="story-archive__card story-archive__card--front group hover:shadow-hard transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="story-archive__front">
+                  <div className="story-archive__front-masthead">
+                    <div>
+                      <p className="story-archive__front-kicker">{story.section}</p>
+                      <h3 className="group-hover:text-ink-black transition-colors">{story.title ?? 'Untitled story'}</h3>
+                      <span className="story-archive__dateline">
+                        <Calendar size={14} strokeWidth={1.75} />
+                        {formatTimestamp(story.created_at)}
+                      </span>
+                    </div>
+                    {story.isSample ? (
+                      <Badge variant="secondary" className="story-archive__sample-badge">
+                        Starter example
+                      </Badge>
                     ) : (
-                      <div className="story-archive__image--placeholder">📰</div>
+                      <Badge variant="outline" className="story-archive__section-badge">
+                        {story.section}
+                      </Badge>
                     )}
                   </div>
-                  <div className="story-archive__front-text">
-                    <p className="story-archive__excerpt">{getExcerpt(story)}</p>
-                    <p className="story-archive__meta">
-                      ~{story.wordCount} words · Layout {story.template_id ?? 'unassigned'}
-                    </p>
+                  <div className="story-archive__front-body">
+                    <div className="story-archive__image overflow-hidden">
+                      {story.imageUrl ? (
+                        <img
+                          src={story.imageUrl}
+                          alt={story.title ?? 'Archived story image'}
+                          className="transition-transform duration-700 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="story-archive__image--placeholder">📰</div>
+                      )}
+                    </div>
+                    <div className="story-archive__front-text">
+                      <p className="story-archive__excerpt">{getExcerpt(story)}</p>
+                      <p className="story-archive__meta">
+                        ~{story.wordCount} words · Layout {story.template_id ?? 'unassigned'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="story-archive__buttons story-archive__buttons--row">
-                <label className="story-archive__share-toggle">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(story.is_public)}
-                    onChange={(event) => onToggleShare(story.id, event.target.checked)}
-                    disabled={Boolean(story.isSample)}
-                    title={
-                      story.isSample
-                        ? 'Archive your own story to enable sharing.'
-                        : 'Toggle sharing'
-                    }
-                  />
-                  Public
-                </label>
-                {story.is_public && !story.isSample && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleShareStory(story.id)}
-                  >
-                    <Share2 size={14} strokeWidth={1.75} />
-                    Share
-                  </Button>
+                <div className="story-archive__buttons story-archive__buttons--row">
+                  <div className="story-archive__actions">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onPreview(story)}
+                      className="text-ink-muted hover:text-ink"
+                    >
+                      <Eye size={16} className="mr-2" />
+                      Read
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onToggleShare(story.id, !story.is_public)}
+                      className={story.is_public ? "text-green-600 hover:text-green-700" : "text-ink-muted hover:text-ink"}
+                    >
+                      <Share2 size={16} className="mr-2" />
+                      {story.is_public ? 'Public' : 'Private'}
+                    </Button>
+
+                    {story.is_public && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleShareStory(story.id)}
+                        className="text-ink-muted hover:text-ink"
+                        title="Copy Link"
+                      >
+                        <Share2 size={16} />
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/newspaper?ids=${story.id}`)}
+                      className="text-ink-muted hover:text-ink"
+                    >
+                      <Newspaper size={16} className="mr-2" />
+                      Issue
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const confirmed = window.confirm(
+                          'Delete this story from your archive? This cannot be undone.',
+                        );
+                        if (!confirmed) return;
+                        try {
+                          await onDelete(story.id);
+                          toast.success('Story deleted from your archive.');
+                        } catch (error) {
+                          console.error('[StoryArchive] Delete failed', error);
+                          toast.error('Could not delete story. Please try again.');
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          {hasMore && (
+            <div className="flex justify-center pt-8 pb-4">
+              <Button
+                variant="outline"
+                onClick={onLoadMore}
+                disabled={isLoading}
+                className="min-w-[200px]"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCcw className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  'Load More Stories'
                 )}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate(`/newspaper?ids=${story.id}`)}
-                >
-                  <Newspaper size={14} strokeWidth={1.75} />
-                  Add to Issue
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => onPreview(story)}
-                >
-                  <Eye size={14} strokeWidth={1.75} />
-                  View
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="story-archive__remove"
-                  onClick={async () => {
-                    const confirmed = window.confirm(
-                      'Delete this story from your archive? This cannot be undone.',
-                    );
-                    if (!confirmed) return;
-                    try {
-                      await onDelete(story.id);
-                      toast.success('Story deleted from your archive.');
-                    } catch (error) {
-                      console.error('[StoryArchive] Delete failed', error);
-                      toast.error('Could not delete story. Please try again.');
-                    }
-                  }}
-                >
-                  <Trash2 size={14} strokeWidth={1.75} />
-                  Delete
-                </Button>
-              </div>
-            </article>
-          ))}
-        </div>
+              </Button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="story-archive__empty">
           <p>You don’t have stories yet — let’s turn your first moment into a feature!</p>
@@ -482,8 +516,9 @@ export function StoryArchive({
             Refresh archive
           </Button>
         </div>
-      )}
-    </section>
+      )
+      }
+    </section >
   );
 }
 

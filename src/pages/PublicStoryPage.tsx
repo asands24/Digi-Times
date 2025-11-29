@@ -1,352 +1,132 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Newspaper, Share2, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { supabase } from '../lib/supabaseClient';
-import { useAuth } from '../providers/AuthProvider';
-
-interface StoryWithImage {
-  id: string;
-  title: string | null;
-  article: string | null;
-  prompt: string | null;
-  image_path: string | null;
-  created_at: string;
-  is_public: boolean | null;
-  created_by: string | null;
-  imageUrl?: string | null;
-}
-
-const STORY_FIELDS =
-  'id,title,article,prompt,image_path,created_at,is_public,created_by';
-
-function getImageUrl(imagePath?: string | null) {
-  if (!imagePath) {
-    return null;
-  }
-  const { data } = supabase.storage.from('photos').getPublicUrl(imagePath);
-  return data?.publicUrl ?? null;
-}
-
-function getArticleHtml(story?: StoryWithImage | null) {
-  if (!story) {
-    return '<p>This story is not available.</p>';
-  }
-  if (story.article?.trim()) {
-    return story.article;
-  }
-  if (story.prompt?.trim()) {
-    return `<p>${story.prompt}</p>`;
-  }
-  return '<p>This story is still being written.</p>';
-}
+import { fetchPublicStory } from '../lib/storiesApi';
+import type { StoryArchiveRow } from '../types/story';
+import { escapeHtml } from '../utils/sanitizeHtml';
+import toast from 'react-hot-toast';
 
 export default function PublicStoryPage() {
-  const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const [story, setStory] = useState<StoryWithImage | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { slug } = useParams<{ slug: string }>();
+  const [story, setStory] = useState<StoryArchiveRow | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadStory = useCallback(async () => {
-    if (!id) {
-      setError('No story ID provided.');
-      setStory(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('story_archives')
-        .select(STORY_FIELDS)
-        .eq('id', id)
-        .single();
-
-      if (fetchError || !data) {
-        console.error('[PublicStoryPage] fetch error', fetchError);
-        setError('This story is not available');
-        setStory(null);
-        return;
-      }
-
-      const canView =
-        Boolean(data.is_public) || (user?.id ? data.created_by === user.id : false);
-
-      if (!canView) {
-        setError('This story is not available');
-        setStory(null);
-        return;
-      }
-
-      setStory({ ...data, imageUrl: getImageUrl(data.image_path) });
-    } catch (err) {
-      console.error('[PublicStoryPage] unexpected error', err);
-      setError('Unable to load story. Please try again.');
-      setStory(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, user?.id]);
-
   useEffect(() => {
-    void loadStory();
-  }, [loadStory]);
-
-  const formattedDate = useMemo(() => {
-    if (!story?.created_at) {
-      return '';
+    async function load() {
+      if (!slug) return;
+      try {
+        const data = await fetchPublicStory(slug);
+        if (!data) {
+          setError('Story not found or is private.');
+        } else {
+          setStory(data);
+        }
+      } catch (err) {
+        console.error('Failed to load public story', err);
+        setError('Could not load story.');
+      } finally {
+        setIsLoading(false);
+      }
     }
+    load();
+  }, [slug]);
 
+  const handleShare = async () => {
+    const url = window.location.href;
     try {
-      return new Intl.DateTimeFormat('en-US', {
-        dateStyle: 'long',
-      }).format(new Date(story.created_at));
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
     } catch {
-      return '';
+      toast.error('Failed to copy link.');
     }
-  }, [story?.created_at]);
+  };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="public-story-screen">
-        <div className="public-story-shell">
-          <div className="public-story-loading" role="status" aria-live="polite">
-            <div className="public-story-spinner" />
-            <p>Loading your story...</p>
-          </div>
-        </div>
-        <PublicStoryStyles />
+      <div className="min-h-screen flex items-center justify-center bg-paper">
+        <Loader2 className="animate-spin text-ink-muted" size={32} />
       </div>
     );
   }
 
   if (error || !story) {
     return (
-      <div className="public-story-screen">
-        <div className="public-story-shell">
-          <div className="public-story-error">
-            <h2>{error || 'This story is not available'}</h2>
-            <p>
-              Private stories are only visible to their creators. Please sign in
-              with the account that originally saved this headline.
-            </p>
-            <div className="public-story-error-actions">
-              <Button onClick={loadStory}>Retry</Button>
-              <Link to="/" className="public-story-link">
-                Return to DigiTimes
-              </Link>
-            </div>
-          </div>
-        </div>
-        <PublicStoryStyles />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-paper p-4 text-center">
+        <h1 className="font-display text-3xl mb-4 text-ink">Story Not Found</h1>
+        <p className="text-ink-muted mb-8 max-w-md">
+          This story might be private, deleted, or the link is incorrect.
+        </p>
+        <Link to="/">
+          <Button>Go Home</Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="public-story-screen">
-      <div className="public-story-shell">
-        <header className="public-story-masthead">
-          <p className="masthead-subtitle">Vol. 1 · Kid Edition</p>
-          <h1>DigiTimes</h1>
-          <p className="masthead-tagline">
-            Reporting bright adventures for curious readers
-          </p>
-          {formattedDate && <p className="masthead-date">{formattedDate}</p>}
-          <div className="masthead-rule" />
-        </header>
+    <div className="min-h-screen bg-paper font-serif">
+      <header className="border-b border-ink/10 bg-paper-soft/50 sticky top-0 z-10 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-ink hover:text-ink-soft transition-colors">
+            <Newspaper size={20} />
+            <span className="font-display font-bold text-lg">DigiTimes</span>
+          </Link>
+          <Button variant="ghost" size="sm" onClick={handleShare}>
+            <Share2 size={16} className="mr-2" />
+            Share
+          </Button>
+        </div>
+      </header>
 
-        <article className="public-story-article">
-          <h2>{story.title || 'Untitled Story'}</h2>
-          {story.imageUrl && (
-            <figure className="public-story-figure">
-              <img src={story.imageUrl} alt={story.title || 'Story illustration'} />
+      <main className="max-w-3xl mx-auto px-4 py-12">
+        <article className="prose prose-lg prose-stone mx-auto">
+          <header className="mb-8 text-center">
+            <h1 className="font-display text-4xl md:text-5xl font-bold text-ink mb-4 leading-tight">
+              {story.title || 'Untitled Story'}
+            </h1>
+            <time className="text-ink-muted text-sm font-sans uppercase tracking-wider">
+              {new Date(story.created_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </time>
+          </header>
+
+          {story.image_path && (
+            <figure className="mb-12 -mx-4 md:mx-0">
+              <img
+                src={`${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}`}
+                alt={story.title || 'Story image'}
+                className="w-full h-auto rounded-sm shadow-hard"
+              />
+              {story.prompt && (
+                <figcaption className="text-center text-sm text-ink-muted mt-4 italic font-sans">
+                  Prompt: {story.prompt}
+                </figcaption>
+              )}
             </figure>
           )}
+
           <div
-            className="public-story-body"
-            dangerouslySetInnerHTML={{ __html: getArticleHtml(story) }}
+            className="font-serif text-lg leading-relaxed text-ink-black"
+            dangerouslySetInnerHTML={{
+              __html: story.article || `<p>${escapeHtml(story.prompt || '')}</p>`
+            }}
           />
         </article>
 
-        <footer className="public-story-footer">
-          <p>Created with DigiTimes</p>
-          <Link to="/">Make your own cheery headlines</Link>
+        <footer className="mt-16 pt-8 border-t border-ink/10 text-center">
+          <p className="text-ink-muted mb-6 font-sans">
+            Created with DigiTimes — Turn your photos into stories.
+          </p>
+          <Link to="/">
+            <Button size="lg" className="font-sans">Create Your Own</Button>
+          </Link>
         </footer>
-      </div>
-      <PublicStoryStyles />
+      </main>
     </div>
-  );
-}
-
-function PublicStoryStyles() {
-  return (
-    <style>{`
-      .public-story-screen {
-        min-height: 100vh;
-        background: #f6f1e7;
-        padding: 2rem 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .public-story-shell {
-        width: 100%;
-        max-width: 900px;
-        background: #fffdfa;
-        border: 1px solid rgba(34, 23, 7, 0.15);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
-        font-family: 'Playfair Display', 'Libre Baskerville', Georgia, serif;
-      }
-
-      .public-story-masthead {
-        text-align: center;
-        padding: 2.5rem 2rem 1.5rem;
-        background: linear-gradient(180deg, #fffdfa 0%, #f2e7d0 100%);
-      }
-
-      .public-story-masthead h1 {
-        margin: 0;
-        font-size: clamp(2.5rem, 5vw, 4rem);
-        letter-spacing: 0.25em;
-        text-transform: uppercase;
-      }
-
-      .masthead-subtitle {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.2em;
-        margin: 0 0 0.5rem;
-        color: #7b674a;
-      }
-
-      .masthead-tagline,
-      .masthead-date {
-        font-size: 1rem;
-        font-style: italic;
-        margin: 0.75rem 0 0;
-        color: #5e4b32;
-      }
-
-      .masthead-rule {
-        height: 3px;
-        margin-top: 1.5rem;
-        background: repeating-linear-gradient(
-          to right,
-          #221907,
-          #221907 20px,
-          transparent 20px,
-          transparent 40px
-        );
-      }
-
-      .public-story-article {
-        padding: 2rem;
-      }
-
-      .public-story-article h2 {
-        font-size: clamp(2rem, 4vw, 3rem);
-        margin: 0 0 1rem;
-        text-align: center;
-        line-height: 1.2;
-      }
-
-      .public-story-figure {
-        margin: 1rem auto 2rem;
-        border: 1px solid rgba(34, 23, 7, 0.15);
-        overflow: hidden;
-        max-width: 100%;
-      }
-
-      .public-story-figure img {
-        display: block;
-        width: 100%;
-        height: auto;
-        object-fit: cover;
-      }
-
-      .public-story-body {
-        font-size: 1.15rem;
-        line-height: 1.8;
-        color: #2c2010;
-      }
-
-      .public-story-body p {
-        margin: 0 0 1.25rem;
-      }
-
-      .public-story-footer {
-        border-top: 2px solid #e3d4bb;
-        padding: 1.5rem 2rem 2rem;
-        text-align: center;
-        font-size: 0.95rem;
-      }
-
-      .public-story-footer a {
-        color: #8b5d16;
-        text-decoration: none;
-        font-weight: 600;
-      }
-
-      .public-story-loading,
-      .public-story-error {
-        padding: 3rem 2rem;
-        text-align: center;
-        font-family: 'Libre Baskerville', Georgia, serif;
-      }
-
-      .public-story-spinner {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto 1rem;
-        border-radius: 50%;
-        border: 4px solid rgba(139, 93, 22, 0.2);
-        border-top-color: #8b5d16;
-        animation: public-story-spin 1s linear infinite;
-      }
-
-      @keyframes public-story-spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      .public-story-error h2 {
-        margin: 0 0 1rem;
-        font-size: 1.75rem;
-      }
-
-      .public-story-error p {
-        margin: 0 auto 1.5rem;
-        max-width: 420px;
-        color: #5a4934;
-      }
-
-      .public-story-error-actions {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.75rem;
-      }
-
-      .public-story-link {
-        color: #8b5d16;
-        text-decoration: underline;
-      }
-
-      @media (max-width: 640px) {
-        .public-story-article {
-          padding: 1.5rem;
-        }
-
-        .public-story-body {
-          font-size: 1.05rem;
-        }
-      }
-    `}</style>
   );
 }

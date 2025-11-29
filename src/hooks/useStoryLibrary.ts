@@ -1,32 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabaseClient } from '../lib/supabaseClient';
-import { supaRest } from '../lib/supaRest';
 import { persistStory } from '../lib/persistStory';
-import type { ArchiveItem, DraftEntry, StoryTemplate, StoryArchiveRow } from '../types/story';
+import { fetchStoriesForUser, updateStory, deleteStory as apiDeleteStory } from '../lib/storiesApi';
+import type { 
+  ArchiveItem, 
+  DraftEntry, 
+  StoryTemplate, 
+  StoryArchiveRow,
+  SaveDraftToArchiveOptions,
+  SaveDraftToArchiveResult,
+  LoadStoriesResult
+} from '../types/story';
+import toast from 'react-hot-toast';
 
 const STORIES_LIMIT = 50;
-
-export type SaveDraftToArchiveOptions = {
-  entry: DraftEntry;
-  template: StoryTemplate | null;
-  userId: string;
-  headline: string;
-  bodyHtml: string;
-  prompt: string | null;
-};
-
-export type SaveDraftToArchiveResult = {
-  story: ArchiveItem | null;
-  error: Error | null;
-};
-
-export type LoadStoriesResult = {
-  stories: ArchiveItem[];
-  error: Error | null;
-};
-
-const STORY_COLUMNS =
-  'id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public';
 
 const toArchiveItems = (rows: StoryArchiveRow[]): ArchiveItem[] =>
   rows.map((row) => {
@@ -40,24 +27,19 @@ const toArchiveItems = (rows: StoryArchiveRow[]): ArchiveItem[] =>
 
 export async function fetchStoryRows(
   userId: string,
+  page = 1,
+  pageSize = STORIES_LIMIT,
 ): Promise<{ rows: StoryArchiveRow[]; error: Error | null }> {
-  console.log('[StoryLibrary] 🔍 Running Supabase select for stories (RAW FETCH)', {
+  console.log('[StoryLibrary] 🔍 Running Supabase select for stories', {
     userId,
-    limit: STORIES_LIMIT,
+    page,
+    pageSize,
   });
 
   try {
-    // WORKAROUND: Use raw fetch because Supabase client hangs
-    const data = await supaRest<StoryArchiveRow[]>('GET', 
-      `/rest/v1/story_archives?select=${encodeURIComponent(STORY_COLUMNS)}&created_by=eq.${userId}&order=created_at.desc&limit=${STORIES_LIMIT}`,
-      {
-        headers: {
-          'Prefer': 'count=none'
-        }
-      }
-    );
+    const data = await fetchStoriesForUser(userId, page, pageSize);
 
-    console.log('[StoryLibrary] Supabase raw fetch response', { count: data.length });
+    console.log('[StoryLibrary] Supabase fetch response', { count: data.length });
     return { rows: data, error: null };
 
   } catch (err) {
@@ -160,17 +142,15 @@ export async function loadStoriesWithDetails(
 }
 
 export async function updateStoryVisibility(id: string, nextValue: boolean): Promise<void> {
-  const { error } = await supabaseClient
-    .from('story_archives')
-    .update({ is_public: nextValue })
-    .eq('id', id);
-  if (error) throw error;
+  await updateStory(id, { is_public: nextValue });
 }
 
 export function useStoryLibrary(userId?: string | null) {
   const [stories, setStories] = useState<ArchiveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   const refreshStories = useCallback(async () => {
     if (!userId) {
@@ -201,6 +181,8 @@ export function useStoryLibrary(userId?: string | null) {
 
       setStories(toArchiveItems(rows));
       setErrorMessage(null);
+      setPage(1);
+      setHasMore(rows.length === STORIES_LIMIT);
       console.log('[StoryLibrary] ✅ Stories loaded', { count: rows.length });
     } catch (err) {
       console.error('[StoryLibrary] ❌ Exception while fetching stories', err);
@@ -210,6 +192,33 @@ export function useStoryLibrary(userId?: string | null) {
       setIsLoading(false);
     }
   }, [userId]);
+
+  const loadMore = useCallback(async () => {
+    if (!userId || !hasMore || isLoading) return;
+    
+    setIsLoading(true);
+    const nextPage = page + 1;
+    console.log('[StoryLibrary] 📥 Loading page', nextPage);
+
+    try {
+      const { rows, error } = await fetchStoryRows(userId, nextPage, STORIES_LIMIT);
+      
+      if (error) {
+        console.error('[StoryLibrary] ❌ Failed to load more stories', error);
+        return;
+      }
+
+      if (rows.length > 0) {
+        setStories(prev => [...prev, ...toArchiveItems(rows)]);
+        setPage(nextPage);
+      }
+      setHasMore(rows.length === STORIES_LIMIT);
+    } catch (err) {
+      console.error('[StoryLibrary] ❌ Exception while loading more stories', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, page, hasMore, isLoading]);
 
   useEffect(() => {
     console.log('[StoryLibrary] 🔄 Refreshing stories list', {
@@ -225,20 +234,28 @@ export function useStoryLibrary(userId?: string | null) {
   }, [userId, refreshStories]);
 
   const saveDraftToArchive = useCallback(
-    async (options: SaveDraftToArchiveOptions): Promise<SaveDraftToArchiveResult> => {
+    async (
+      options: SaveDraftToArchiveOptions & { onProgress?: (percent: number) => void }
+    ): Promise<SaveDraftToArchiveResult> => {
+      const { entry, template, userId, headline, bodyHtml, prompt, onProgress } = options;
+
       console.log('[Archive] saveDraftToArchive called', {
-        entryId: options.entry.id,
-        hasArticle: Boolean(options.entry.article),
-        hasFile: Boolean(options.entry.file),
-        userId: options.userId,
+        entryId: entry.id,
+        hasArticle: Boolean(entry.article),
+        hasFile: Boolean(entry.file),
+        userId: userId,
       });
 
-      if (!options.entry.article) {
+      if (!userId) {
+        return { story: null, error: new Error('User not authenticated') };
+      }
+
+      if (!entry.article) {
         console.warn('[Archive] ⚠️ No article on entry, skipping save');
         return { story: null, error: new Error('No article to save') };
       }
 
-      if (!options.entry.file) {
+      if (!entry.file) {
         const missingFileError = new Error('No image file to save');
         console.warn('[Archive] ⚠️ No file attached to entry, cannot save image', {
           entryId: options.entry.id,
@@ -281,33 +298,24 @@ export function useStoryLibrary(userId?: string | null) {
   );
 
   const deleteStory = useCallback(
-    async (storyId: string) => {
-      if (!userId) {
-        throw new Error('Must be signed in to delete a story.');
-      }
+    async (id: string) => {
+      if (!userId) return;
 
-      console.log('[Archive] 🗑️ Deleting story via REST', { storyId, userId });
-
-      const query = new URLSearchParams({
-        id: `eq.${storyId}`,
-        created_by: `eq.${userId}`,
-      });
+      // Optimistic update
+      const previousStories = [...stories];
+      setStories((prev) => prev.filter((s) => s.id !== id));
 
       try {
-        await supaRest(
-          'DELETE',
-          `/rest/v1/story_archives?${query.toString()}`,
-          { headers: { Prefer: 'return=minimal' } },
-        );
-      } catch (error) {
-        console.error('[Archive] ❌ Failed to delete story', error);
-        throw error instanceof Error ? error : new Error('Failed to delete story');
+        await apiDeleteStory(id);
+        toast.success('Story deleted');
+      } catch (err) {
+        console.error('Failed to delete story', err);
+        toast.error('Could not delete story');
+        // Rollback
+        setStories(previousStories);
       }
-
-      await refreshStories();
-      console.log('[Archive] ✅ Story deleted', { storyId });
     },
-    [refreshStories, userId],
+    [userId, stories]
   );
 
   return {
@@ -317,6 +325,8 @@ export function useStoryLibrary(userId?: string | null) {
     refreshStories,
     saveDraftToArchive,
     deleteStory,
+    loadMore,
+    hasMore,
   };
 }
 

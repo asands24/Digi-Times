@@ -60,6 +60,18 @@ export async function supaRest<T>(
 
   if (!res.ok) {
     const text = await res.text();
+    
+    // Enhanced error classification
+    if (res.status === 401 || res.status === 403) {
+      throw new Error('Please log in again to continue.');
+    }
+    if (res.status === 429) {
+      throw new Error('Too many requests. Please wait a moment.');
+    }
+    if (res.status >= 500) {
+      throw new Error('Our servers are having trouble. Please try again later.');
+    }
+
     throw new Error(`Supabase REST error ${res.status}: ${text}`);
   }
 

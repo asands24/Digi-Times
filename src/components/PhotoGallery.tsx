@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { getSupabase } from '../lib/supabaseClient';
+import { supaRest } from '../lib/supaRest';
 import { publicPhotoUrl } from '../lib/storage';
 import { Button } from './ui/button';
 
 type Photo = { name: string; publicUrl: string };
+type StorageObject = { name: string };
+const STORAGE_LIST_TIMEOUT_MS = 10000;
 
 export default function PhotoGallery(): JSX.Element {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -12,28 +14,41 @@ export default function PhotoGallery(): JSX.Element {
   const [loading, setLoading] = useState(true);
 
   const fetchPhotos = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort('Listing photos timed out'), STORAGE_LIST_TIMEOUT_MS);
+
     try {
       setLoading(true);
       setError(null);
-      const supabase = getSupabase();
-      const { data, error: listError } = await supabase.storage
-        .from('photos')
-        .list('anonymous', {
+
+      // Use REST API to avoid occasional hangs in the JS client when listing storage objects
+      const response = await supaRest<StorageObject[]>('POST', '/storage/v1/object/list/photos', {
+        body: JSON.stringify({
+          prefix: 'anonymous',
           limit: 100,
           offset: 0,
-          sortBy: { column: 'created_at', order: 'desc' },
-        });
-      if (listError) throw listError;
-      const resolved = (data ?? []).map((entry) => {
-        const path = `anonymous/${entry.name}`;
-        return { name: entry.name, publicUrl: publicPhotoUrl(path) };
+          sortBy: { column: 'updated_at', order: 'desc' },
+        }),
+        signal: controller.signal,
       });
+
+      const resolved = (response ?? [])
+        .filter((entry) => Boolean(entry.name))
+        .map((entry) => {
+          const path = `anonymous/${entry.name}`;
+          return { name: entry.name, publicUrl: publicPhotoUrl(path) };
+        });
       setPhotos(resolved);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Could not load photos.';
       console.error('Photo gallery load failed', message);
-      setError('We could not load the latest photos right now. Please try again.');
+      if (message.includes('timed out')) {
+        setError('Photo loading is taking too long. Please try again.');
+      } else {
+        setError('We could not load the latest photos right now. Please try again.');
+      }
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   }, []);
