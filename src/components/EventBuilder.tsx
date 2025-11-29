@@ -71,11 +71,9 @@ function EventBuilder() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const entryUrlsRef = useRef<string[]>([]);
-  const shareUrlRef = useRef<string | null>(null);
 
-  const { saveDraftToArchive, stories } = useStoryLibrary();
+  const { saveDraftToArchive } = useStoryLibrary();
   const { user } = useAuth();
-  const hasArchivedStories = stories.length > 0;
 
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
@@ -121,9 +119,7 @@ function EventBuilder() {
     return global.trim();
   };
 
-  const hasEffectivePrompt = (entry: StoryEntry, global: string) => {
-    return getEffectivePrompt(entry, global).length > 0;
-  };
+
 
   const getEditableArticle = (entry: StoryEntry) => {
     if (entry.status !== 'ready' || !entry.article) {
@@ -216,25 +212,6 @@ function EventBuilder() {
   const clearEntries = useCallback(() => {
     entryUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     setEntries([]);
-  }, []);
-
-  const updatePrompt = useCallback((id: string, prompt: string) => {
-    setEntries((prev) =>
-      prev.map((entry) => {
-        if (entry.id !== id) {
-          return entry;
-        }
-        const trimmed = prompt.trim();
-        const nextSource: StoryEntry['promptSource'] = trimmed.length === 0 ? 'global' : 'custom';
-        return {
-          ...entry,
-          prompt,
-          promptSource: nextSource,
-          status: entry.status === 'ready' ? 'idle' : entry.status,
-          article: entry.status === 'ready' ? undefined : entry.article,
-        };
-      }),
-    );
   }, []);
 
   const applyPromptToDrafts = useCallback(() => {
@@ -397,10 +374,6 @@ function EventBuilder() {
         (entry) => entry.status === 'idle' && entry.prompt.trim().length === 0,
       ),
     [entries],
-  );
-  const hasDraftWithPrompt = useMemo(
-    () => entries.some((entry) => hasEffectivePrompt(entry, globalPrompt)),
-    [entries, globalPrompt, hasEffectivePrompt],
   );
   const hasDraftWithArticle = useMemo(
     () => entries.some((entry) => Boolean(entry.article)),
