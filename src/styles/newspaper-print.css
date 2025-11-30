@@ -5,18 +5,18 @@
 
 .newspaper-page {
   min-height: 100vh;
-  background: #ebe6dc;
+  background: #e8e3d8;
   padding: 2rem 1rem 3rem;
   font-family: 'Playfair Display', 'Libre Baskerville', Georgia, serif;
 }
 
 .newspaper-container {
-  max-width: 1024px;
+  max-width: 1100px;
   margin: 0 auto;
-  background: #fffefa;
-  padding: 2rem;
-  border: 1px solid rgba(22, 13, 2, 0.15);
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.12);
+  background: #fffef8;
+  padding: 3rem 2.5rem;
+  border: 2px solid rgba(22, 13, 2, 0.2);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
 }
 
 .newspaper-controls {
@@ -31,12 +31,29 @@
   align-items: center;
   gap: 1rem;
   justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.newspaper-actions__left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.newspaper-actions__right {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .newspaper-back-link {
   color: #8b5d16;
   font-weight: 600;
   text-decoration: none;
+  transition: color 0.2s;
+}
+
+.newspaper-back-link:hover {
+  color: #6d4912;
 }
 
 .newspaper-notice {
@@ -67,168 +84,250 @@
   color: #5c4322;
 }
 
-.newspaper-error-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .newspaper-link {
   color: #8b5d16;
   text-decoration: underline;
 }
 
-/* Masthead ----------------------------------------------------------------- */
+/* Header/Masthead ---------------------------------------------------------- */
 
-.newspaper-masthead {
+.newspaper-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 3px double rgba(22, 13, 2, 0.3);
 }
 
-.newspaper-masthead h1 {
-  font-size: clamp(2.75rem, 6vw, 4.5rem);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  margin: 0.35rem 0;
-}
-
-.masthead-edition {
-  margin: 0;
-  letter-spacing: 0.25em;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  color: #7f6542;
-}
-
-.masthead-meta {
-  margin: 0.5rem 0;
-  font-size: 1rem;
-  letter-spacing: 0.1em;
+.newspaper-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #3b2c1a;
+  margin-bottom: 0.75rem;
 }
 
-.masthead-separator {
-  padding: 0 0.75rem;
-}
-
-.masthead-border {
-  width: 100%;
-  height: 4px;
-  margin-top: 1rem;
-  background: linear-gradient(to right,
-      transparent,
-      #120b03 10%,
-      #120b03 90%,
-      transparent);
-}
-
-/* Lead story --------------------------------------------------------------- */
-
-.newspaper-lead-story {
-  margin-bottom: 2.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 3px double rgba(18, 11, 3, 0.2);
-}
-
-.newspaper-lead-story h2 {
-  font-size: clamp(2.2rem, 4vw, 3.2rem);
-  letter-spacing: 0.08em;
-  margin: 0 0 1.5rem;
+.newspaper-title {
+  margin: 0.5rem 0;
   text-align: center;
 }
 
-.lead-story-image {
-  margin: 0 auto 1.5rem;
-  border: 1px solid rgba(18, 11, 3, 0.25);
-  overflow: hidden;
-  max-width: 600px;
-  /* Limit image size on screen */
+.newspaper-tagline {
+  margin-top: 0.75rem;
+  text-align: center;
+  color: #5c4322;
 }
 
-.lead-story-image img {
+/* Layout ------------------------------------------------------------------- */
+
+.newspaper-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2.5rem;
+  position: relative;
+}
+
+.newspaper-layout::before {
+  content: '';
+  position: absolute;
+  left: calc(66.666% - 1.25rem);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom,
+      transparent 0%,
+      rgba(22, 13, 2, 0.15) 5%,
+      rgba(22, 13, 2, 0.15) 95%,
+      transparent 100%);
+}
+
+/* Main Story --------------------------------------------------------------- */
+
+.newspaper-story--main {
+  grid-column: 1;
+}
+
+.newspaper-story__image-container {
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(22, 13, 2, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.newspaper-story__image {
   width: 100%;
   height: auto;
   display: block;
+  max-height: 500px;
   object-fit: cover;
-  max-height: 400px;
-  /* Prevent overly tall images */
 }
 
-.lead-story-content {
+.newspaper-story__caption {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #4a3520;
+  background: rgba(248, 246, 243, 0.8);
+  border-top: 1px solid rgba(22, 13, 2, 0.1);
+}
+
+.newspaper-story__headline {
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Helvetica, Arial, sans-serif;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5rem;
+  color: #0f0a03;
+  text-transform: uppercase;
+}
+
+.newspaper-story__byline {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #5c4322;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(22, 13, 2, 0.15);
+}
+
+.newspaper-story__content {
+  margin-top: 1.5rem;
+}
+
+.newspaper-story__body {
   column-count: 2;
   column-gap: 2rem;
-  font-size: 1.1rem;
-  line-height: 1.8;
+  column-rule: 1px solid rgba(22, 13, 2, 0.1);
+  font-size: 1rem;
+  line-height: 1.75;
+  text-align: justify;
   color: #2b2013;
 }
 
-.lead-story-content p {
+.newspaper-story__body p {
   margin: 0 0 1rem;
   break-inside: avoid;
 }
 
-/* Story grid --------------------------------------------------------------- */
+/* Drop cap for first paragraph */
+.newspaper-story__body p:first-child::first-letter {
+  float: left;
+  font-size: 4.5em;
+  line-height: 0.85;
+  font-weight: 700;
+  margin: 0.1em 0.15em 0 0;
+  font-family: 'Playfair Display', serif;
+  color: #0f0a03;
+}
 
-.newspaper-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+/* Sidebar Stories ---------------------------------------------------------- */
+
+.newspaper-sidebar {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
   gap: 2rem;
 }
 
-.newspaper-story {
-  border-top: 2px solid rgba(18, 11, 3, 0.15);
-  padding-top: 1.25rem;
-  break-inside: avoid;
+.newspaper-story--side {
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid rgba(22, 13, 2, 0.15);
 }
 
-.newspaper-story h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1.5rem;
-  letter-spacing: 0.05em;
+.newspaper-story--side:last-child {
+  border-bottom: none;
 }
 
-.story-image {
-  border: 1px solid rgba(18, 11, 3, 0.25);
-  margin: 0 0 1rem;
+.newspaper-story--side .newspaper-story__headline {
+  font-size: 1.35rem;
+  margin-bottom: 0.75rem;
 }
 
-.story-image img {
+.newspaper-story--side .newspaper-story__image {
   width: 100%;
   height: auto;
-  display: block;
+  max-height: 200px;
   object-fit: cover;
-  max-height: 250px;
-  /* Prevent overly tall images in grid */
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(22, 13, 2, 0.2);
 }
 
-.story-content {
-  font-size: 1rem;
-  line-height: 1.7;
-  color: #2f2617;
+.newspaper-story--side .newspaper-story__body {
+  column-count: 1;
+  font-size: 0.9rem;
+  line-height: 1.65;
 }
 
-.story-content p {
-  margin: 0 0 0.85rem;
+/* Bottom Story Grid -------------------------------------------------------- */
+
+.newspaper-bottom-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 2.5rem;
+  padding-top: 2.5rem;
+  border-top: 3px double rgba(22, 13, 2, 0.25);
 }
+
+.newspaper-story--bottom {
+  padding: 0;
+}
+
+.newspaper-story--bottom .newspaper-story__headline {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.newspaper-story--bottom .newspaper-story__body {
+  column-count: 1;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+/* Footer ------------------------------------------------------------------- */
 
 .newspaper-footer {
-  margin-top: 2.5rem;
-  padding-top: 1.25rem;
-  border-top: 2px solid rgba(18, 11, 3, 0.35);
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 3px double rgba(22, 13, 2, 0.3);
   text-align: center;
-  font-size: 0.95rem;
-  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5c4322;
+}
+
+.newspaper-footer p {
+  margin: 0;
 }
 
 /* Responsive --------------------------------------------------------------- */
 
 @media (max-width: 900px) {
-  .lead-story-content {
+  .newspaper-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .newspaper-layout::before {
+    display: none;
+  }
+
+  .newspaper-story--main,
+  .newspaper-sidebar {
+    grid-column: 1;
+  }
+
+  .newspaper-story__body {
     column-count: 1;
   }
 
-  .newspaper-grid {
+  .newspaper-bottom-grid {
     grid-template-columns: 1fr;
   }
 
@@ -236,15 +335,32 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .newspaper-actions__right {
+    flex-direction: column;
+    width: 100%;
+  }
 }
 
 @media (max-width: 600px) {
   .newspaper-container {
-    padding: 1.5rem;
+    padding: 2rem 1.5rem;
   }
 
   .newspaper-page {
     padding: 1.5rem 1rem 2rem;
+  }
+
+  .newspaper-story__headline {
+    font-size: 1.75rem;
+  }
+
+  .newspaper-story--side .newspaper-story__headline {
+    font-size: 1.25rem;
+  }
+
+  .newspaper-story--bottom .newspaper-story__headline {
+    font-size: 1.15rem;
   }
 }
 
@@ -276,30 +392,41 @@
   .no-print,
   nav,
   button,
-  .newspaper-back-link {
+  .newspaper-back-link,
+  .newspaper-actions {
     display: none !important;
   }
 
-  .lead-story-content {
-    column-gap: 1.25rem;
+  .newspaper-layout {
+    grid-template-columns: 2fr 1fr;
   }
 
-  .newspaper-lead-story,
+  .newspaper-layout::before {
+    display: block;
+  }
+
+  .newspaper-story__body {
+    column-gap: 1.5rem;
+  }
+
+  .newspaper-story__image {
+    max-height: 5in;
+    object-fit: contain;
+  }
+
+  .newspaper-story--side .newspaper-story__image {
+    max-height: 3in;
+  }
+
+  .newspaper-bottom-grid {
+    grid-template-columns: repeat(3, 1fr);
+    page-break-before: auto;
+  }
+
   .newspaper-story,
-  .lead-story-image,
-  .story-image {
+  .newspaper-story__image-container {
     page-break-inside: avoid;
     break-inside: avoid;
-  }
-
-  .newspaper-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .story-image img,
-  .lead-story-image img {
-    max-height: 4in;
-    object-fit: contain;
   }
 
   .newspaper-footer {
