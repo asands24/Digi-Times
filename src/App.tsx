@@ -162,11 +162,10 @@ export default function App() {
     return (
       <AppErrorBoundary>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/s/:slug" element={<PublicStoryPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AppErrorBoundary>
     );
