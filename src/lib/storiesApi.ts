@@ -6,7 +6,7 @@ import type { StoryArchiveRow } from '../types/story';
  */
 export async function fetchStoriesForUser(userId: string, page = 1, pageSize = 50) {
   const start = (page - 1) * pageSize;
-  const end = start + pageSize - 1; // Supabase range is inclusive
+
   
   return supaRest<StoryArchiveRow[]>('GET',
     `/rest/v1/story_archives?created_by=eq.${userId}&select=*&order=created_at.desc&offset=${start}&limit=${pageSize}`
