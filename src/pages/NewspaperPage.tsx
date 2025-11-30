@@ -179,6 +179,7 @@ export default function NewspaperPage() {
       await createIssue({
         title,
         storyIds: stories.map(s => s.id),
+        userId: user.id,
       });
       toast.success('Issue saved successfully!');
     } catch (err) {

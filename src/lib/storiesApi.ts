@@ -88,13 +88,14 @@ export interface IssueStoryRow {
 /**
  * Create a new newspaper issue.
  */
-export async function createIssue(payload: { title: string; description?: string; storyIds: string[] }) {
+export async function createIssue(payload: { title: string; description?: string; storyIds: string[]; userId: string }) {
   // 1. Create the issue
   const [issue] = await supaRest<IssueRow[]>('POST', '/rest/v1/issues', {
     headers: { 'Prefer': 'return=representation' },
     body: JSON.stringify({
       title: payload.title,
       description: payload.description,
+      created_by: payload.userId,
     }),
   });
 
