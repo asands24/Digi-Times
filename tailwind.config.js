@@ -33,6 +33,9 @@ module.exports = {
                 serif: ['"Libre Baskerville"', 'serif'],
                 news: ['"Newsreader"', '"Libre Baskerville"', 'serif'],
                 sans: ['"Inter"', 'sans-serif'],
+                headline: ['"Franklin Gothic Medium"', '"Arial Narrow"', 'Helvetica', 'Arial', 'sans-serif'],
+                cheltenham: ['Georgia', '"Times New Roman"', 'serif'],
+                guardian: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
             },
             borderRadius: {
                 soft: '12px',

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Printer, Save } from 'lucide-react';
+import { Printer, Save, Download } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabaseClient';
 import { supaRest } from '../lib/supaRest';
@@ -8,6 +8,7 @@ import { createIssue, fetchIssueById } from '../lib/storiesApi';
 import { useAuth } from '../providers/AuthProvider';
 import type { Database } from '../types/supabase';
 import toast from 'react-hot-toast';
+import { exportNewspaperToPDF } from '../lib/pdfExport';
 import '../styles/newspaper-print.css';
 
 type StoryRow = Database['public']['Tables']['story_archives']['Row'];
@@ -55,6 +56,7 @@ export default function NewspaperPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const ids = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -187,6 +189,26 @@ export default function NewspaperPage() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    const toastId = toast.loading('Generating PDF...');
+
+    try {
+      await exportNewspaperToPDF('newspaper-content', {
+        onProgress: (progress) => {
+          if (progress === 100) {
+            toast.success('PDF downloaded!', { id: toastId });
+          }
+        },
+      });
+    } catch (err) {
+      console.error('Failed to generate PDF', err);
+      toast.error('Failed to generate PDF. Please try again.', { id: toastId });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="newspaper-loading">
@@ -226,6 +248,10 @@ export default function NewspaperPage() {
             <Save size={16} className="mr-2" />
             {isSaving ? 'Saving...' : 'Save Issue'}
           </Button>
+          <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading}>
+            <Download size={16} className="mr-2" />
+            {isDownloading ? 'Generating...' : 'Download PDF'}
+          </Button>
           <Button onClick={handlePrint}>
             <Printer size={16} className="mr-2" />
             Print Newspaper
@@ -240,8 +266,12 @@ export default function NewspaperPage() {
             <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
             <span>$1.00</span>
           </div>
-          <h1 className="newspaper-title">The Daily Chronicle</h1>
-          <div className="newspaper-tagline">"All the news that's fit to print — and then some."</div>
+          <div className="border-t-4 border-b border-ink-black my-2"></div>
+          <h1 className="newspaper-title font-headline text-6xl font-black tracking-tight text-ink-black uppercase">
+            DigiTimes
+          </h1>
+          <div className="border-t border-b-4 border-ink-black my-2"></div>
+          <div className="newspaper-tagline font-cheltenham italic text-sm">"Your Memories, Front Page News"</div>
         </header>
 
         <main className="newspaper-layout">

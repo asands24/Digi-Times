@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
+import { Trash2 } from 'lucide-react';
 import { supaRest } from '../lib/supaRest';
 import { publicPhotoUrl } from '../lib/storage';
 import { Button } from './ui/button';
 import { useAuth } from '../providers/AuthProvider';
+import toast from 'react-hot-toast';
 
 type Photo = { name: string; publicUrl: string };
 type StorageObject = { name: string };
@@ -68,6 +70,27 @@ export default function PhotoGallery(): JSX.Element {
     void fetchPhotos();
   };
 
+  const handleDelete = async (photoName: string) => {
+    if (!user) return;
+    if (!window.confirm('Are you sure you want to delete this photo? This cannot be undone.')) {
+      return;
+    }
+
+    // Optimistic update
+    const previousPhotos = [...photos];
+    setPhotos((prev) => prev.filter((p) => p.name !== photoName));
+
+    try {
+      await supaRest('DELETE', `/storage/v1/object/photos/stories/${user.id}/${photoName}`);
+      toast.success('Photo deleted');
+    } catch (err) {
+      console.error('Failed to delete photo', err);
+      toast.error('Could not delete photo');
+      // Rollback
+      setPhotos(previousPhotos);
+    }
+  };
+
   const renderMessage = (message: string, action?: JSX.Element) => (
     <section className="container" style={{ padding: '2rem 1rem' }}>
       <div className="card" style={{ textAlign: 'center' }}>
@@ -109,20 +132,25 @@ export default function PhotoGallery(): JSX.Element {
           }}
         >
           {photos.map((photo) => (
-            <figure key={photo.name} style={{ margin: 0 }}>
-              <img
-                src={photo.publicUrl}
-                alt={photo.name}
-                loading="lazy"
-                decoding="async"
-                style={{
-                  width: '100%',
-                  height: 160,
-                  objectFit: 'cover',
-                  borderRadius: 8,
-                }}
-              />
-              <figcaption style={{ fontSize: 12, opacity: 0.7 }}>
+            <figure key={photo.name} className="group relative" style={{ margin: 0 }}>
+              <div className="relative aspect-square overflow-hidden rounded-lg">
+                <img
+                  src={photo.publicUrl}
+                  alt={photo.name}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
+                <button
+                  onClick={() => handleDelete(photo.name)}
+                  className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 hover:text-red-600"
+                  title="Delete photo"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              <figcaption className="mt-2 text-xs text-ink-muted truncate px-1">
                 {photo.name}
               </figcaption>
             </figure>
