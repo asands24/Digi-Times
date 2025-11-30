@@ -15,7 +15,6 @@ import {
   parseBodyDraft,
   buildBodyHtml,
   generateStoryFromPrompt,
-  GeneratedArticle
 } from '../utils/storyGenerator';
 import { StoryTemplate } from '../types/story';
 
@@ -33,21 +32,7 @@ const LOADING_MESSAGES = [
   'Setting the type…',
 ];
 
-// Helper to read file as data URL
-const readFileAsDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('Failed to read file'));
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+
 
 function EventBuilder() {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
@@ -126,7 +111,6 @@ function EventBuilder() {
           }
 
           try {
-            const imageDataUrl = await readFileAsDataUrl(file);
             const previewUrl = URL.createObjectURL(file);
             // MAGIC ONBOARDING: If no prompt exists, we can default to a generic one
             // or leave it empty to prompt the user.
@@ -210,8 +194,6 @@ function EventBuilder() {
       }
 
       const effectivePrompt = getEffectivePrompt(target, globalPrompt);
-      const cleanFileName = target.file.name.replace(/\.[^/.]+$/, '');
-      const fallbackIdea = `Front-page spotlight: ${cleanFileName || target.file.name || 'Feature'}`;
 
       // MAGIC: If no prompt, use a default "Magic" prompt
       const magicPrompt = "A wonderful moment captured in time, worthy of the front page.";
