@@ -1,4 +1,4 @@
-export const APP_ACCESS_MODE = process.env.APP_ACCESS_MODE ?? 'public'; // 'public' | 'login'
+export const APP_ACCESS_MODE = process.env.APP_ACCESS_MODE ?? 'login'; // 'public' | 'login'
 export const REQUIRE_LOGIN = APP_ACCESS_MODE === 'login';
 
 const URL =
