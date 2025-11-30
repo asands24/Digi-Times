@@ -85,5 +85,15 @@ export async function supaRest<T>(
     return {} as T;
   }
 
-  return (await res.json()) as T;
+  const text = await res.text();
+  if (!text) {
+    return {} as T;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch (e) {
+    console.error('[supaRest] Failed to parse JSON', e);
+    throw new Error('Invalid JSON response from server');
+  }
 }
