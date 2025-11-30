@@ -24,7 +24,6 @@ import DebugTemplates from './pages/DebugTemplates';
 import PublicStoryPage from './pages/PublicStoryPage';
 import { IssuesList } from './components/IssuesList';
 import NewspaperPage from './pages/NewspaperPage';
-import LandingPage from './pages/LandingPage';
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 function HomePage() {
