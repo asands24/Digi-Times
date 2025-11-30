@@ -109,6 +109,10 @@ export async function createIssue(payload: { title: string; description?: string
   }));
 
   await supaRest('POST', '/rest/v1/issue_stories', {
+    headers: {
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
     body: JSON.stringify(junctionPayload),
   });
 

@@ -212,8 +212,13 @@ export default function NewspaperPage() {
   if (loading) {
     return (
       <div className="newspaper-loading">
-        <div className="newspaper-spinner" />
-        <p>Typesetting your edition...</p>
+        <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📰</p>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+          Typesetting your edition...
+        </p>
+        <p style={{ fontSize: '0.95rem', color: 'var(--ink-soft)' }}>
+          Setting the type, checking the spelling, and preparing the presses!
+        </p>
       </div>
     );
   }
@@ -221,8 +226,9 @@ export default function NewspaperPage() {
   if (error) {
     return (
       <div className="newspaper-error">
-        <h2>Stopped the presses!</h2>
-        <p>{error}</p>
+        <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🛑</p>
+        <h2 style={{ fontFamily: 'var(--font-display)' }}>Stopped the presses!</h2>
+        <p style={{ maxWidth: '420px', margin: '0 auto 1.5rem' }}>{error}</p>
         <Link to="/">
           <Button variant="outline">Return to Newsroom</Button>
         </Link>

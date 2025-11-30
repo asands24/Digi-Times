@@ -355,8 +355,9 @@ export function StoryArchive({
 
       {isLoading ? (
         <div className="story-archive__empty" role="status" aria-live="polite">
-          <p>
-            Loading your stories...
+          <p style={{ fontSize: '2rem', marginBottom: '1rem' }}>🗞️</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem' }}>
+            Gathering your headlines...
             <span className="story-archive__loading-icon" aria-hidden="true">
               ⏳
             </span>
@@ -511,7 +512,14 @@ export function StoryArchive({
         </>
       ) : (
         <div className="story-archive__empty">
-          <p>You don’t have stories yet — let’s turn your first moment into a feature!</p>
+          <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📰✨</p>
+          <p style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
+            Your newsroom is ready!
+          </p>
+          <p style={{ color: 'var(--ink-soft)', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
+            Start creating stories from your photos and watch your personal newspaper come to life.
+            Every memory deserves a headline!
+          </p>
           <Button type="button" variant="outline" onClick={onRefresh}>
             Refresh archive
           </Button>

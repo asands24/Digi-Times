@@ -173,9 +173,9 @@
 }
 
 .newspaper-story__headline {
-  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Helvetica, Arial, sans-serif;
+  font-family: 'Playfair Display', Georgia, serif;
   font-size: clamp(2rem, 4vw, 2.75rem);
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.01em;
   margin: 0 0 0.5rem;
@@ -203,7 +203,7 @@
   column-gap: 2rem;
   column-rule: 1px solid rgba(22, 13, 2, 0.1);
   font-size: 1rem;
-  line-height: 1.75;
+  line-height: 1.8;
   text-align: justify;
   color: #2b2013;
 }
