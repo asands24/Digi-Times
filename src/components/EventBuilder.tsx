@@ -1,11 +1,13 @@
-import React, { useState, useRef, useCallback, useEffect, ChangeEvent, useMemo } from 'react';
-import { Camera, ImageIcon, Sparkles, Trash2, RefreshCcw, Archive, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Sparkles, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import toast from 'react-hot-toast';
 import { useStoryLibrary } from '../hooks/useStoryLibrary';
 import { useAuth } from '../providers/AuthProvider';
 import { TemplatesGallery } from './TemplatesGallery';
+import { PhotoUploader } from './builder/PhotoUploader';
+import { StoryPromptInput } from './builder/StoryPromptInput';
+import { StoryReview, StoryEntry } from './builder/StoryReview';
 import {
   generateArticle,
   toStoryParagraphs,
@@ -31,23 +33,6 @@ const LOADING_MESSAGES = [
   'Setting the type…',
 ];
 
-interface StoryEntry {
-  id: string;
-  file: File;
-  previewUrl: string;
-  imageDataUrl: string;
-  prompt: string;
-  promptSource: 'global' | 'custom';
-  createdAt: Date;
-  status: 'idle' | 'generating' | 'ready';
-  generationId: number;
-  article?: GeneratedArticle;
-  loadingLabel?: string;
-  headlineDraft?: string;
-  subheadlineDraft?: string;
-  bodyDraft?: string;
-}
-
 // Helper to read file as data URL
 const readFileAsDataUrl = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -68,8 +53,6 @@ function EventBuilder() {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const entryUrlsRef = useRef<string[]>([]);
 
   const { saveDraftToArchive } = useStoryLibrary();
@@ -113,19 +96,14 @@ function EventBuilder() {
   };
 
   const getEffectivePrompt = (entry: StoryEntry, global: string) => {
-    if (entry.promptSource === 'custom' && entry.prompt.trim().length > 0) {
+    // If entry has a specific prompt (custom), use it.
+    // Otherwise use global.
+    // Note: In our simplified model, we mostly rely on global prompt being applied to entries.
+    // But we keep this logic if we want per-story overrides later.
+    if (entry.prompt && entry.prompt !== global && entry.prompt.trim().length > 0) {
       return entry.prompt;
     }
     return global.trim();
-  };
-
-
-
-  const getEditableArticle = (entry: StoryEntry) => {
-    if (entry.status !== 'ready' || !entry.article) {
-      return null;
-    }
-    return entry.article;
   };
 
   const handleFiles = useCallback(
@@ -150,16 +128,15 @@ function EventBuilder() {
           try {
             const imageDataUrl = await readFileAsDataUrl(file);
             const previewUrl = URL.createObjectURL(file);
+            // MAGIC ONBOARDING: If no prompt exists, we can default to a generic one
+            // or leave it empty to prompt the user.
+            // For now, we initialize with current global prompt.
             const entry: StoryEntry = {
               id: createId(),
               file,
               previewUrl,
-              imageDataUrl,
-              prompt: trimmedGlobalPrompt,
-              promptSource: 'global',
-              createdAt: new Date(),
               status: 'idle' as const,
-              generationId: 0,
+              prompt: trimmedGlobalPrompt,
             };
             return entry;
           } catch (error) {
@@ -194,11 +171,6 @@ function EventBuilder() {
     [],
   );
 
-  const onFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    void handleFiles(event.target.files);
-    event.target.value = '';
-  };
-
   const removeEntry = useCallback((id: string) => {
     setEntries((prev) => {
       const target = prev.find((entry) => entry.id === id);
@@ -222,48 +194,12 @@ function EventBuilder() {
 
     setEntries((prev) =>
       prev.map((entry) =>
-        entry.status === 'idle' && !entry.prompt.trim()
-          ? { ...entry, prompt: trimmed, promptSource: 'global' }
+        entry.status === 'idle'
+          ? { ...entry, prompt: trimmed }
           : entry,
       ),
     );
-  }, [globalPrompt]);
-
-  useEffect(() => {
-    const trimmed = globalPrompt.trim();
-    const idsToRefresh: string[] = [];
-    setEntries((prev) => {
-      if (prev.length === 0) {
-        return prev;
-      }
-      let didChange = false;
-      const nextEntries = prev.map((entry) => {
-        if (entry.promptSource !== 'global') {
-          return entry;
-        }
-        if (entry.prompt === trimmed) {
-          return entry;
-        }
-        idsToRefresh.push(entry.id);
-        didChange = true;
-        return {
-          ...entry,
-          prompt: trimmed,
-          status: 'idle' as const,
-          article: undefined,
-        };
-      });
-      return didChange ? nextEntries : prev;
-    });
-
-    if (idsToRefresh.length > 0) {
-      const count = idsToRefresh.length;
-      toast(
-        count === 1
-          ? 'Story idea updated—press Generate to refresh that draft.'
-          : `${count} drafts updated. Press Generate on each to refresh them.`,
-      );
-    }
+    toast.success('Story idea applied to all drafts!');
   }, [globalPrompt]);
 
   const generateStory = useCallback(
@@ -276,24 +212,26 @@ function EventBuilder() {
       const effectivePrompt = getEffectivePrompt(target, globalPrompt);
       const cleanFileName = target.file.name.replace(/\.[^/.]+$/, '');
       const fallbackIdea = `Front-page spotlight: ${cleanFileName || target.file.name || 'Feature'}`;
-      const idea = effectivePrompt || fallbackIdea || 'Front-page spotlight';
+
+      // MAGIC: If no prompt, use a default "Magic" prompt
+      const magicPrompt = "A wonderful moment captured in time, worthy of the front page.";
+      const idea = effectivePrompt || magicPrompt;
 
       const entryIndex = Math.max(entries.findIndex((entry) => entry.id === id), 0);
-      const nextGenerationId = target.generationId + 1;
-      const loadingLabel = LOADING_MESSAGES[nextGenerationId % LOADING_MESSAGES.length];
+      // We don't track generationId in the simplified type, but we can simulate it or add it back if needed.
+      // For now, we just use a random loading label.
+      const loadingLabel = LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
 
       setEntries((prev) =>
         prev.map((entry) =>
           entry.id === id
             ? {
               ...entry,
-              prompt: entry.promptSource === 'global' ? effectivePrompt : entry.prompt,
+              prompt: idea,
               status: 'generating',
               article: undefined,
-              generationId: nextGenerationId,
               loadingLabel,
               headlineDraft: undefined,
-              subheadlineDraft: undefined,
               bodyDraft: undefined,
             }
             : entry,
@@ -303,9 +241,9 @@ function EventBuilder() {
       const localArticle = generateArticle({
         prompt: idea,
         fileName: target.file.name,
-        capturedAt: target.createdAt,
+        capturedAt: new Date(), // We don't have createdAt in simplified type, use now
         templateName: selectedTemplate?.title,
-        storyIndex: entryIndex + nextGenerationId,
+        storyIndex: entryIndex,
       });
 
       const run = async () => {
@@ -325,13 +263,12 @@ function EventBuilder() {
 
         setEntries((prev) =>
           prev.map((entry) =>
-            entry.id === id && entry.generationId === nextGenerationId
+            entry.id === id
               ? {
                 ...entry,
                 status: 'ready',
                 article: resolvedArticle,
                 headlineDraft: resolvedArticle.headline,
-                subheadlineDraft: resolvedArticle.subheadline,
                 bodyDraft: toEditableBody(resolvedArticle),
               }
               : entry,
@@ -351,13 +288,7 @@ function EventBuilder() {
       return;
     }
 
-    if (!globalPrompt.trim()) {
-      const missingPrompt = entries.some((entry) => !entry.prompt.trim());
-      if (missingPrompt) {
-        toast.error('Add a story idea or fill each prompt before generating all stories.');
-        return;
-      }
-    }
+    // MAGIC: We don't block on missing prompt anymore. We use the magic default.
 
     entries.forEach((entry) => {
       if (entry.status === 'idle') {
@@ -365,13 +296,13 @@ function EventBuilder() {
       }
     });
     toast.success('Generating newsroom drafts for every photo…');
-  }, [entries, generateStory, globalPrompt]);
+  }, [entries, generateStory]);
 
   const hasEntries = entries.length > 0;
   const hasDraftsWithoutPrompt = useMemo(
     () =>
       entries.some(
-        (entry) => entry.status === 'idle' && entry.prompt.trim().length === 0,
+        (entry) => entry.status === 'idle' && (!entry.prompt || entry.prompt.trim().length === 0),
       ),
     [entries],
   );
@@ -386,278 +317,123 @@ function EventBuilder() {
     );
   };
 
+  const handleSaveEntry = (entry: StoryEntry) => {
+    if (!entry.article) return;
+
+    handleSaveToArchive({
+      entry,
+      template: selectedTemplate,
+      userId: user?.id || '',
+      headline: entry.headlineDraft ?? entry.article.headline,
+      bodyHtml: buildBodyHtml({ ...entry.article, body: parseBodyDraft(entry.bodyDraft, entry.article.body) }),
+      prompt: entry.prompt,
+    }).then((res) => {
+      if (res.error) {
+        toast.error('Failed to save story');
+      } else {
+        toast.success('Story saved to archive!');
+        removeEntry(entry.id);
+      }
+    });
+  };
+
   return (
-    <section className="story-builder">
-      <header className="story-builder__header">
-        <div className="story-builder__eyebrow">
-          <Sparkles size={16} strokeWidth={1.75} />
+    <section className="bg-surface border border-accent-border rounded-xl shadow-soft p-4 md:p-8">
+      <header className="text-center mb-10 max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 text-accent-gold-dark font-sans text-sm uppercase tracking-widest mb-3 font-semibold">
+          <Sparkles size={16} strokeWidth={2} />
           <span>Front Page Studio</span>
         </div>
-        <h1>Build tomorrow’s front page in three guided steps.</h1>
-        <p>
-          Add your photo, tell us what’s happening, then review and tweak the article before saving
-          it to your newspaper issue.
+        <h1 className="font-display text-4xl md:text-5xl text-ink-black mb-4 leading-tight">
+          Build tomorrow’s front page.
+        </h1>
+        <p className="text-ink-soft text-lg leading-relaxed">
+          Upload your photos and let our AI Editor draft the story.
+          Review the headlines, tweak the copy, and publish to your archive.
         </p>
       </header>
 
-      <div className="story-steps mb-4">
-        <div
-          className={`story-step ${hasEntries ? 'story-step--done' : 'story-step--active'}`}
-        >
-          <span className="story-step__number">1</span>
-          <div>
-            <p className="story-step__label">Upload</p>
-          </div>
-        </div>
-        <div
-          className={`story-step ${hasDraftWithArticle ? 'story-step--done' : hasEntries ? 'story-step--active' : ''
-            }`}
-        >
-          <span className="story-step__number">2</span>
-          <div>
-            <p className="story-step__label">Refine</p>
-          </div>
-        </div>
-        <div className={`story-step ${hasDraftWithArticle ? 'story-step--active' : ''}`}>
-          <span className="story-step__number">3</span>
-          <div>
-            <p className="story-step__label">Review</p>
-          </div>
-        </div>
+      {/* STEP 1: UPLOAD */}
+      <div className="mb-12">
+        <PhotoUploader
+          onFilesSelected={handleFiles}
+          hasEntries={hasEntries}
+        />
       </div>
 
-      {!hasEntries && (
-        <div className="story-dropzone text-center py-5">
-          <div className="story-dropzone__header mb-4">
-            <h2 className="text-2xl font-display mb-2">Start your story</h2>
-            <p className="text-muted">Select a photo from your library to get started.</p>
-          </div>
+      {hasEntries && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12">
 
-          <div className="story-dropzone__actions flex justify-center gap-4 mb-4">
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <ImageIcon size={20} strokeWidth={1.75} className="mr-2" />
-              Upload Photo
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => cameraInputRef.current?.click()}
-            >
-              <Camera size={20} strokeWidth={1.75} className="mr-2" />
-              Take Photo
-            </Button>
-          </div>
-          <p className="text-sm text-muted">
-            Tip: photos with people make the best stories.
-          </p>
+          {/* STEP 2: REFINE (Prompt & Template) */}
+          {!hasDraftWithArticle && (
+            <div className="grid md:grid-cols-2 gap-8 items-start">
+              <div className="space-y-6">
+                <StoryPromptInput
+                  value={globalPrompt}
+                  onChange={setGlobalPrompt}
+                  onApplyToAll={applyPromptToDrafts}
+                  canApplyToAll={hasDraftsWithoutPrompt && globalPrompt.trim().length > 0}
+                />
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={onFileInputChange}
-          />
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={onFileInputChange}
-          />
-        </div>
-      )}
-
-      {hasEntries && !hasDraftWithArticle && (
-        <div className="step-container animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-display mb-2">Tell us what’s happening</h2>
-            <p className="text-muted">Add a prompt and choose a style for your story.</p>
-          </div>
-
-          <div className="max-w-2xl mx-auto space-y-8">
-            <section className="bg-surface p-6 rounded-xl border border-accent-border shadow-sm">
-              <label className="block text-sm font-medium uppercase tracking-wider text-ink-muted mb-3">
-                Global Story Idea
-              </label>
-              <textarea
-                id="globalPrompt"
-                className="w-full p-4 rounded-lg border border-accent-border bg-paper-soft focus:ring-2 focus:ring-ink focus:border-transparent transition-all"
-                placeholder="e.g. Halloween in Navy Yard with the kids..."
-                value={globalPrompt}
-                onChange={(event) => setGlobalPrompt(event.target.value)}
-                rows={3}
-              />
-              <p className="text-xs text-ink-muted mt-2 text-right">
-                1–2 sentences is perfect.
-              </p>
-
-              <div className="mt-4 flex justify-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={applyPromptToDrafts}
-                  disabled={!hasDraftsWithoutPrompt || !globalPrompt.trim()}
-                >
-                  <RefreshCcw size={14} className="mr-2" />
-                  Apply to all drafts
-                </Button>
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
+                  <strong>✨ Magic Tip:</strong> Leave the prompt blank and we'll write a surprise story for you!
+                </div>
               </div>
-            </section>
 
-            <section>
-              <h3 className="text-lg font-display mb-4">Choose a Template</h3>
-              <TemplatesGallery
-                selectedTemplateId={selectedTemplate?.id ?? null}
-                onSelect={setSelectedTemplate}
-              />
-            </section>
+              <div className="space-y-4">
+                <h3 className="text-lg font-display text-ink">Choose a Style</h3>
+                <TemplatesGallery
+                  selectedTemplateId={selectedTemplate?.id ?? null}
+                  onSelect={setSelectedTemplate}
+                />
+              </div>
+            </div>
+          )}
 
-            <div className="flex justify-center pt-4">
+          {/* ACTION: GENERATE */}
+          {!hasDraftWithArticle && (
+            <div className="flex justify-center pt-4 border-t border-accent-border">
               <Button
                 size="lg"
                 onClick={generateAllStories}
-                className="w-full md:w-auto min-w-[200px]"
+                className="w-full md:w-auto min-w-[240px] h-14 text-lg bg-ink text-white hover:bg-ink-soft shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
               >
-                <Sparkles size={18} className="mr-2" />
+                <Sparkles size={20} className="mr-2" />
                 Generate Stories
               </Button>
             </div>
+          )}
 
-            <div className="text-center">
-              <Button variant="ghost" onClick={clearEntries} className="text-muted">
-                Start Over
-              </Button>
+          {/* STEP 3: REVIEW */}
+          {hasDraftWithArticle && (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-display text-ink">Editor's Desk</h2>
+                <Button variant="ghost" onClick={clearEntries} className="text-red-600 hover:bg-red-50 hover:text-red-700">
+                  <Trash2 size={16} className="mr-2" />
+                  Clear All
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {entries.map((entry) => (
+                  <StoryReview
+                    key={entry.id}
+                    entry={entry}
+                    onUpdate={updateEntry}
+                    onRegenerate={generateStory}
+                    onSave={handleSaveEntry}
+                    isSaving={uploadProgress !== null}
+                    toEditableBody={toEditableBody}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
         </div>
       )}
-
-      {hasEntries && hasDraftWithArticle && (
-        <div className="step-container animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="story-builder__actions mb-6 flex justify-between items-center">
-            <span className="text-muted">
-              {entries.length} {entries.length === 1 ? 'story' : 'stories'} ready
-            </span>
-            <Button variant="outline" type="button" onClick={clearEntries}>
-              <Trash2 size={16} strokeWidth={1.75} className="mr-2" />
-              Clear & Restart
-            </Button>
-          </div>
-
-          <div className="story-grid">
-            {entries.map((entry) => {
-              const editableArticle = getEditableArticle(entry);
-
-              return (
-                <article key={entry.id} className="story-card">
-                  <div className="story-card__media">
-                    <img
-                      src={entry.previewUrl}
-                      alt={entry.file.name}
-                      className="story-card__image"
-                    />
-                  </div>
-
-                  <div className="story-card__body">
-                    {entry.status === 'generating' ? (
-                      <div className="py-12 text-center">
-                        <Loader2 className="animate-spin mx-auto mb-4 text-accent-gold" size={32} />
-                        <p className="text-lg font-display animate-pulse">
-                          {entry.loadingLabel || 'Writing your story...'}
-                        </p>
-                      </div>
-                    ) : entry.status === 'ready' && editableArticle ? (
-                      <div className="story-article">
-                        <div className="story-article__status mb-4">
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                            Ready to Publish
-                          </Badge>
-                        </div>
-
-                        <div className="space-y-4">
-                          <input
-                            className="w-full font-display text-2xl font-bold bg-transparent border-none p-0 focus:ring-0 placeholder-ink-muted/50"
-                            value={entry.headlineDraft ?? editableArticle.headline}
-                            onChange={(e) => updateEntry(entry.id, { headlineDraft: e.target.value })}
-                            placeholder="Headline"
-                          />
-                          <textarea
-                            className="w-full font-serif text-base leading-relaxed bg-transparent border-none p-0 focus:ring-0 resize-none placeholder-ink-muted/50"
-                            value={entry.bodyDraft ?? (entry.article ? toEditableBody(entry.article) : '')}
-                            onChange={(e) => updateEntry(entry.id, { bodyDraft: e.target.value })}
-                            rows={6}
-                            placeholder="Story body..."
-                          />
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-accent-border flex justify-between items-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => generateStory(entry.id)}
-                          >
-                            <RefreshCcw size={14} className="mr-2" />
-                            Regenerate
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={!user || uploadProgress !== null}
-                            className="min-w-[140px]"
-                            onClick={() => handleSaveToArchive({
-                              entry,
-                              template: selectedTemplate,
-                              userId: user?.id || '',
-                              headline: entry.headlineDraft ?? editableArticle.headline,
-                              bodyHtml: buildBodyHtml({ ...editableArticle, body: parseBodyDraft(entry.bodyDraft, editableArticle.body) }),
-                              prompt: entry.prompt,
-                            }).then((res) => {
-                              if (res.error) {
-                                toast.error('Failed to save story');
-                              } else {
-                                toast.success('Story saved to archive!');
-                                removeEntry(entry.id);
-                              }
-                            })}
-                          >
-                            {uploadProgress !== null ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                {`Saving ${uploadProgress}%`}
-                              </>
-                            ) : (
-                              <>
-                                <Archive className="mr-2 h-4 w-4" />
-                                Save Story
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Fallback for idle state in view mode (shouldn't happen often in this flow)
-                      <div className="text-center py-8">
-                        <p className="mb-4">Ready to write?</p>
-                        <Button onClick={() => generateStory(entry.id)}>Generate</Button>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </div >
-      )
-      }
-    </section >
+    </section>
   );
 }
 
