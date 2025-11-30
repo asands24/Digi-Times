@@ -151,8 +151,20 @@ export default function App() {
 
   if (REQUIRE_LOGIN && loading) {
     return (
-      <div className="app-shell" style={{ padding: 32 }}>
-        <p>Loading…</p>
+      <div className="app-shell" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: 'var(--paper)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '3rem', marginBottom: '1rem' }} className="animate-bounce">📰</p>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+            DigiTimes
+          </h2>
+          <p style={{ color: 'var(--ink-soft)' }}>Loading DigiTimes...</p>
+        </div>
       </div>
     );
   }

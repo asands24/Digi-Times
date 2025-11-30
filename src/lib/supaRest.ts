@@ -3,7 +3,7 @@ import { SUPABASE_URL, SUPABASE_ANON } from './config';
 const PROJECT_REF = 'irxpqhxrylaxfdppnwra';
 const AUTH_KEY = `sb-${PROJECT_REF}-auth-token`;
 
-type SupaMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type SupaMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'HEAD';
 
 /**
  * Retrieves the Supabase access token from localStorage.
@@ -27,14 +27,19 @@ export function getAccessToken(): string | null {
 /**
  * Helper to build headers for Supabase REST requests.
  */
-function buildHeaders(extra?: Record<string, string>) {
+function buildHeaders(method: SupaMethod, extra?: Record<string, string>) {
   const token = getAccessToken();
-  return {
+  const headers: Record<string, string> = {
     'apikey': SUPABASE_ANON,
-    'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...extra,
   };
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  return headers;
 }
 
 /**
@@ -55,7 +60,7 @@ export async function supaRest<T>(
   const res = await fetch(url, {
     method,
     ...init,
-    headers: buildHeaders(init.headers as Record<string, string> | undefined),
+    headers: buildHeaders(method, init.headers as Record<string, string> | undefined),
   });
 
   if (!res.ok) {

@@ -362,6 +362,11 @@ export function StoryArchive({
               ⏳
             </span>
           </p>
+          <div style={{ marginTop: '1rem', opacity: 0, animation: 'fadeIn 0.5s ease 5s forwards' }}>
+            <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
+              Taking too long? Reload
+            </Button>
+          </div>
         </div>
       ) : isError ? (
         <div className="story-archive__empty story-archive__error" role="alert" aria-live="assertive">

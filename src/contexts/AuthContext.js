@@ -150,15 +150,29 @@ export const AuthProvider = ({ children }) => {
           return
         }
 
-        const { data: { session } } = await supabase.auth.getSession()
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session load timed out')), 5000)
+        )
+
+        // Race Supabase getSession against timeout
+        const { data: { session } } = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise
+        ])
+
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          await fetchProfile(session.user.id, session.user)
+          // Don't await profile fetch to prevent blocking the UI
+          fetchProfile(session.user.id, session.user).catch(e => console.error('Profile fetch background error:', e))
         }
       } catch (error) {
         console.error('Error getting session:', error)
-        toast.error('Error loading session')
+        // Don't show toast for timeout, just let it fail to guest/login
+        if (error.message !== 'Session load timed out') {
+          toast.error('Error loading session')
+        }
       } finally {
         setLoading(false)
       }
