@@ -196,6 +196,7 @@ export default function NewspaperPage() {
 
     try {
       await exportNewspaperToPDF('newspaper-content', {
+        stories, // Pass the current stories data
         onProgress: (progress) => {
           if (progress === 100) {
             toast.success('PDF downloaded!', { id: toastId });
