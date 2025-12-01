@@ -21,141 +21,166 @@ import type { ArchiveItem } from '../types/story';
 
 const styles = StyleSheet.create({
     page: {
-        paddingTop: 60, // Increased for fixed header
-        paddingBottom: 60, // Increased for footer
-        paddingHorizontal: 40,
-        fontFamily: 'Times-Roman', // Standard font
-        fontSize: 10,
-        lineHeight: 1.5,
-        color: '#2b2013',
+        paddingTop: 70,
+        paddingBottom: 60,
+        paddingHorizontal: 50,
+        fontFamily: 'Times-Roman',
+        fontSize: 11,
+        lineHeight: 1.6,
+        color: '#1a1a1a',
     },
     header: {
         position: 'absolute',
-        top: 20,
-        left: 40,
-        right: 40,
+        top: 25,
+        left: 50,
+        right: 50,
         borderBottomWidth: 2,
-        borderBottomColor: '#333',
-        paddingBottom: 5,
+        borderBottomColor: '#000',
+        paddingBottom: 8,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     headerText: {
-        fontFamily: 'Times-Roman',
-        fontSize: 10,
+        fontFamily: 'Times-Bold',
+        fontSize: 9,
+        letterSpacing: 1.2,
         textTransform: 'uppercase',
-        color: '#666',
-        fontWeight: 700,
+        color: '#333',
     },
     masthead: {
         textAlign: 'center',
-        marginBottom: 20,
-        marginTop: 10,
-        borderBottomWidth: 3,
-        borderBottomColor: '#222',
-        borderBottomStyle: 'solid', // double not supported, simulate with solid
-        paddingBottom: 15,
+        marginBottom: 25,
+        borderBottomWidth: 4,
+        borderBottomColor: '#000',
+        paddingBottom: 20,
     },
-    title: {
-        fontFamily: 'Times-Roman',
-        fontSize: 48,
-        textAlign: 'center',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        marginBottom: 10,
-    },
-    tagline: {
-        fontSize: 10,
-        textAlign: 'center',
-        fontStyle: 'italic',
-        color: '#5c4322',
-    },
-    meta: {
+    mastheadTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         borderTopWidth: 1,
         borderBottomWidth: 1,
-        borderColor: '#222',
-        paddingVertical: 5,
-        marginBottom: 15,
+        borderColor: '#000',
+        paddingVertical: 6,
+        marginBottom: 12,
         fontSize: 8,
+        letterSpacing: 0.5,
+    },
+    title: {
+        fontFamily: 'Times-Bold',
+        fontSize: 52,
+        textAlign: 'center',
+        letterSpacing: 3,
         textTransform: 'uppercase',
-        fontFamily: 'Times-Roman',
-        fontWeight: 700,
+        marginBottom: 8,
+        color: '#000',
+    },
+    tagline: {
+        fontSize: 11,
+        textAlign: 'center',
+        fontStyle: 'italic',
+        color: '#444',
+        marginTop: 4,
     },
     mainStory: {
-        marginBottom: 20,
+        marginBottom: 30,
     },
     headline: {
-        fontFamily: 'Times-Roman',
-        fontSize: 24,
-        fontWeight: 700,
-        marginBottom: 8,
+        fontFamily: 'Times-Bold',
+        fontSize: 26,
+        lineHeight: 1.2,
+        marginBottom: 10,
         textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        color: '#000',
+    },
+    subheadline: {
+        fontSize: 14,
+        fontStyle: 'italic',
+        marginBottom: 8,
+        color: '#333',
     },
     byline: {
-        fontSize: 8,
+        fontSize: 9,
         textTransform: 'uppercase',
-        color: '#5c4322',
-        marginBottom: 10,
+        letterSpacing: 0.8,
+        color: '#666',
+        marginBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
-        paddingBottom: 5,
+        borderBottomColor: '#ccc',
+        paddingBottom: 8,
+    },
+    imageContainer: {
+        marginBottom: 12,
+        border: '1px solid #ddd',
     },
     image: {
         width: '100%',
-        height: 300,
+        maxHeight: 350,
         objectFit: 'cover',
-        marginBottom: 10,
     },
     caption: {
-        fontSize: 8,
+        fontSize: 9,
         fontStyle: 'italic',
-        color: '#666',
-        marginBottom: 10,
-        backgroundColor: '#f8f6f3',
-        padding: 5,
+        color: '#555',
+        padding: 8,
+        backgroundColor: '#f5f5f5',
+        borderTop: '1px solid #ddd',
     },
-    body: {
+    bodyColumns: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 20,
+        gap: 25,
+        marginTop: 12,
     },
     column: {
-        width: '48%',
+        flex: 1,
         textAlign: 'justify',
+        fontSize: 11,
+        lineHeight: 1.7,
     },
     separator: {
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
-        borderTopWidth: 1,
-        borderTopColor: '#ddd',
-        height: 3,
-        marginVertical: 20,
-        width: '50%',
+        width: 80,
+        height: 1,
+        backgroundColor: '#999',
         alignSelf: 'center',
+        marginVertical: 25,
+    },
+    sideStory: {
+        marginBottom: 25,
+        paddingBottom: 25,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    sideHeadline: {
+        fontFamily: 'Times-Bold',
+        fontSize: 16,
+        lineHeight: 1.3,
+        marginBottom: 8,
+        textTransform: 'uppercase',
+        color: '#000',
+    },
+    sideImage: {
+        width: '100%',
+        height: 180,
+        objectFit: 'cover',
+        marginBottom: 10,
+        border: '1px solid #ddd',
     },
     footer: {
         position: 'absolute',
-        bottom: 20,
-        left: 40,
-        right: 40,
+        bottom: 25,
+        left: 50,
+        right: 50,
         borderTopWidth: 1,
-        borderTopColor: '#ddd',
-        paddingTop: 10,
+        borderTopColor: '#ccc',
+        paddingTop: 8,
         flexDirection: 'row',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     footerText: {
         fontSize: 8,
-        color: '#888',
-    },
-    pageNumber: {
-        position: 'absolute',
-        right: 0,
-        fontSize: 8,
-        color: '#888',
+        color: '#666',
     },
 });
 
@@ -167,58 +192,69 @@ interface NewspaperPDFProps {
 
 // Helper to strip HTML tags
 const stripHtml = (html: string) => {
-    return html.replace(/<[^>]+>/g, '');
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 };
 
 export const NewspaperPDF: React.FC<NewspaperPDFProps> = ({ stories, volume = 1, issueNo = 1 }) => {
     const mainStory = stories[0];
-    const otherStories = stories.slice(1);
+    const sideStories = stories.slice(1);
 
     return (
         <Document>
             <Page size="A4" style={styles.page}>
                 {/* Fixed Header */}
                 <View style={styles.header} fixed>
-                    <Text style={styles.headerText}>DigiTimes Edition</Text>
-                    <Text style={styles.headerText}>{new Date().toLocaleDateString()}</Text>
+                    <Text style={styles.headerText}>DigiTimes</Text>
+                    <Text style={styles.headerText}>{new Date().toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    })}</Text>
                 </View>
 
                 {/* Masthead */}
                 <View style={styles.masthead}>
-                    <View style={styles.meta}>
+                    <View style={styles.mastheadTop}>
                         <Text>Vol. {volume}, No. {issueNo}</Text>
-                        <Text>$1.00</Text>
+                        <Text>Your Personal Edition</Text>
+                        <Text>DigiTimes.com</Text>
                     </View>
-                    <Text style={styles.title}>DigiTimes</Text>
-                    <Text style={styles.tagline}>"Your Memories, Front Page News"</Text>
+                    <Text style={styles.title}>THE DIGITIMES</Text>
+                    <Text style={styles.tagline}>"All the Memories Fit to Print"</Text>
                 </View>
 
-                {/* Main Story */}
+                {/* Main Feature Story */}
                 {mainStory && (
                     <View style={styles.mainStory}>
-                        {(mainStory.base64Image || mainStory.imageUrl) && (
-                            <>
+                        <Text style={styles.headline}>{mainStory.title || 'Untitled Story'}</Text>
+                        {mainStory.prompt && (
+                            <Text style={styles.subheadline}>{mainStory.prompt}</Text>
+                        )}
+                        <Text style={styles.byline}>By DigiTimes Staff</Text>
+
+                        {(mainStory.imageUrl || mainStory.base64Image) && (
+                            <View style={styles.imageContainer}>
                                 <Image
-                                    src={mainStory.base64Image || mainStory.imageUrl || ''}
+                                    src={mainStory.imageUrl || mainStory.base64Image || ''}
                                     style={styles.image}
+                                    cache={false}
                                 />
                                 {mainStory.prompt && (
                                     <Text style={styles.caption}>{mainStory.prompt}</Text>
                                 )}
-                            </>
+                            </View>
                         )}
-                        <Text style={styles.headline}>{mainStory.title || 'Untitled Feature'}</Text>
-                        <Text style={styles.byline}>By DigiTimes Staff</Text>
 
-                        <View style={styles.body}>
+                        <View style={styles.bodyColumns}>
                             <View style={styles.column}>
                                 <Text>
-                                    {stripHtml(mainStory.article || mainStory.prompt || '').slice(0, 1000)}
+                                    {stripHtml(mainStory.article || mainStory.prompt || 'No content available.').slice(0, 800)}
                                 </Text>
                             </View>
                             <View style={styles.column}>
                                 <Text>
-                                    {stripHtml(mainStory.article || mainStory.prompt || '').slice(1000)}
+                                    {stripHtml(mainStory.article || mainStory.prompt || '').slice(800, 1600)}
                                 </Text>
                             </View>
                         </View>
@@ -226,30 +262,34 @@ export const NewspaperPDF: React.FC<NewspaperPDFProps> = ({ stories, volume = 1,
                 )}
 
                 {/* Separator */}
-                {otherStories.length > 0 && <View style={styles.separator} />}
+                {sideStories.length > 0 && <View style={styles.separator} />}
 
-                {/* Other Stories */}
-                {otherStories.map((story, index) => (
-                    <View key={story.id} style={{ marginBottom: 15 }} break={index > 0}>
-                        <Text style={[styles.headline, { fontSize: 18 }]}>{story.title}</Text>
-                        {(story.base64Image || story.imageUrl) && (
+                {/* Additional Stories */}
+                {sideStories.map((story, index) => (
+                    <View key={story.id} style={styles.sideStory} break={index > 1}>
+                        <Text style={styles.sideHeadline}>{story.title || 'Untitled'}</Text>
+
+                        {(story.imageUrl || story.base64Image) && (
                             <Image
-                                src={story.base64Image || story.imageUrl || ''}
-                                style={[styles.image, { height: 200 }]}
+                                src={story.imageUrl || story.base64Image || ''}
+                                style={styles.sideImage}
+                                cache={false}
                             />
                         )}
-                        <Text style={{ fontSize: 9, textAlign: 'justify' }}>
-                            {stripHtml(story.article || story.prompt || '').slice(0, 500)}...
+
+                        <Text style={{ fontSize: 10, lineHeight: 1.6, textAlign: 'justify' }}>
+                            {stripHtml(story.article || story.prompt || 'No content available.').slice(0, 600)}
+                            {stripHtml(story.article || story.prompt || '').length > 600 ? '...' : ''}
                         </Text>
                     </View>
                 ))}
 
                 {/* Footer */}
                 <View style={styles.footer} fixed>
-                    <Text style={styles.footerText}>Created with DigiTimes</Text>
-                    <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => (
+                    <Text style={styles.footerText}>© {new Date().getFullYear()} DigiTimes • Created with DigiTimes</Text>
+                    <Text style={styles.footerText} render={({ pageNumber, totalPages }) =>
                         `Page ${pageNumber} of ${totalPages}`
-                    )} />
+                    } />
                 </View>
             </Page>
         </Document>
