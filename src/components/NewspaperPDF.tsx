@@ -2,27 +2,27 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import type { ArchiveItem } from '../types/story';
 
-// Register fonts
-Font.register({
-    family: 'Playfair Display',
-    fonts: [
-        { src: 'https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.woff2', fontWeight: 400 },
-        { src: 'https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKebvXDXbtM.woff2', fontWeight: 700 },
-    ],
-});
+// Fonts are currently disabled to fix 404 errors. Using standard PDF fonts.
+// Font.register({
+//   family: 'Playfair Display',
+//   fonts: [
+//     { src: 'https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.woff2', fontWeight: 400 },
+//     { src: 'https://fonts.gstatic.com/s/playfairdisplay/v30/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKebvXDXbtM.woff2', fontWeight: 700 },
+//   ],
+// });
 
-Font.register({
-    family: 'Libre Baskerville',
-    fonts: [
-        { src: 'https://fonts.gstatic.com/s/librebaskerville/v14/kmKnZrc3Hgbbcjq75U4uslyuy4kn0qviTjYw.woff2', fontWeight: 400 },
-        { src: 'https://fonts.gstatic.com/s/librebaskerville/v14/kmKiZrc3Hgbbcjq75U4uslyuy4kn0qviTgY5Krg.woff2', fontWeight: 700 },
-    ],
-});
+// Font.register({
+//   family: 'Libre Baskerville',
+//   fonts: [
+//     { src: 'https://fonts.gstatic.com/s/librebaskerville/v14/kmKnZrc3Hgbbcjq75U4uslyuy4kn0qviTjYw.woff2', fontWeight: 400 },
+//     { src: 'https://fonts.gstatic.com/s/librebaskerville/v14/kmKiZrc3Hgbbcjq75U4uslyuy4kn0qviTgY5Krg.woff2', fontWeight: 700 },
+//   ],
+// });
 
 const styles = StyleSheet.create({
     page: {
         padding: 40,
-        fontFamily: 'Libre Baskerville',
+        fontFamily: 'Times-Roman', // Standard font
         fontSize: 10,
         lineHeight: 1.5,
         color: '#2b2013',
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerText: {
-        fontFamily: 'Playfair Display',
+        fontFamily: 'Times-Roman',
         fontSize: 10,
         textTransform: 'uppercase',
         color: '#666',
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
         paddingBottom: 15,
     },
     title: {
-        fontFamily: 'Playfair Display',
+        fontFamily: 'Times-Roman',
         fontSize: 48,
         textAlign: 'center',
         fontWeight: 700,
@@ -75,14 +75,14 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         fontSize: 8,
         textTransform: 'uppercase',
-        fontFamily: 'Playfair Display',
+        fontFamily: 'Times-Roman',
         fontWeight: 700,
     },
     mainStory: {
         marginBottom: 20,
     },
     headline: {
-        fontFamily: 'Playfair Display',
+        fontFamily: 'Times-Roman',
         fontSize: 24,
         fontWeight: 700,
         marginBottom: 8,
