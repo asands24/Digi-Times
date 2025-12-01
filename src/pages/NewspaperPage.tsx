@@ -15,7 +15,6 @@ type StoryRow = Database['public']['Tables']['story_archives']['Row'];
 
 interface StoryWithImage extends StoryRow {
   imageUrl: string | null;
-  base64Image: string | null;
 }
 
 const STORY_COLUMNS =
@@ -139,30 +138,9 @@ export default function NewspaperPage() {
         return;
       }
 
-      // Fetch images as Base64 to avoid CORS in PDF
-      const withImages = await Promise.all(available.map(async (story: StoryRow) => {
-        const imageUrl = getPublicImage(story.image_path);
-        let base64Image: string | null = null;
-
-        if (imageUrl) {
-          try {
-            const response = await fetch(imageUrl);
-            const blob = await response.blob();
-            base64Image = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-          } catch (e) {
-            console.warn('Failed to convert image to base64', e);
-          }
-        }
-
-        return {
-          ...story,
-          imageUrl,
-          base64Image,
-        };
+      const withImages = available.map((story: StoryRow) => ({
+        ...story,
+        imageUrl: getPublicImage(story.image_path),
       }));
 
       // Preserve the requested order
@@ -218,7 +196,6 @@ export default function NewspaperPage() {
 
     try {
       await exportNewspaperToPDF('newspaper-content', {
-        stories, // Pass the current stories data
         onProgress: (progress) => {
           if (progress === 100) {
             toast.success('PDF downloaded!', { id: toastId });

@@ -1,46 +1,72 @@
-
-import React from 'react';
-import { pdf } from '@react-pdf/renderer';
-import { NewspaperPDF } from '../components/NewspaperPDF';
-import type { ArchiveItem } from '../types/story';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export interface ExportPDFOptions {
   filename?: string;
   onProgress?: (progress: number) => void;
-  stories?: ArchiveItem[]; // Pass stories directly
 }
 
 /**
- * Exports a newspaper to a PDF file using @react-pdf/renderer.
+ * Exports a newspaper HTML element to a PDF file using html2canvas.
+ * Captures the visible newspaper layout and converts it to PDF.
  */
 export async function exportNewspaperToPDF(
-  _elementId: string = 'newspaper-content', // Deprecated but kept for signature compatibility
+  elementId: string = 'newspaper-content',
   options: ExportPDFOptions = {}
 ): Promise<void> {
-  const { filename = `DigiTimes-${new Date().toISOString().split('T')[0]}.pdf`, onProgress, stories } = options;
-
-  if (!stories || stories.length === 0) {
-    console.error('No stories provided for PDF export');
-    return;
-  }
+  const { filename = `DigiTimes-${new Date().toISOString().split('T')[0]}.pdf`, onProgress } = options;
 
   try {
     onProgress?.(10);
 
-    // Render the PDF component to a blob
-    const blob = await pdf(<NewspaperPDF stories={stories} />).toBlob();
+    const element = document.getElementById(elementId);
+    if (!element) {
+      throw new Error(`Element with id "${elementId}" not found.`);
+    }
 
-    onProgress?.(80);
+    onProgress?.(30);
 
-    // Create a download link
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Capture the element as an image
+    const canvas = await html2canvas(element, {
+      scale: 2, // Higher quality
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+    });
+
+    onProgress?.(60);
+
+    // Calculate PDF dimensions
+    const imgWidth = 210; // A4 width in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const pageHeight = 297; // A4 height in mm
+
+    const pdf = new jsPDF({
+      orientation: imgHeight > pageHeight ? 'portrait' : 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    let heightLeft = imgHeight;
+    let position = 0;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    // Add first page
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    // Add additional pages if needed
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    onProgress?.(90);
+
+    // Save the PDF
+    pdf.save(filename);
 
     onProgress?.(100);
   } catch (error) {
