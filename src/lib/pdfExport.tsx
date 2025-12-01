@@ -26,46 +26,57 @@ export async function exportNewspaperToPDF(
 
     onProgress?.(30);
 
-    // Capture the element as an image
+    // Capture at 4x scale for professional quality
     const canvas = await html2canvas(element, {
-      scale: 2, // Higher quality
+      scale: 4, // 4x for high quality
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
+      allowTaint: false,
+      imageTimeout: 0,
+      removeContainer: true,
     });
 
     onProgress?.(60);
 
-    // Calculate PDF dimensions
-    const imgWidth = 210; // A4 width in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    const pageHeight = 297; // A4 height in mm
+    // A4 dimensions in mm
+    const A4_WIDTH_MM = 210;
+    const A4_HEIGHT_MM = 297;
 
+    // Calculate scaling to fit A4 width
+    const imgWidth = A4_WIDTH_MM;
+    const imgHeight = (canvas.height * A4_WIDTH_MM) / canvas.width;
+
+    // Initialize PDF with consistent A4 settings
     const pdf = new jsPDF({
-      orientation: imgHeight > pageHeight ? 'portrait' : 'portrait',
+      orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
+      compress: true,
+      precision: 2,
     });
 
     let heightLeft = imgHeight;
     let position = 0;
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    // Use high-quality JPEG compression (0.98 quality)
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
     // Add first page
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+    heightLeft -= A4_HEIGHT_MM;
 
-    // Add additional pages if needed
+    // Add additional pages if content exceeds one page
     while (heightLeft > 0) {
       position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      pdf.addPage('a4', 'portrait');
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= A4_HEIGHT_MM;
     }
 
     onProgress?.(90);
 
-    // Save the PDF
+    // Save with consistent filename format
     pdf.save(filename);
 
     onProgress?.(100);

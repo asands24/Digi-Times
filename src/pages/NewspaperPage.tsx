@@ -255,13 +255,13 @@ export default function NewspaperPage() {
             <Save size={16} className="mr-2" />
             {isSaving ? 'Saving...' : 'Save Issue'}
           </Button>
-          <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading}>
-            <Download size={16} className="mr-2" />
-            {isDownloading ? 'Generating...' : 'Download PDF'}
-          </Button>
           <Button onClick={handlePrint}>
             <Printer size={16} className="mr-2" />
-            Print Newspaper
+            Print to PDF
+          </Button>
+          <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading} size="sm">
+            <Download size={16} className="mr-2" />
+            {isDownloading ? 'Exporting...' : 'Quick Export'}
           </Button>
         </div>
       </header>
