@@ -15,7 +15,7 @@ type StoryRow = Database['public']['Tables']['story_archives']['Row'];
 
 interface StoryWithImage extends StoryRow {
   imageUrl: string | null;
-  base64Image?: string | null;
+  base64Image: string | null;
 }
 
 const STORY_COLUMNS =
