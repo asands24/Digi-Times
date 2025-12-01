@@ -172,7 +172,8 @@
   height: auto;
   display: block;
   max-height: 550px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #f8f6f3;
 }
 
 .newspaper-story__caption {
@@ -545,7 +546,9 @@
   }
 
   .newspaper-story--side .newspaper-story__image {
-    max-height: 60mm;
+    max-height: 400px;
+    object-fit: contain;
+    background: #f8f6f3;
   }
 
   .newspaper-story--side .newspaper-story__body {

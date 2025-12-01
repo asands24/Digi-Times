@@ -266,6 +266,29 @@ export default function NewspaperPage() {
         </div>
       </header>
 
+      {/* PDF Export Instructions */}
+      <div className="newspaper-notice" style={{
+        marginBottom: '1.5rem',
+        padding: '1rem 1.25rem',
+        backgroundColor: 'rgba(139, 93, 22, 0.08)',
+        borderLeft: '3px solid #8b5d16',
+        borderRadius: '4px',
+        fontSize: '0.9rem',
+        lineHeight: '1.6'
+      }}>
+        <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#5c4322' }}>
+          💡 PDF Export Options:
+        </div>
+        <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#5c4322' }}>
+          <li style={{ marginBottom: '0.25rem' }}>
+            <strong>Print to PDF</strong> (Recommended): Click the button above, then select "Save as PDF" in your browser's print dialog for the highest quality vector-based PDF.
+          </li>
+          <li>
+            <strong>Quick Export</strong>: One-click download for convenient sharing. Good quality, larger file size.
+          </li>
+        </ul>
+      </div>
+
       <div className="newspaper-container" id="newspaper-content">
         <header className="newspaper-header">
           <div className="newspaper-meta">
