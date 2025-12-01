@@ -1,5 +1,4 @@
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+
 import React from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { NewspaperPDF } from '../components/NewspaperPDF';
@@ -30,7 +29,7 @@ export async function exportNewspaperToPDF(
 
     // Render the PDF component to a blob
     const blob = await pdf(<NewspaperPDF stories={stories} />).toBlob();
-    
+
     onProgress?.(80);
 
     // Create a download link
