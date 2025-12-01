@@ -22,6 +22,7 @@ export function buildStarterStory(userId: string): ArchiveItem {
     photo_id: null,
     template_id: template?.id ?? null,
     is_public: false,
+    public_slug: null,
     created_at: now,
     updated_at: now,
     imageUrl: SAMPLE_IMAGE,
