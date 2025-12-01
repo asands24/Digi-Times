@@ -21,17 +21,22 @@ import type { ArchiveItem } from '../types/story';
 
 const styles = StyleSheet.create({
     page: {
-        padding: 40,
+        paddingTop: 60, // Increased for fixed header
+        paddingBottom: 60, // Increased for footer
+        paddingHorizontal: 40,
         fontFamily: 'Times-Roman', // Standard font
         fontSize: 10,
         lineHeight: 1.5,
         color: '#2b2013',
     },
     header: {
-        marginBottom: 20,
+        position: 'absolute',
+        top: 20,
+        left: 40,
+        right: 40,
         borderBottomWidth: 2,
         borderBottomColor: '#333',
-        paddingBottom: 10,
+        paddingBottom: 5,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -46,6 +51,7 @@ const styles = StyleSheet.create({
     masthead: {
         textAlign: 'center',
         marginBottom: 20,
+        marginTop: 10,
         borderBottomWidth: 3,
         borderBottomColor: '#222',
         borderBottomStyle: 'solid', // double not supported, simulate with solid
@@ -132,7 +138,7 @@ const styles = StyleSheet.create({
     },
     footer: {
         position: 'absolute',
-        bottom: 30,
+        bottom: 20,
         left: 40,
         right: 40,
         borderTopWidth: 1,
@@ -171,8 +177,8 @@ export const NewspaperPDF: React.FC<NewspaperPDFProps> = ({ stories, volume = 1,
     return (
         <Document>
             <Page size="A4" style={styles.page}>
-                {/* Header */}
-                <View style={styles.header}>
+                {/* Fixed Header */}
+                <View style={styles.header} fixed>
                     <Text style={styles.headerText}>DigiTimes Edition</Text>
                     <Text style={styles.headerText}>{new Date().toLocaleDateString()}</Text>
                 </View>
@@ -190,9 +196,12 @@ export const NewspaperPDF: React.FC<NewspaperPDFProps> = ({ stories, volume = 1,
                 {/* Main Story */}
                 {mainStory && (
                     <View style={styles.mainStory}>
-                        {mainStory.imageUrl && (
+                        {(mainStory.base64Image || mainStory.imageUrl) && (
                             <>
-                                <Image src={mainStory.imageUrl} style={styles.image} />
+                                <Image
+                                    src={mainStory.base64Image || mainStory.imageUrl || ''}
+                                    style={styles.image}
+                                />
                                 {mainStory.prompt && (
                                     <Text style={styles.caption}>{mainStory.prompt}</Text>
                                 )}
@@ -219,20 +228,28 @@ export const NewspaperPDF: React.FC<NewspaperPDFProps> = ({ stories, volume = 1,
                 {/* Separator */}
                 {otherStories.length > 0 && <View style={styles.separator} />}
 
-                {/* Other Stories (simplified for now, just listing titles) */}
+                {/* Other Stories */}
                 {otherStories.map((story, index) => (
-                    <View key={story.id} style={{ marginBottom: 15 }}>
+                    <View key={story.id} style={{ marginBottom: 15 }} break={index > 0}>
                         <Text style={[styles.headline, { fontSize: 18 }]}>{story.title}</Text>
-                        <Text style={{ fontSize: 9 }}>{stripHtml(story.article || story.prompt || '').slice(0, 300)}...</Text>
+                        {(story.base64Image || story.imageUrl) && (
+                            <Image
+                                src={story.base64Image || story.imageUrl || ''}
+                                style={[styles.image, { height: 200 }]}
+                            />
+                        )}
+                        <Text style={{ fontSize: 9, textAlign: 'justify' }}>
+                            {stripHtml(story.article || story.prompt || '').slice(0, 500)}...
+                        </Text>
                     </View>
                 ))}
 
                 {/* Footer */}
-                <View style={styles.footer}>
+                <View style={styles.footer} fixed>
                     <Text style={styles.footerText}>Created with DigiTimes</Text>
                     <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => (
                         `Page ${pageNumber} of ${totalPages}`
-                    )} fixed />
+                    )} />
                 </View>
             </Page>
         </Document>

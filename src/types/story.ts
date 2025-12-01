@@ -26,7 +26,7 @@ export interface StoryTemplate {
   owner: string | null;
 }
 
-export type ArchiveItem = StoryArchiveRow & { imageUrl?: string | null; isSample?: boolean };
+export type ArchiveItem = StoryArchiveRow & { imageUrl?: string | null; base64Image?: string | null; isSample?: boolean };
 
 export interface StoryRecord {
   id: string;
