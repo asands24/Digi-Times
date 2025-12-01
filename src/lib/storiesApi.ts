@@ -63,8 +63,9 @@ export async function deleteStory(id: string) {
  * No auth token required (RLS handles access).
  */
 export async function fetchPublicStory(slug: string) {
+  // Try to find by slug OR id (for backward compatibility or fallback)
   return supaRest<StoryArchiveRow[]>('GET',
-    `/rest/v1/story_archives?public_slug=eq.${slug}&select=*`)
+    `/rest/v1/story_archives?or=(public_slug.eq.${slug},id.eq.${slug})&select=*`)
     .then(rows => rows[0] || null);
 }
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabaseClient } from '../lib/supabaseClient';
 import { persistStory } from '../lib/persistStory';
-import { fetchStoriesForUser, updateStory, deleteStory as apiDeleteStory } from '../lib/storiesApi';
+import { fetchStoriesForUser, updateStory, deleteStory as apiDeleteStory, fetchStoryById } from '../lib/storiesApi';
 import type { 
   ArchiveItem, 
   StoryArchiveRow,
@@ -70,7 +70,7 @@ export async function loadStoryDetails(storyId: string, userId: string): Promise
 
   const { data, error } = await supabaseClient
     .from('story_archives')
-    .select('id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public')
+    .select('id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public,public_slug')
     .eq('id', storyId)
     .eq('created_by', userId)
     .single();
@@ -115,7 +115,7 @@ export async function loadStoriesWithDetails(
 
   const { data, error } = await supabaseClient
     .from('story_archives')
-    .select('id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public')
+    .select('id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public,public_slug')
     .eq('created_by', userId)
     .in('id', storyIds);
 
@@ -140,7 +140,28 @@ export async function loadStoriesWithDetails(
 }
 
 export async function updateStoryVisibility(id: string, nextValue: boolean): Promise<void> {
-  await updateStory(id, { is_public: nextValue });
+  const payload: { is_public: boolean; public_slug?: string } = { is_public: nextValue };
+
+  // If making public, ensure we have a slug
+  if (nextValue) {
+    // Check if it already has one (we could fetch, but simpler to just try to update if null)
+    // Actually, we can just generate one client side if we want, or rely on the DB function if we used that.
+    // The plan said "Use a simple random string generator".
+    // We'll fetch the story first to see if it needs a slug, or just blindly update it if it's null?
+    // Safer to just generate one and let the DB ignore it if we only update if null?
+    // But standard update overwrites.
+    // Let's fetch first to be safe, or just generate one if we don't have it in the UI state?
+    // The UI state might not have the full row.
+    // Let's just generate a random one and send it. If it already has one, we might overwrite it?
+    // Wait, we don't want to change the slug if it exists.
+    // Let's fetch the current story to check.
+    const current = await fetchStoryById(id);
+    if (current && !current.public_slug) {
+      payload.public_slug = Math.random().toString(36).substring(2, 10);
+    }
+  }
+
+  await updateStory(id, payload);
 }
 
 export function useStoryLibrary(userId?: string | null) {

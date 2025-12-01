@@ -262,6 +262,7 @@ export interface Database {
           photo_id: Nullable<string>;
           template_id: Nullable<string>;
           is_public: boolean;
+          public_slug: Nullable<string>;
           created_at: string;
           updated_at: string;
         };
@@ -275,6 +276,7 @@ export interface Database {
           photo_id?: Nullable<string>;
           template_id?: Nullable<string>;
           is_public?: boolean;
+          public_slug?: Nullable<string>;
           created_at?: string;
           updated_at?: string;
         };
@@ -288,6 +290,7 @@ export interface Database {
           photo_id?: Nullable<string>;
           template_id?: Nullable<string>;
         is_public?: boolean;
+        public_slug?: Nullable<string>;
         created_at?: string;
         updated_at?: string;
       };
