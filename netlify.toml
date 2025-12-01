@@ -34,3 +34,6 @@
 [[headers]]
   for = "/*"
   [headers.values]
+[[edge_functions]]
+  path = "/s/*"
+  function = "share-meta"

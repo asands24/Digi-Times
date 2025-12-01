@@ -438,3 +438,77 @@
     text-decoration: none;
   }
 }
+
+/* PDF Generation Sandbox --------------------------------------------------- */
+
+.newspaper-pdf-page {
+  background: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.newspaper-pdf-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  font-family: 'Playfair Display', serif;
+  font-size: 10pt;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.newspaper-pdf-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Libre Baskerville', serif;
+  font-size: 9pt;
+  color: #888;
+}
+
+.newspaper-pdf-content {
+  margin-top: 50px;
+  /* Header height + gap */
+  margin-bottom: 50px;
+  /* Footer height + gap */
+}
+
+/* Enforce 2-column justified layout for stories in PDF */
+.newspaper-pdf-content .newspaper-story__body {
+  column-count: 2 !important;
+  column-gap: 2rem !important;
+  text-align: justify !important;
+  hyphens: auto;
+}
+
+/* Stylish separator between stories */
+.newspaper-pdf-separator {
+  border-bottom: 1px solid #ddd;
+  border-top: 1px solid #ddd;
+  height: 3px;
+  margin: 2rem auto;
+  width: 100%;
+  max-width: 200px;
+}
+
+/* Bolder header */
+.newspaper-pdf-header {
+  font-weight: 700;
+  border-bottom: 2px solid #333;
+}
