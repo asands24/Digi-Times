@@ -294,6 +294,17 @@ export function StoryArchive({
 
   const handleBuildNewspaper = () => {
     const ids = exportableStories.map((story) => story.id).join(',');
+
+    // Check if any stories are private
+    const hasPrivateStories = exportableStories.some((story) => !story.is_public);
+
+    if (hasPrivateStories) {
+      toast('📰 Building newspaper... Tip: Set stories to "Public" if you want to share this with others!', {
+        duration: 5000,
+        icon: '💡',
+      });
+    }
+
     navigate(`/newspaper?ids=${ids}`);
   };
 

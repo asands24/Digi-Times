@@ -1,4 +1,9 @@
-export const APP_ACCESS_MODE = process.env.APP_ACCESS_MODE ?? 'login'; // 'public' | 'login'
+// Authentication mode: 'public' (no login required) or 'login' (requires authentication)
+// To re-enable the paywall/authentication:
+//   1. Set APP_ACCESS_MODE='login' in your .env file, OR
+//   2. Change the default below from 'public' to 'login'
+//   3. Restart the dev server
+export const APP_ACCESS_MODE = process.env.APP_ACCESS_MODE ?? 'public'; // 'public' | 'login'
 export const REQUIRE_LOGIN = APP_ACCESS_MODE === 'login';
 
 const URL =
