@@ -1139,6 +1139,7 @@ button {
 .animate-heartbeat {
   animation: heartbeat 1.5s ease-in-out infinite;
 }
+
 /* ================================================
    DROPDOWN MENU STYLES
    ================================================ */
@@ -1285,6 +1286,71 @@ button {
   font-style: italic;
   color: var(--ink-muted) !important;
 }
+
+.login-page__features {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 2px solid var(--accent-border);
+}
+
+.login-page__features-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  text-align: center;
+  color: var(--ink-black);
+  margin: 0 0 2rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-page__features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .login-page__features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.login-page__feature {
+  text-align: center;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  border: 1px solid var(--accent-border);
+  transition: all 0.3s ease;
+}
+
+.login-page__feature:hover {
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.login-page__feature-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.login-page__feature h4 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+  color: var(--ink-black);
+  letter-spacing: 0.05em;
+}
+
+.login-page__feature p {
+  font-size: 0.9rem !important;
+  line-height: 1.5 !important;
+  color: var(--ink-soft) !important;
+  margin: 0 !important;
+}
+
 
 .login-page__form-card {
   background: var(--surface);
@@ -1478,4 +1544,5 @@ button {
   to {
     transform: rotate(360deg);
   }
+}
 }

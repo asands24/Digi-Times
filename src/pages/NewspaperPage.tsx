@@ -225,11 +225,24 @@ export default function NewspaperPage() {
   }
 
   if (error) {
+    // Determine error type for better messaging
+    const isPermissionError = error.includes('permission') || error.includes('private');
+    const isNotFoundError = error.includes('not found') || error.includes('deleted');
+
     return (
       <div className="newspaper-error">
         <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🛑</p>
-        <h2 style={{ fontFamily: 'var(--font-display)' }}>Stopped the presses!</h2>
-        <p style={{ maxWidth: '420px', margin: '0 auto 1.5rem' }}>{error}</p>
+        <h2 style={{ fontFamily: 'var(--font-display)' }}>
+          {isPermissionError ? 'Access Restricted' : isNotFoundError ? 'Stories Not Found' : 'Unable to Load Stories'}
+        </h2>
+        <p style={{ maxWidth: '520px', margin: '0 auto 1rem', fontSize: '1rem', lineHeight: '1.6' }}>
+          {error}
+        </p>
+        {isPermissionError && (
+          <p style={{ maxWidth: '520px', margin: '0 auto 1.5rem', fontSize: '0.9rem', color: 'var(--ink-soft)' }}>
+            💡 <strong>Tip:</strong> To share stories with others, make sure they're set to "Public" in your archive before creating the newspaper link.
+          </p>
+        )}
         <Link to="/">
           <Button variant="outline">Return to Newsroom</Button>
         </Link>

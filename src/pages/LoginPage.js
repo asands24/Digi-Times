@@ -57,6 +57,33 @@ const LoginPage = () => {
           <p className="login-page__hint">
             Featured photos rotate with every visit, so everyone gets their moment to shine.
           </p>
+
+          {/* Features Overview */}
+          <div className="login-page__features">
+            <h3 className="login-page__features-title">What You Can Do</h3>
+            <div className="login-page__features-grid">
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">📸</span>
+                <h4>Photo to Story</h4>
+                <p>Upload any photo and watch it transform into a newspaper-style article with AI-powered storytelling.</p>
+              </div>
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">✨</span>
+                <h4>Smart Generation</h4>
+                <p>Our AI creates kid-friendly, engaging stories that turn everyday moments into front-page news.</p>
+              </div>
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">📰</span>
+                <h4>Print & Share</h4>
+                <p>Build beautiful newspaper layouts, save as PDF, and share memorable editions with family and friends.</p>
+              </div>
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">📦</span>
+                <h4>Archive & Organize</h4>
+                <p>Keep all your stories in one place, organize by category, and create newspaper issues anytime.</p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <Card className="login-page__form-card">
