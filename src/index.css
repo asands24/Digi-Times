@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Newsreader:opsz,wght@6..72,400;6..72,600;6..72,700&display=swap');
-
 :root {
   /* Color Palette - "Deep Navy & Newsprint" */
   --paper: #FAF8F5;
@@ -582,8 +580,8 @@ button {
 
 .story-archive__excerpt {
   font-family: var(--font-news);
-  font-size: 0.95rem;
-  line-height: 1.8;
+  font-size: 1rem;
+  line-height: 1.7;
   color: var(--ink);
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -791,7 +789,8 @@ button {
 .template-card__body {
   font-family: var(--font-news);
   color: var(--ink-soft);
-  line-height: 1.6;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
   margin: 0;
 }
 
@@ -1046,15 +1045,15 @@ button {
 }
 
 .newspaper-headline--large {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(2rem, 5vw + 0.5rem, 3.5rem);
 }
 
 .newspaper-headline--medium {
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.5rem, 3vw + 0.25rem, 2.25rem);
 }
 
 .newspaper-headline--small {
-  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  font-size: clamp(1.25rem, 2.5vw + 0.15rem, 1.75rem);
 }
 
 /* Newspaper Deck/Subhead - Italic serif */
@@ -1355,4 +1354,128 @@ button {
   margin-top: 1.5rem !important;
   text-align: center;
   line-height: 1.5;
+}
+
+/* ================================================
+   PAYWALL STYLES
+   Premium feature gates
+   ================================================ */
+
+.paywall-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  min-height: 300px;
+}
+
+.paywall-card {
+  max-width: 500px;
+  width: 100%;
+  background: linear-gradient(180deg, #fffdf8 0%, #f4ebdc 100%);
+  border: 2px solid var(--accent-gold);
+  border-radius: 18px;
+  padding: 2.5rem;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(197, 160, 101, 0.2);
+}
+
+.paywall-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(197, 160, 101, 0.15);
+  color: var(--accent-gold-dark);
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.5rem;
+}
+
+.paywall-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  margin: 0 0 1rem 0;
+  color: var(--ink-black);
+  letter-spacing: 0.02em;
+}
+
+.paywall-description {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 2rem 0;
+}
+
+.paywall-benefits {
+  background: var(--paper-white);
+  border: 1px solid var(--accent-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.paywall-benefits-title {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+  margin: 0 0 1rem 0;
+}
+
+.paywall-benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.paywall-benefits-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.paywall-benefits-list li svg {
+  flex-shrink: 0;
+  color: var(--accent-gold-dark);
+}
+
+.paywall-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.paywall-status {
+  margin-top: 1.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.paywall-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
