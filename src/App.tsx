@@ -184,12 +184,14 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      <nav className="app-nav">
-        <Link to="/">Home</Link>
-        <Link to="/templates">Templates</Link>
-        <Link to="/gallery">Gallery</Link>
-        {IS_DEV ? <Link to="/debug/templates">Template Debug</Link> : null}
-      </nav>
+      {user && (
+        <nav className="app-nav">
+          <Link to="/">Home</Link>
+          <Link to="/templates">Templates</Link>
+          <Link to="/gallery">Gallery</Link>
+          {IS_DEV ? <Link to="/debug/templates">Template Debug</Link> : null}
+        </nav>
+      )}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/templates" element={<TemplatesPage />} />
