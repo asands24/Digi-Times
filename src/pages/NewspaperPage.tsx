@@ -1,7 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Printer, Save, Download, Calendar } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { supabase } from '../lib/supabaseClient';
 import { supaRest } from '../lib/supaRest';
 import { createIssue, fetchIssueById } from '../lib/storiesApi';
@@ -59,6 +68,9 @@ export default function NewspaperPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [issueTitle, setIssueTitle] = useState('My Daily Edition');
+  const issueTitleRef = useRef<HTMLInputElement>(null);
 
   // Check if "On This Day" feature is enabled via URL param
   const showHistory = useMemo(() => {
@@ -90,7 +102,7 @@ export default function NewspaperPage() {
     try {
       // If loading from an issue, fetch the issue first to get story IDs
       if (issueId) {
-        console.log('[NewspaperPage] 🔍 Fetching issue', issueId);
+        if (process.env.NODE_ENV !== 'production') console.log('[NewspaperPage] 🔍 Fetching issue', issueId);
         const issue = await fetchIssueById(issueId);
 
         if (!issue) {
@@ -111,7 +123,7 @@ export default function NewspaperPage() {
         return;
       }
 
-      console.log('[NewspaperPage] 🔍 Fetching stories (RAW FETCH)', { ids: targetIds });
+      if (process.env.NODE_ENV !== 'production') console.log('[NewspaperPage] 🔍 Fetching stories (RAW FETCH)', { ids: targetIds });
 
       // WORKAROUND: Use raw fetch because Supabase client hangs
       const idsParam = `(${targetIds.join(',')})`;
@@ -124,7 +136,7 @@ export default function NewspaperPage() {
         }
       );
 
-      console.log('[NewspaperPage] Raw fetch response', { count: data.length });
+      if (process.env.NODE_ENV !== 'production') console.log('[NewspaperPage] Raw fetch response', { count: data.length });
 
       const available = (data ?? []).filter((story: StoryRow) => {
         if (story.is_public) {
@@ -173,25 +185,27 @@ export default function NewspaperPage() {
     window.print();
   };
 
-  const handleSaveIssue = async () => {
+  const handleSaveIssue = () => {
     if (!user) {
       toast.error('You must be logged in to save an issue.');
       return;
     }
+    setSaveDialogOpen(true);
+  };
 
-    const title = window.prompt('Name your newspaper issue:', 'My Daily Edition');
-    if (!title) return;
-
+  const handleConfirmSaveIssue = async () => {
+    if (!user || !issueTitle.trim()) return;
+    setSaveDialogOpen(false);
     setIsSaving(true);
     try {
       await createIssue({
-        title,
+        title: issueTitle.trim(),
         storyIds: stories.map(s => s.id),
         userId: user.id,
       });
       toast.success('Issue saved successfully!');
     } catch (err) {
-      console.error('Failed to save issue', err);
+      if (process.env.NODE_ENV !== 'production') console.error('Failed to save issue', err);
       toast.error('Failed to save issue.');
     } finally {
       setIsSaving(false);
@@ -211,7 +225,7 @@ export default function NewspaperPage() {
         },
       });
     } catch (err) {
-      console.error('Failed to generate PDF', err);
+      if (process.env.NODE_ENV !== 'production') console.error('Failed to generate PDF', err);
       toast.error('Failed to generate PDF. Please try again.', { id: toastId });
     } finally {
       setIsDownloading(false);
@@ -307,25 +321,11 @@ export default function NewspaperPage() {
       </header>
 
       {/* PDF Export Instructions */}
-      <div className="newspaper-notice" style={{
-        marginBottom: '1.5rem',
-        padding: '1rem 1.25rem',
-        backgroundColor: 'rgba(139, 93, 22, 0.08)',
-        borderLeft: '3px solid #8b5d16',
-        borderRadius: '4px',
-        fontSize: '0.9rem',
-        lineHeight: '1.6'
-      }}>
-        <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#5c4322' }}>
-          💡 PDF Export Options:
-        </div>
-        <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#5c4322' }}>
-          <li style={{ marginBottom: '0.25rem' }}>
-            <strong>Print to PDF</strong> (Recommended): Click the button above, then select "Save as PDF" in your browser's print dialog for the highest quality vector-based PDF.
-          </li>
-          <li>
-            <strong>Quick Export</strong>: One-click download for convenient sharing. Good quality, larger file size.
-          </li>
+      <div className="newspaper-pdf-notice no-print">
+        <div className="newspaper-pdf-notice__heading">💡 PDF Export Options:</div>
+        <ul className="newspaper-pdf-notice__list">
+          <li><strong>Print to PDF</strong> (Recommended): Click the button above, then select "Save as PDF" in your browser's print dialog for the highest quality vector-based PDF.</li>
+          <li><strong>Quick Export</strong>: One-click download for convenient sharing. Good quality, larger file size.</li>
         </ul>
       </div>
 
@@ -409,6 +409,31 @@ export default function NewspaperPage() {
           <p>Printed with DigiTimes • Turn your memories into headlines.</p>
         </footer>
       </div>
+
+      {/* Save Issue Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Newspaper Issue</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-2">
+            <Label htmlFor="issue-title">Issue name</Label>
+            <Input
+              id="issue-title"
+              ref={issueTitleRef}
+              value={issueTitle}
+              onChange={(e) => setIssueTitle(e.target.value)}
+              placeholder="My Daily Edition"
+              onKeyDown={(e) => e.key === 'Enter' && handleConfirmSaveIssue()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleConfirmSaveIssue} disabled={!issueTitle.trim()}>Save Issue</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

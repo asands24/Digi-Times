@@ -1429,6 +1429,155 @@ button {
   line-height: 1.5;
 }
 
+.login-page__legal-link {
+  color: var(--accent-gold-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.login-page__legal-link:hover {
+  color: var(--ink-black);
+}
+
+.login-page__google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: 1.5px solid var(--accent-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink-black);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.login-page__google:hover:not(:disabled) {
+  background: var(--paper-soft);
+  border-color: var(--ink-muted);
+}
+
+.login-page__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.login-page__divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--accent-border);
+}
+
+.login-page__divider-text {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* ================================================
+   POLICY PAGES (Privacy & Guidelines)
+   ================================================ */
+
+.policy-page {
+  min-height: 100vh;
+  background: var(--paper-white, #fffdf8);
+  padding: 3rem 1.5rem;
+}
+
+.policy-page__inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.policy-page__back {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--accent-gold-dark);
+  text-decoration: none;
+  margin-bottom: 2rem;
+}
+
+.policy-page__back:hover {
+  text-decoration: underline;
+}
+
+.policy-page__title {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--ink-black);
+  margin: 0 0 0.5rem;
+}
+
+.policy-page__updated {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  margin: 0 0 2rem;
+}
+
+.policy-page__intro {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  margin-bottom: 2.5rem;
+  line-height: 1.7;
+}
+
+.policy-page__section {
+  margin-bottom: 2rem;
+}
+
+.policy-page__section h2 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ink-black);
+  margin: 0 0 0.5rem;
+}
+
+.policy-page__section p {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.policy-page__section a {
+  color: var(--accent-gold-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.newspaper-pdf-notice {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: rgba(139, 93, 22, 0.08);
+  border-left: 3px solid #8b5d16;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #5c4322;
+}
+
+.newspaper-pdf-notice__heading {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.newspaper-pdf-notice__list {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.newspaper-pdf-notice__list li {
+  margin-bottom: 0.25rem;
+}
+
 /* ================================================
    PAYWALL STYLES
    Premium feature gates

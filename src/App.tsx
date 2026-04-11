@@ -23,6 +23,8 @@ import AuthCallback from './pages/AuthCallback';
 import PublicStoryPage from './pages/PublicStoryPage';
 import { IssuesList } from './components/IssuesList';
 import NewspaperPage from './pages/NewspaperPage';
+import PrivacyPage from './pages/PrivacyPage';
+import GuidelinesPage from './pages/GuidelinesPage';
 
 const DebugTemplates = lazy(() => import('./pages/DebugTemplates'));
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -210,6 +212,8 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/s/:slug" element={<PublicStoryPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/guidelines" element={<GuidelinesPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AppErrorBoundary>
@@ -249,6 +253,8 @@ export default function App() {
         />
         <Route
           path="/newspaper" element={<NewspaperPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/guidelines" element={<GuidelinesPage />} />
         <Route
           path="/login"
           element={user ? <Navigate to="/" replace /> : <LoginPage />}
