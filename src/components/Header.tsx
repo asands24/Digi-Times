@@ -1,6 +1,6 @@
 import { LogOut, User } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Button } from './ui/button';
 import {
@@ -59,6 +59,12 @@ export function Header() {
             Your Family Stories, Beautifully Preserved
           </span>
         </div>
+
+        <nav className="editorial-header__nav" aria-label="Main navigation">
+          <NavLink to="/" end className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Home</NavLink>
+          <NavLink to="/templates" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Templates</NavLink>
+          <NavLink to="/gallery" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Gallery</NavLink>
+        </nav>
 
         <div className="editorial-header__actions">
           <DropdownMenu>

@@ -122,9 +122,19 @@ function HomePage() {
 
         <OnboardingBanner />
         <section ref={builderRef} className="creation-section">
+          <div className="section-label">
+            <span className="section-label__line" />
+            <span className="section-label__text">Create a Story</span>
+            <span className="section-label__line" />
+          </div>
           <EventBuilder />
         </section>
         <section ref={archiveRef} className="archive-section">
+          <div className="section-label">
+            <span className="section-label__line" />
+            <span className="section-label__text">Your Stories</span>
+            <span className="section-label__line" />
+          </div>
           <StoryArchive
             stories={stories}
             isLoading={isLoading}
@@ -138,6 +148,25 @@ function HomePage() {
           />
         </section>
       </main>
+
+      <footer className="site-footer">
+        <div className="site-footer__inner">
+          <div className="site-footer__brand">
+            <span className="site-footer__name">📰 DIGITIMES</span>
+            <p className="site-footer__tagline">Everyday life, front-page worthy.</p>
+          </div>
+          <div className="site-footer__links">
+            <Link to="/" className="site-footer__link">Home</Link>
+            <Link to="/templates" className="site-footer__link">Templates</Link>
+            <Link to="/gallery" className="site-footer__link">Gallery</Link>
+            <a href="mailto:asands44@gmail.com" className="site-footer__link">Contact</a>
+          </div>
+          <p className="site-footer__copy">
+            © {new Date().getFullYear()} DigiTimes · Made with ☕ and a love of stories
+          </p>
+        </div>
+      </footer>
+
       <StoryPreviewDialog
         story={previewStory}
         open={Boolean(previewStory)}
@@ -189,14 +218,6 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      {user && (
-        <nav className="app-nav">
-          <Link to="/">Home</Link>
-          <Link to="/templates">Templates</Link>
-          <Link to="/gallery">Gallery</Link>
-          {IS_DEV ? <Link to="/debug/templates">Template Debug</Link> : null}
-        </nav>
-      )}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/templates" element={<TemplatesPage />} />
