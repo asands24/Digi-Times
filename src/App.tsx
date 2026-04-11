@@ -1,5 +1,5 @@
+import { lazy, Suspense, useCallback, useRef, useState, type RefObject } from 'react';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
-import { useCallback, useRef, useState, type RefObject } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
 import EventBuilder from './components/EventBuilder';
@@ -20,11 +20,11 @@ import { useAuth } from './providers/AuthProvider';
 import LoginPage from './pages/LoginPage';
 import { REQUIRE_LOGIN } from './lib/config';
 import AuthCallback from './pages/AuthCallback';
-import { lazy, Suspense } from 'react';
-const DebugTemplates = lazy(() => import('./pages/DebugTemplates'));
 import PublicStoryPage from './pages/PublicStoryPage';
 import { IssuesList } from './components/IssuesList';
 import NewspaperPage from './pages/NewspaperPage';
+
+const DebugTemplates = lazy(() => import('./pages/DebugTemplates'));
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 function HomePage() {
