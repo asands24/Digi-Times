@@ -1,0 +1,137 @@
+/* On This Day in History Box Styles */
+/* Newspaper-authentic styling with subtle elegance */
+
+.on-this-day-box {
+    background: var(--paper, #fefdfb);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    padding: 16px 20px;
+    margin: 24px 0;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.on-this-day-box--visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.on-this-day-box__border-top,
+.on-this-day-box__border-bottom {
+    height: 2px;
+    background: linear-gradient(to right,
+            transparent 0%,
+            rgba(0, 0, 0, 0.2) 20%,
+            rgba(0, 0, 0, 0.2) 80%,
+            transparent 100%);
+    margin: 0 -4px;
+}
+
+.on-this-day-box__border-top {
+    margin-bottom: 12px;
+}
+
+.on-this-day-box__border-bottom {
+    margin-top: 12px;
+}
+
+.on-this-day-box__header {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #777;
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.on-this-day-box__date {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: #555;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.on-this-day-box__events {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.on-this-day-box__event {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #333;
+    margin-bottom: 10px;
+    padding-left: 8px;
+    position: relative;
+}
+
+.on-this-day-box__event:last-child {
+    margin-bottom: 0;
+}
+
+.on-this-day-box__event::before {
+    content: '•';
+    position: absolute;
+    left: -2px;
+    color: #666;
+    font-weight: bold;
+}
+
+.on-this-day-box__year {
+    font-weight: 600;
+    color: #222;
+}
+
+.on-this-day-box__separator {
+    color: #666;
+}
+
+.on-this-day-box__description {
+    color: #333;
+}
+
+/* Print Styles */
+@media print {
+    .on-this-day-box {
+        opacity: 1 !important;
+        transform: none !important;
+        page-break-inside: avoid;
+        border: 1px solid #000;
+        background: #fff;
+    }
+
+    .on-this-day-box__header,
+    .on-this-day-box__date {
+        color: #000;
+    }
+
+    .on-this-day-box__event {
+        color: #000;
+    }
+
+    .on-this-day-box__year {
+        color: #000;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .on-this-day-box {
+        padding: 14px 16px;
+        margin: 20px 0;
+    }
+
+    .on-this-day-box__header {
+        font-size: 9px;
+    }
+
+    .on-this-day-box__event {
+        font-size: 12px;
+    }
+}

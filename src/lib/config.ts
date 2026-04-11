@@ -1,9 +1,9 @@
 // Authentication mode: 'public' (no login required) or 'login' (requires authentication)
 // To re-enable the paywall/authentication:
-//   1. Set APP_ACCESS_MODE='login' in your .env file, OR
+//   1. Set REACT_APP_ACCESS_MODE='login' in your .env file, OR
 //   2. Change the default below from 'public' to 'login'
 //   3. Restart the dev server
-export const APP_ACCESS_MODE = process.env.APP_ACCESS_MODE ?? 'public'; // 'public' | 'login'
+export const APP_ACCESS_MODE = process.env.REACT_APP_ACCESS_MODE ?? 'public'; // 'public' | 'login'
 export const REQUIRE_LOGIN = APP_ACCESS_MODE === 'login';
 
 const URL =
@@ -24,8 +24,8 @@ if (!URL || !KEY) {
 export const SUPABASE_URL: string = URL;
 export const SUPABASE_ANON: string = KEY;
 
-if (typeof window !== 'undefined') {
-  // Log non-secret info for developers
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  // Log non-secret info for developers (dev only)
   console.log('[Supabase config]', {
     SUPABASE_URL,
     hasAnonKey: Boolean(SUPABASE_ANON),

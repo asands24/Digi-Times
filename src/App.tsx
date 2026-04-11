@@ -20,7 +20,8 @@ import { useAuth } from './providers/AuthProvider';
 import LoginPage from './pages/LoginPage';
 import { REQUIRE_LOGIN } from './lib/config';
 import AuthCallback from './pages/AuthCallback';
-import DebugTemplates from './pages/DebugTemplates';
+import { lazy, Suspense } from 'react';
+const DebugTemplates = lazy(() => import('./pages/DebugTemplates'));
 import PublicStoryPage from './pages/PublicStoryPage';
 import { IssuesList } from './components/IssuesList';
 import NewspaperPage from './pages/NewspaperPage';
@@ -69,17 +70,17 @@ function HomePage() {
         <section className="welcome-hero">
 
           <div>
-            <p className="welcome-hero__kicker">DigiTimes</p>
+            <p className="welcome-hero__kicker">📰 DigiTimes</p>
             <h1 className="welcome-hero__title">
-              Turn Your Moments into Front-Page Stories
+              Your photo deserves a front page
             </h1>
             <p className="welcome-hero__subtitle">
-              Upload a photo → we turn it into a newspaper-style story you can save, print, or share.
-              Story · Newspaper · Issue — all in one guided flow.
+              Upload any photo — a birthday, a school project, a family trip — and DigiTimes turns it into a
+              real newspaper story in seconds. Print it, share the link, or bundle it into an issue to send to grandma.
             </p>
             <div className="welcome-hero__actions">
               <Button size="lg" onClick={() => scrollToSection(builderRef)}>
-                Create a Story
+                Make My Story — It's Free
               </Button>
               <Button
                 size="lg"
@@ -89,27 +90,31 @@ function HomePage() {
                 View My Stories
               </Button>
             </div>
+            <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+              No sign-up needed to try it. Stories save when you create an account.
+            </p>
           </div>
+
           <div className="welcome-hero__pillars">
             <div className="welcome-hero__pillar">
-              <span className="welcome-hero__pillar-icon">📰</span>
+              <span className="welcome-hero__pillar-icon">📸</span>
               <div>
-                <h3>Front Page Ready</h3>
-                <p>Serif headlines, print-worthy layouts, and a cozy masthead vibe.</p>
+                <h3>1. Upload a photo</h3>
+                <p>Any moment worth remembering — birthday, trip, milestone, everyday magic.</p>
               </div>
             </div>
             <div className="welcome-hero__pillar">
               <span className="welcome-hero__pillar-icon">✨</span>
               <div>
-                <h3>Guided in 3 Steps</h3>
-                <p>Add photo, tell the story, review &amp; save — no guesswork.</p>
+                <h3>2. AI writes the story</h3>
+                <p>A kid-friendly headline and article appears in seconds. Edit anything you like.</p>
               </div>
             </div>
             <div className="welcome-hero__pillar">
-              <span className="welcome-hero__pillar-icon">📦</span>
+              <span className="welcome-hero__pillar-icon">📬</span>
               <div>
-                <h3>Issues to Share</h3>
-                <p>Bundle stories into an issue for printing or sending to family.</p>
+                <h3>3. Print or share</h3>
+                <p>Download a print-ready newspaper, share a link, or bundle stories into an issue.</p>
               </div>
             </div>
           </div>
@@ -195,7 +200,16 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/templates" element={<TemplatesPage />} />
-        {IS_DEV ? <Route path="/debug/templates" element={<DebugTemplates />} /> : null}
+        {IS_DEV ? (
+          <Route
+            path="/debug/templates"
+            element={
+              <Suspense fallback={null}>
+                <DebugTemplates />
+              </Suspense>
+            }
+          />
+        ) : null}
         <Route path="/gallery" element={<PhotoGallery />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />

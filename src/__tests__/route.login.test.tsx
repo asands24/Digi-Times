@@ -49,12 +49,12 @@ beforeEach(() => {
 
 describe('/login route', () => {
   afterEach(() => {
-    process.env.APP_ACCESS_MODE = 'public';
+    process.env.REACT_APP_ACCESS_MODE = 'public';
     jest.clearAllMocks();
   });
 
   it('shows the login page when logged out and login is required', async () => {
-    process.env.APP_ACCESS_MODE = 'login';
+    process.env.REACT_APP_ACCESS_MODE = 'login';
     useAuth.mockReturnValue({ user: null, loading: false });
 
     const App = (await import('../App')).default;
@@ -69,7 +69,7 @@ describe('/login route', () => {
   });
 
   it('redirects logged-in visitors away from /login', async () => {
-    process.env.APP_ACCESS_MODE = 'login';
+    process.env.REACT_APP_ACCESS_MODE = 'login';
     useAuth.mockReturnValue({ user: { id: 'user-123' }, loading: false });
 
     const App = (await import('../App')).default;

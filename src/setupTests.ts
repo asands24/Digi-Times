@@ -6,6 +6,6 @@ process.env.REACT_APP_SUPABASE_URL =
 process.env.REACT_APP_SUPABASE_ANON_KEY =
   process.env.REACT_APP_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock';
-process.env.APP_ACCESS_MODE = process.env.APP_ACCESS_MODE ?? 'public';
+process.env.REACT_APP_ACCESS_MODE = process.env.REACT_APP_ACCESS_MODE ?? 'public';
 
 mockBrowserFilePipeline();

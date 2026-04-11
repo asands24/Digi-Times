@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Printer, Save, Download } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Printer, Save, Download, Calendar } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { supabase } from '../lib/supabaseClient';
 import { supaRest } from '../lib/supaRest';
@@ -9,6 +9,7 @@ import { useAuth } from '../providers/AuthProvider';
 import type { Database } from '../types/supabase';
 import toast from 'react-hot-toast';
 import { exportNewspaperToPDF } from '../lib/pdfExport';
+import { OnThisDayBox } from '../components/OnThisDayBox';
 import '../styles/newspaper-print.css';
 
 type StoryRow = Database['public']['Tables']['story_archives']['Row'];
@@ -50,6 +51,7 @@ function buildPreview(story: StoryWithImage) {
 
 export default function NewspaperPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [stories, setStories] = useState<StoryWithImage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,12 @@ export default function NewspaperPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Check if "On This Day" feature is enabled via URL param
+  const showHistory = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('showHistory') === 'true';
+  }, [location.search]);
 
   const ids = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -210,6 +218,16 @@ export default function NewspaperPage() {
     }
   };
 
+  const handleToggleHistory = () => {
+    const params = new URLSearchParams(location.search);
+    if (showHistory) {
+      params.delete('showHistory');
+    } else {
+      params.set('showHistory', 'true');
+    }
+    navigate({ search: params.toString() }, { replace: true });
+  };
+
   if (loading) {
     return (
       <div className="newspaper-loading">
@@ -264,6 +282,15 @@ export default function NewspaperPage() {
           {notice && <span className="newspaper-notice">{notice}</span>}
         </div>
         <div className="newspaper-actions__right">
+          <Button
+            variant={showHistory ? 'default' : 'outline'}
+            onClick={handleToggleHistory}
+            size="sm"
+            title="Toggle 'On This Day in History' section"
+          >
+            <Calendar size={16} className="mr-2" />
+            {showHistory ? 'Hide History' : 'Show History'}
+          </Button>
           <Button variant="outline" onClick={handleSaveIssue} disabled={isSaving}>
             <Save size={16} className="mr-2" />
             {isSaving ? 'Saving...' : 'Save Issue'}
@@ -371,6 +398,11 @@ export default function NewspaperPage() {
               </article>
             ))}
           </section>
+        )}
+
+        {/* On This Day in History - Optional */}
+        {showHistory && mainStory && (
+          <OnThisDayBox date={new Date(mainStory.created_at)} />
         )}
 
         <footer className="newspaper-footer">

@@ -92,124 +92,76 @@ export async function persistStory(
   }
 
   const supabase = supabaseClient;
-  console.log('[persistStory] Supabase client exists?', !!supabase);
   if (!supabase) {
-    console.error('[persistStory] ❌ No Supabase client – aborting');
     throw new Error('[persistStory] Supabase client is unavailable');
   }
 
-  console.log('[persistStory] starting', { mode, storyId, payload });
-  console.log('[persistStory] about to upload image', {
-    filePath,
-    fileName: file.name,
-  });
-  
-  // Storage is fixed, so we can upload now.
-  const DEBUG_SKIP_UPLOAD = false;
-
+  // Upload via XHR to avoid fetch/Supabase client hanging issues.
+  // Token is sourced from localStorage first, then falls back to getSession with timeout.
   const uploadStart = Date.now();
   let uploadError: StorageError | null = null;
-  if (!DEBUG_SKIP_UPLOAD) {
-    console.log('[persistStory] 🚀 Starting upload await...');
-    
-    // WORKAROUND: Use XHR instead of fetch/Supabase client
-    // because both fetch and Supabase client are hanging
-    try {
-      console.log('[persistStory] VERSION: XHR_WITH_TOKEN_FALLBACK_V2');
-      
-      // Helper to get token with timeout and localStorage fallback
-      const getToken = async () => {
-        console.log('[persistStory] getToken called');
-        
-        // STRATEGY 1: Try localStorage FIRST (fastest, avoids hanging client)
-        const localToken = getAccessToken();
-        if (localToken) {
-          console.log('[persistStory] ✅ Found token in localStorage');
-          return localToken;
+
+  try {
+    const getToken = async () => {
+      // Strategy 1: localStorage (fastest, avoids potential hanging)
+      const localToken = getAccessToken();
+      if (localToken) return localToken;
+
+      // Strategy 2: getSession with timeout
+      try {
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 2000)
+        );
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        if (session?.access_token) return session.access_token;
+      } catch {
+        // Fall through — no token available
+      }
+      return null;
+    };
+
+    const token = await getToken();
+    if (!token) {
+      throw new Error('No auth token available');
+    }
+
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/photos/${filePath}`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('apikey', SUPABASE_ANON);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
         }
-
-        console.log('[persistStory] ⚠️ No local token, trying getSession (risky)...');
-
-        // STRATEGY 2: Try standard way with timeout
-        try {
-          const sessionPromise = supabase.auth.getSession();
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 2000)
-          );
-          
-          const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-          if (session?.access_token) return session.access_token;
-        } catch (e) {
-          console.warn('[persistStory] getSession timed out or failed');
-        }
-
-        return null;
       };
 
-      const token = await getToken();
-      console.log('[persistStory] 🔑 Token retrieved:', Boolean(token));
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(xhr.responseText);
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
+        }
+      };
 
-      if (!token) {
-        throw new Error('No auth token available');
-      }
-      
-      console.log('[persistStory] 🚀 Starting XHR upload...');
-      
-      await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/photos/${filePath}`);
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        xhr.setRequestHeader('apikey', SUPABASE_ANON);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            console.log(`[persistStory] 📤 Upload progress: ${percent}%`);
-            if (onProgress) {
-              onProgress(percent);
-            }
-          }
-        };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.timeout = 30000;
+      xhr.ontimeout = () => reject(new Error('Upload timed out'));
+      xhr.send(file);
+    });
+  } catch (err) {
+    uploadError = { name: 'StorageError', message: String(err) } as StorageError;
+  }
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            console.log('[persistStory] ✅ XHR Upload success:', xhr.status);
-            resolve(xhr.responseText);
-          } else {
-            console.error('[persistStory] ❌ XHR Upload failed:', xhr.status, xhr.responseText);
-            reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
-          }
-        };
-        
-        xhr.onerror = () => {
-          console.error('[persistStory] ❌ XHR Network error');
-          reject(new Error('Network error during upload'));
-        };
-        
-        xhr.timeout = 30000; // 30s timeout
-        xhr.ontimeout = () => {
-          console.error('[persistStory] ❌ XHR Timeout');
-          reject(new Error('Upload timed out'));
-        };
-        
-        xhr.send(file);
-      });
-      
-      console.log('[persistStory] ✅ Upload await completed');
-    } catch (err) {
-      console.error('[persistStory] 💥 Upload exception:', err);
-      uploadError = { name: 'StorageError', message: String(err) } as StorageError;
-    }
-  } else {
-    console.warn('[persistStory] ⚠️ DEBUG: Skipping image upload, using filePath anyway', {
-      filePath,
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[persistStory] upload finished', {
+      durationMs: Date.now() - uploadStart,
+      hasError: Boolean(uploadError),
     });
   }
-  console.log('[persistStory] upload finished', {
-    durationMs: Date.now() - uploadStart,
-    hasError: Boolean(uploadError),
-  });
 
   if (uploadError) {
     console.error('[persistStory] image upload failed', {
@@ -220,35 +172,12 @@ export async function persistStory(
     throw new Error(`Image upload failed: ${uploadError.message}`);
   }
 
-  const mutationStart = Date.now();
   let savedRow: StoryArchiveRow;
   try {
-    savedRow = await persistStoryRecord({
-      supabase,
-      mode,
-      storyId,
-      payload,
-    });
+    savedRow = await persistStoryRecord({ supabase, mode, storyId, payload });
   } catch (error) {
-    console.error('[persistStory] failed to persist story record', {
-      error,
-      mode,
-      storyId,
-      userId,
-      payload,
-    });
     throw error;
   }
-  console.log('[persistStory] mutation duration ms', Date.now() - mutationStart, {
-    mode,
-    storyId,
-    savedRowId: savedRow.id,
-  });
-  console.log('[persistStory] Supabase mutation response', {
-    mode,
-    storyId,
-    dataId: savedRow.id,
-  });
 
   const normalized: ArchiveItem = {
     ...savedRow,
@@ -260,7 +189,6 @@ export async function persistStory(
     normalized.imageUrl = publicUrl?.publicUrl ?? null;
   }
 
-  console.log('[persistStory] saved story', { mode, id: normalized.id });
   return {
     id: normalized.id,
     mode,
@@ -275,13 +203,7 @@ const persistStoryRecord = async ({
   storyId,
   payload,
 }: PersistStoryArgs): Promise<StoryArchiveRow> => {
-  console.log('[persistStory] Supabase mutation payload (RAW FETCH)', {
-    mode,
-    storyId,
-    payload,
-  });
-
-  // WORKAROUND: Use raw fetch because Supabase client hangs
+  // Uses supaRest (raw fetch) for reliability; Supabase JS client can hang in some environments.
   const path = mode === 'update' && storyId
     ? `/rest/v1/${STORY_TABLE}?id=eq.${storyId}&select=*`
     : `/rest/v1/${STORY_TABLE}?select=*`;
@@ -290,13 +212,9 @@ const persistStoryRecord = async ({
 
   try {
     const data = await supaRest<StoryArchiveRow[]>(method, path, {
-      headers: {
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify(payload)
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(payload),
     });
-
-    console.log('[persistStory] Raw fetch response', { data });
 
     if (!data || data.length === 0) {
       throw new Error('Database mutation returned no data');

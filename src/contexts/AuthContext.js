@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { getSupabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabaseClient'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext({})
@@ -315,8 +315,6 @@ export const AuthProvider = ({ children }) => {
       return { error }
     } finally {
       setLoading(false)
-      // Force reload to ensure clean state if needed
-      // window.location.reload() 
     }
   }
 

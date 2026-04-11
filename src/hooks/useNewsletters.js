@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getSupabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 

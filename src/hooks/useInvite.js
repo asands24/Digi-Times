@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getSupabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabaseClient'
 import toast from 'react-hot-toast'
 
 export const useInvite = () => {

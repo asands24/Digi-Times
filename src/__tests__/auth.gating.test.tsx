@@ -21,12 +21,12 @@ const loadStories = jest.requireMock('../hooks/useStoryLibrary').loadStories as 
 
 describe('Hybrid auth gating', () => {
   afterEach(() => {
-    process.env.APP_ACCESS_MODE = 'public';
+    process.env.REACT_APP_ACCESS_MODE = 'public';
     jest.resetModules();
   });
 
   it('skips archive fetches when logged out and login is required', async () => {
-    process.env.APP_ACCESS_MODE = 'login';
+    process.env.REACT_APP_ACCESS_MODE = 'login';
     useAuth.mockReturnValue({ user: null, loading: false });
 
     const App = (await import('../App')).default;
