@@ -96,7 +96,7 @@ export default function PublicStoryPage() {
           setStory(data);
         }
       } catch (err) {
-        console.error('Failed to load public story', err);
+        if (process.env.NODE_ENV !== 'production') console.error('Failed to load public story', err);
         setError('Could not load story.');
       } finally {
         setIsLoading(false);
@@ -158,7 +158,7 @@ export default function PublicStoryPage() {
           // User cancelled - don't show error
           return;
         }
-        console.warn('Share failed, falling back to clipboard', err);
+        if (process.env.NODE_ENV !== 'production') console.warn('Share failed, falling back to clipboard', err);
         // Fall through to clipboard copy
       }
     }

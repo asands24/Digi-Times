@@ -61,11 +61,11 @@ export async function deleteStory(id: string) {
 /**
  * Fetch a public story by its slug.
  * No auth token required (RLS handles access).
+ * Only returns stories that are explicitly marked is_public=true.
  */
 export async function fetchPublicStory(slug: string) {
-  // Try to find by slug OR id (for backward compatibility or fallback)
   return supaRest<StoryArchiveRow[]>('GET',
-    `/rest/v1/story_archives?or=(public_slug.eq.${slug},id.eq.${slug})&select=*`)
+    `/rest/v1/story_archives?public_slug=eq.${encodeURIComponent(slug)}&is_public=eq.true&select=*`)
     .then(rows => rows[0] || null);
 }
 

@@ -179,20 +179,13 @@ export function useStoryLibrary(userId?: string | null) {
     }
 
     setIsLoading(true);
-    console.log('[StoryLibrary] 🌐 Fetching stories list from Supabase...', {
-      userId,
-      limit: STORIES_LIMIT,
-    });
+    const isDev = process.env.NODE_ENV !== 'production';
 
     try {
       const { rows, error } = await fetchStoryRows(userId);
-      console.log('[StoryLibrary] Supabase fetch response', {
-        data: rows,
-        error,
-      });
 
       if (error) {
-        console.error('[StoryLibrary] ❌ Failed to fetch stories', error);
+        if (isDev) console.error('[StoryLibrary] ❌ Failed to fetch stories', error);
         setErrorMessage(error.message);
         setStories([]);
         return;
@@ -202,9 +195,8 @@ export function useStoryLibrary(userId?: string | null) {
       setErrorMessage(null);
       setPage(1);
       setHasMore(rows.length === STORIES_LIMIT);
-      console.log('[StoryLibrary] ✅ Stories loaded', { count: rows.length });
     } catch (err) {
-      console.error('[StoryLibrary] ❌ Exception while fetching stories', err);
+      if (isDev) console.error('[StoryLibrary] ❌ Exception while fetching stories', err);
       setStories([]);
       setErrorMessage(err instanceof Error ? err.message : 'Unexpected error loading stories.');
     } finally {

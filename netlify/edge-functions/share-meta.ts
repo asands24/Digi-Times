@@ -20,10 +20,10 @@ export default async (request: Request, context: Context) => {
   }
 
   try {
-    // Fetch story metadata
-    // We check for either public_slug OR id matching the slug
+    // Fetch story metadata — only public stories matched by slug
     const query = new URLSearchParams({
-      or: `(public_slug.eq.${slug},id.eq.${slug})`,
+      public_slug: `eq.${slug}`,
+      is_public: 'eq.true',
       select: 'title,prompt,image_path'
     });
 
@@ -63,23 +63,28 @@ export default async (request: Request, context: Context) => {
     // Prepare meta tags
     const title = (story.title || "DigiTimes Story").replace(/"/g, '&quot;');
     const description = (story.prompt || "Check out this story created with DigiTimes.").replace(/"/g, '&quot;');
-    const imageUrl = story.image_path 
+    const imageUrl = story.image_path
       ? `${supabaseUrl}/storage/v1/object/public/photos/${story.image_path}`
-      : `${origin}/og-default.jpg`; // Ensure you have a default OG image if possible
+      : `${origin}/images/placeholders/newspapers1.jpeg`;
 
     // Inject tags
     // We replace the existing title and inject meta tags before </head>
+    const canonicalUrl = `${origin}/s/${slug}`;
     const modifiedHtml = html
-      .replace(/<title>.*<\/title>/, `<title>${title}</title>`)
+      .replace(/<title>.*?<\/title>/, `<title>${title}</title>`)
       .replace('</head>', `
+    <meta name="description" content="${description}" />
     <meta property="og:type" content="article" />
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${description}" />
     <meta property="og:image" content="${imageUrl}" />
+    <meta property="og:url" content="${canonicalUrl}" />
+    <meta property="og:site_name" content="DigiTimes" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${title}" />
     <meta name="twitter:description" content="${description}" />
     <meta name="twitter:image" content="${imageUrl}" />
+    <link rel="canonical" href="${canonicalUrl}" />
     </head>`);
 
     return new Response(modifiedHtml, {
