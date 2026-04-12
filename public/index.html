@@ -3,27 +3,79 @@
 
 <head>
   <meta charset="utf-8" />
-  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#000000" />
-  <meta name="description" content="Turn your photos into newspaper-style stories in seconds. Upload a photo, get an AI-written headline and article, then save, print, or share — perfect for families, classrooms, and keepsakes." />
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https:; worker-src 'self' blob:;">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- =============================================
+       PRIMARY META
+       ============================================= -->
   <title>DigiTimes – Turn Your Photos into Newspaper Stories</title>
+  <meta name="description" content="Turn your photos into newspaper-style stories in seconds. Upload a photo, get an AI-written headline and article, then save, print, or share — perfect for families, classrooms, and keepsakes." />
   <meta name="keywords" content="photo newspaper, AI story generator, family keepsake, kids newspaper, photo stories, print newspaper" />
   <meta name="author" content="DigiTimes" />
-  <!-- Open Graph -->
+  <meta name="theme-color" content="#0b1d36" />
+
+  <!-- =============================================
+       APPLE / IOS SPECIFIC
+       ============================================= -->
+  <!-- Makes the app launch in full-screen mode from home screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- Sets status bar style when launched from home screen -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <!-- Name shown below the icon on home screen -->
+  <meta name="apple-mobile-web-app-title" content="DigiTimes" />
+  <!-- Disable automatic phone number detection -->
+  <meta name="format-detection" content="telephone=no" />
+
+  <!-- Apple touch icons (used when user saves to home screen) -->
+  <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/icons/icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/icons/icon-180x180.png" />
+
+  <!-- Apple splash screens (iOS shows these while app loads from home screen) -->
+  <!-- iPhone SE (320x568) -->
+  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" href="%PUBLIC_URL%/icons/icon-512x512.png" />
+  <!-- iPhone 8 (375x667) -->
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="%PUBLIC_URL%/icons/icon-512x512.png" />
+  <!-- iPhone XR (414x896) -->
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" href="%PUBLIC_URL%/icons/icon-1024x1024.png" />
+  <!-- iPhone 14 Pro (393x852) -->
+  <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" href="%PUBLIC_URL%/icons/icon-1024x1024.png" />
+
+  <!-- =============================================
+       ICONS & MANIFEST
+       ============================================= -->
+  <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/icons/icon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/icons/icon-16x16.png" />
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+  <!-- =============================================
+       OPEN GRAPH
+       ============================================= -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="DigiTimes" />
   <meta property="og:title" content="DigiTimes – Turn Your Photos into Newspaper Stories" />
   <meta property="og:description" content="Upload a photo and watch it become a front-page newspaper story in seconds. Perfect for families, classrooms, and keepsakes." />
   <meta property="og:image" content="/images/placeholders/newspapers1.jpeg" />
-  <!-- Twitter Card -->
+  <meta property="og:url" content="https://digi-times.netlify.app" />
+
+  <!-- =============================================
+       TWITTER CARD
+       ============================================= -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="DigiTimes – Turn Your Photos into Newspaper Stories" />
   <meta name="twitter:description" content="Upload a photo and watch it become a front-page newspaper story in seconds." />
   <meta name="twitter:image" content="/images/placeholders/newspapers1.jpeg" />
-  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+  <!-- =============================================
+       SECURITY
+       ============================================= -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https:; worker-src 'self' blob:;" />
+
+  <!-- =============================================
+       FONTS
+       ============================================= -->
   <link rel="stylesheet" href="%PUBLIC_URL%/csp-base.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

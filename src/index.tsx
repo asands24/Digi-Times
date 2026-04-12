@@ -6,6 +6,7 @@ import App from './App';
 import './styles/base.css';
 import './index.css';
 import { AuthProvider } from './providers/AuthProvider';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const setGlobalImageVariables = () => {
   const root = document.documentElement;
@@ -26,6 +27,10 @@ if (!rootElement) {
 }
 
 setGlobalImageVariables();
+
+// Register service worker for PWA caching (production only).
+// Shows a toast when a new version is available so users can refresh.
+serviceWorkerRegistration.register();
 
 const root = ReactDOM.createRoot(rootElement);
 

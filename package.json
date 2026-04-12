@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/ios": "^8.3.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@supabase/supabase-js": "^2.38.0",
@@ -24,6 +27,9 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
     "test": "react-scripts test",
     "test:cov": "react-scripts test --coverage --watchAll=false",
     "clean": "node scripts/cleanup.js",
