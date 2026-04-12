@@ -386,39 +386,41 @@ export function StoryArchive({
             </div>
           </div>
         </div>
-        <div className="story-archive__header-actions">
-          <Button type="button" variant="outline" onClick={onRefresh} disabled={isLoading}>
-            <RefreshCcw size={16} strokeWidth={1.75} />
-            Refresh
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/issues')}
-            disabled={isLoading}
-          >
-            <Newspaper size={16} strokeWidth={1.75} />
-            View Issues
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleBuildNewspaper}
-            disabled={!canExportEdition || isLoading}
-          >
-            <Newspaper size={16} strokeWidth={1.75} />
-            Build Newspaper
-          </Button>
-          <Button
-            type="button"
-            onClick={handleExportEdition}
-            disabled={!canExportEdition || exportLoading || isLoading}
-          >
-            <ArchiveIcon size={16} strokeWidth={1.75} />
-            {exportLoading ? 'Loading...' : 'Export edition'}
-          </Button>
+        <div className="story-archive__header-actions-wrap">
+          <div className="story-archive__header-actions">
+            <Button type="button" variant="outline" onClick={onRefresh} disabled={isLoading}>
+              <RefreshCcw size={16} strokeWidth={1.75} />
+              Refresh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/issues')}
+              disabled={isLoading}
+            >
+              <Newspaper size={16} strokeWidth={1.75} />
+              View Issues
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBuildNewspaper}
+              disabled={!canExportEdition || isLoading}
+            >
+              <Newspaper size={16} strokeWidth={1.75} />
+              Build Newspaper
+            </Button>
+            <Button
+              type="button"
+              onClick={handleExportEdition}
+              disabled={!canExportEdition || exportLoading || isLoading}
+            >
+              <ArchiveIcon size={16} strokeWidth={1.75} />
+              {exportLoading ? 'Loading...' : 'Export edition'}
+            </Button>
+          </div>
           {showExportHint ? (
-            <span className="story-archive__hint">Add a story to enable export.</span>
+            <span className="story-archive__hint">Add a story above to enable export.</span>
           ) : null}
         </div>
       </header>
