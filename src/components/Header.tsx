@@ -1,6 +1,6 @@
 import { LogOut, User } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { Link, useNavigate, NavLink } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Button } from './ui/button';
 import {
@@ -18,22 +18,16 @@ export function Header() {
   const displayName = useMemo(() => {
     const profileName =
       typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
-    if (profileName) {
-      return profileName;
-    }
+    if (profileName) return profileName;
 
     const profileEmail =
       typeof profile?.email === 'string' ? profile.email.trim() : '';
-    if (profileEmail) {
-      return profileEmail;
-    }
+    if (profileEmail) return profileEmail;
 
     const userEmail = typeof user?.email === 'string' ? user.email.trim() : '';
-    if (userEmail) {
-      return userEmail;
-    }
+    if (userEmail) return userEmail;
 
-    return 'guest@digitimes.app';
+    return '';
   }, [profile?.display_name, profile?.email, user?.email]);
 
   const handleSignOut = useCallback(
@@ -53,12 +47,12 @@ export function Header() {
   return (
     <header className="editorial-header">
       <div className="editorial-header__inner">
-        <div className="editorial-header__logo" role="banner">
+        <Link to="/" className="editorial-header__logo" aria-label="DigiTimes home">
           <span className="editorial-header__name">DIGITIMES</span>
           <span className="editorial-header__tagline">
             Your Family Stories, Beautifully Preserved
           </span>
-        </div>
+        </Link>
 
         <nav className="editorial-header__nav" aria-label="Main navigation">
           <NavLink to="/" end className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Home</NavLink>
@@ -67,28 +61,36 @@ export function Header() {
         </nav>
 
         <div className="editorial-header__actions">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="editorial-user"
-                aria-label={`Open account menu for ${displayName}`}
-              >
-                <User size={16} strokeWidth={1.75} />
-                <span className="editorial-user__name">{displayName}</span>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="editorial-user"
+                  aria-label={`Open account menu for ${displayName}`}
+                >
+                  <User size={16} strokeWidth={1.75} />
+                  <span className="editorial-user__name">{displayName}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="editorial-user__logout"
+                  onSelect={handleSignOut}
+                >
+                  <LogOut size={16} strokeWidth={1.75} />
+                  <span>Log Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/login">
+              <Button size="sm" className="editorial-header__signin">
+                Sign In
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="editorial-user__logout"
-                onSelect={handleSignOut}
-              >
-                <LogOut size={16} strokeWidth={1.75} />
-                <span>Log Out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </Link>
+          )}
         </div>
       </div>
     </header>

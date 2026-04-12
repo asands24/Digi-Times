@@ -71,7 +71,7 @@ function HomePage() {
       <main className="editorial-main">
         <section className="welcome-hero">
 
-          <div>
+          <div className="welcome-hero__content">
             <p className="welcome-hero__kicker">📰 DigiTimes</p>
             <h1 className="welcome-hero__title">
               Your photo deserves a front page
@@ -92,7 +92,7 @@ function HomePage() {
                 View My Stories
               </Button>
             </div>
-            <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
+            <p className="welcome-hero__hint">
               No sign-up needed to try it. Stories save when you create an account.
             </p>
           </div>
@@ -161,6 +161,8 @@ function HomePage() {
             <Link to="/" className="site-footer__link">Home</Link>
             <Link to="/templates" className="site-footer__link">Templates</Link>
             <Link to="/gallery" className="site-footer__link">Gallery</Link>
+            <Link to="/privacy" className="site-footer__link">Privacy</Link>
+            <Link to="/guidelines" className="site-footer__link">Guidelines</Link>
             <a href="mailto:asands44@gmail.com" className="site-footer__link">Contact</a>
           </div>
           <p className="site-footer__copy">
