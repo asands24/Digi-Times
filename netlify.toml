@@ -5,6 +5,9 @@
 [build.environment]
   NODE_VERSION = "18"
   # Note: REACT_APP_SUPABASE_ANON_KEY is intentionally public (it's the Supabase anon/public key)
+  # Emit the CRA webpack runtime as a separate file instead of an inline <script>,
+  # so the CSP script-src can use 'self' without 'unsafe-inline'.
+  INLINE_RUNTIME_CHUNK = "false"
 
 [[redirects]]
   from = "/*"
@@ -34,7 +37,15 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https:; worker-src 'self' blob:;"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # script-src: 'self' only (no 'unsafe-inline') — works because INLINE_RUNTIME_CHUNK=false.
+    # connect-src: explicit Supabase REST/Storage/Auth (https) + Realtime (wss); 'self' covers the
+    #   same-origin Netlify function at /.netlify/functions/generateStory.
+    # style-src still needs 'unsafe-inline' (Tailwind/CRA inject inline styles at runtime).
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https://irxpqhxrylaxfdppnwra.supabase.co wss://irxpqhxrylaxfdppnwra.supabase.co; worker-src 'self' blob:;"
 
 [[edge_functions]]
   path = "/s/*"

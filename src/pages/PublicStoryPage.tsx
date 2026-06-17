@@ -4,7 +4,7 @@ import { Newspaper, Share2, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { fetchPublicStory } from '../lib/storiesApi';
 import type { StoryArchiveRow } from '../types/story';
-import { escapeHtml } from '../utils/sanitizeHtml';
+import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
 import { copyToClipboard } from '../utils/clipboard';
 import toast from 'react-hot-toast';
 
@@ -287,7 +287,9 @@ export default function PublicStoryPage() {
           <div
             className="font-serif text-lg leading-relaxed text-ink-black"
             dangerouslySetInnerHTML={{
-              __html: story.article || `<p>${escapeHtml(story.prompt || '')}</p>`
+              // article is AI-generated/user-derived HTML; sanitize before injecting.
+              // The prompt fallback is escaped to plain text.
+              __html: sanitizeHtml(story.article || '') || `<p>${escapeHtml(story.prompt || '')}</p>`
             }}
           />
         </article>

@@ -98,6 +98,7 @@ const openPreviewWindow = async (story: ArchiveItem) => {
   bodyEl.appendChild(root);
 
   const article = doc.createElement('article');
+  // safeBody is produced by sanitizeHtml() (DOMPurify) above, so this innerHTML is safe.
   article.innerHTML = safeBody;
 
   if (story.imageUrl) {
