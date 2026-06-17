@@ -52,6 +52,21 @@ supabase db push
 2. Verify `created_by` is populated by running `select created_by from story_archives limit 5;`.
 3. Confirm the new index appears via `select indexname from pg_indexes where tablename = 'story_archives';`.
 
+### `20260616_fix_security_definer_view.sql`
+
+**Purpose:** Fixes the Supabase linter "Security Definer View" warning on the `templates_public` view.
+
+**What it does:**
+- Sets `security_invoker = true` on `public.templates_public` (guarded so it is a no-op if the view is absent).
+- Ensures the view evaluates the underlying `templates` table access using the caller's RLS context instead of the view owner's elevated privileges.
+
+**Requirements:** PostgreSQL 15+ (all current Supabase projects).
+
+**How to test:**
+1. Apply the migration.
+2. Run `select reloptions from pg_class where relname = 'templates_public';` and confirm it contains `security_invoker=true`.
+3. Confirm `getTemplates()` still returns system templates for anonymous and authenticated users.
+
 ## Important Notes
 
 - **Do not modify existing migration files** - create new ones instead

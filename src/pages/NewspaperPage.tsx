@@ -19,6 +19,7 @@ import type { Database } from '../types/supabase';
 import toast from 'react-hot-toast';
 import { exportNewspaperToPDF } from '../lib/pdfExport';
 import { OnThisDayBox } from '../components/OnThisDayBox';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 import '../styles/newspaper-print.css';
 
 type StoryRow = Database['public']['Tables']['story_archives']['Row'];
@@ -359,7 +360,8 @@ export default function NewspaperPage() {
                 <div className="newspaper-story__byline">By DigiTimes Staff</div>
                 <div className="newspaper-story__body">
                   {mainStory.article ? (
-                    <div dangerouslySetInnerHTML={{ __html: mainStory.article }} />
+                    // article is AI-generated/user-derived HTML; sanitize before injecting
+                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(mainStory.article) }} />
                   ) : (
                     buildPreview(mainStory).map((p, i) => <p key={i}>{p}</p>)
                   )}

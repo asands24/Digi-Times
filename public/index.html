@@ -71,7 +71,9 @@
        SECURITY
        ============================================= -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https:; worker-src 'self' blob:;" />
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https://irxpqhxrylaxfdppnwra.supabase.co wss://irxpqhxrylaxfdppnwra.supabase.co; worker-src 'self' blob:;" />
+  <!-- X-Content-Type-Options, X-Frame-Options, Referrer-Policy and Permissions-Policy are sent
+       as HTTP response headers from netlify.toml (X-Frame-Options can't be set via a meta tag). -->
 
   <!-- =============================================
        FONTS
