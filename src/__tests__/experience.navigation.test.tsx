@@ -12,20 +12,12 @@ const story: ArchiveItem = { id: 'one', title: 'A family picnic', article: '<p>A
 
 beforeEach(() => auth.mockReturnValue({ user: { id: 'owner' } }));
 
-it('makes the library active and scrolls back to it on a repeated dock click under reduced motion', () => {
-  const scroll = jest.fn();
-  const previousScroll = HTMLElement.prototype.scrollIntoView;
-  const previousMedia = window.matchMedia;
-  HTMLElement.prototype.scrollIntoView = scroll;
-  window.matchMedia = jest.fn().mockReturnValue({ matches: true });
-  try {
-    render(<MemoryRouter initialEntries={['/#my-stories']}><section id="my-stories" /><MobileNav /></MemoryRouter>);
-    const library = screen.getByRole('link', { name: 'Library' });
-    expect(library).toHaveAttribute('aria-current', 'location');
-    expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
-    fireEvent.click(library);
-    expect(scroll).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
-  } finally { HTMLElement.prototype.scrollIntoView = previousScroll; window.matchMedia = previousMedia; }
+it('uses real page destinations and marks only the current mobile destination active', () => {
+  render(<MemoryRouter initialEntries={['/library']}><MobileNav /></MemoryRouter>);
+  expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('link', { name: 'Create' })).toHaveAttribute('href', '/create');
+  expect(screen.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
+  expect(screen.getAllByRole('link').every(link => !link.getAttribute('href')?.includes('#'))).toBe(true);
 });
 
 it('returns to the top when changing pages without a section destination', () => {
@@ -42,7 +34,7 @@ it('shows signed-out visitors useful library actions without empty filters or ex
   auth.mockReturnValue({ user: null });
   render(<MemoryRouter><StoryArchive {...callbacks} stories={[]} isLoading={false} hasMore={false} /></MemoryRouter>);
   expect(screen.getByRole('link', { name: 'Sign in to your library' })).toHaveAttribute('href', '/login');
-  expect(screen.getByRole('link', { name: /Create your first story/ })).toHaveAttribute('href', '#create-story');
+  expect(screen.getByRole('link', { name: /Create your first story/ })).toHaveAttribute('href', '/create');
   expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Export edition/ })).not.toBeInTheDocument();
 });

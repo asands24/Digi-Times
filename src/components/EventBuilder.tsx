@@ -36,7 +36,7 @@ const LOADING_MESSAGES = [
 
 
 
-export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void } = {}) {
+export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArchiveSaved?: () => void; compactHeading?: boolean } = {}) {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
@@ -44,6 +44,9 @@ export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void }
 
   const { saveDraftToArchive } = useStoryLibrary();
   const { user } = useAuth();
+  const previousAccountRef = useRef(user?.id);
+  const currentAccountRef = useRef(user?.id);
+  currentAccountRef.current = user?.id;
 
   const savingRef = useRef(false);
   const [savedStoryId, setSavedStoryId] = useState<string | null>(null);
@@ -173,6 +176,25 @@ export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void }
     entryUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     setEntries([]);
   }, []);
+
+  useEffect(() => {
+    // Keep an anonymous trial when its creator signs in, but release a signed-in
+    // account's drafts when that account signs out or switches users.
+    if (previousAccountRef.current && previousAccountRef.current !== user?.id) {
+      clearEntries();
+      setGlobalPrompt('');
+      setSelectedTemplate(null);
+      setSavedStoryId(null);
+    }
+    previousAccountRef.current = user?.id;
+  }, [user?.id, clearEntries]);
+
+  useEffect(() => {
+    if (!entries.length) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [entries.length]);
 
   const applyPromptToDrafts = useCallback(() => {
     const trimmed = globalPrompt.trim();
@@ -328,6 +350,7 @@ export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void }
       bodyHtml: buildBodyHtml({ ...entry.article, body: parseBodyDraft(entry.bodyDraft, entry.article.body) }),
       prompt: entry.prompt,
     }).then((res) => {
+      if (currentAccountRef.current !== user.id) return;
       if (res.error || !res.story) {
         toast.error(res.error?.message || 'We couldn’t confirm the save. Your draft is still here.');
       } else {
@@ -346,16 +369,16 @@ export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void }
           <Sparkles size={16} strokeWidth={2} />
           <span>Front Page Studio</span>
         </div>
-        <h2 className="font-display text-4xl md:text-5xl text-ink-black mb-4 leading-tight">
+        {!compactHeading && <><h2 className="font-display text-4xl md:text-5xl text-ink-black mb-4 leading-tight">
           Make a little moment headline news.
         </h2>
         <p className="text-ink-soft text-lg leading-relaxed">
           Add a photo and tell us the moment. We’ll draft the story; you make it yours.
-        </p>
+        </p></>}
       </header>
 
       <CreationSteps current={uploadProgress !== null ? 4 : isGenerating ? 2 : hasDraftWithArticle ? 3 : hasEntries ? 1 : 0} />
-      {savedStoryId && <div className="memory-saved" role="status"><div><strong>Your memory is on the record.</strong><p>Next, give it a home in a family newspaper.</p></div><Link className="dt-button dt-button--primary" to={`/newspaper?ids=${savedStoryId}`}>Add to Newspaper →</Link><a href="#my-stories">View library</a></div>}
+      {savedStoryId && <div className="memory-saved" role="status"><div><strong>Your memory is on the record.</strong><p>Next, give it a home in a family newspaper.</p></div><Link className="dt-button dt-button--primary" to={`/newspaper?ids=${savedStoryId}`}>Add to Newspaper →</Link><Link to="/library">View library</Link></div>}
       {/* STEP 1: UPLOAD */}
       <div className="mb-12">
         <PhotoUploader

@@ -437,7 +437,7 @@ export function StoryArchive({
             </>}
           </div>
           {showExportHint && stories.length > 0 ? (
-            <span className="story-archive__hint">Add a story above to enable export.</span>
+            <span className="story-archive__hint">Create and save a story to enable export.</span>
           ) : null}
         </div>}
       </header>
@@ -619,9 +619,9 @@ export function StoryArchive({
             {stories.length ? 'No memories match just yet.' : user ? 'Your first memory belongs here.' : 'A home for every story you keep.'}
           </p>
           <p style={{ color: 'var(--ink-soft)', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
-            {stories.length ? 'Try another headline or clear the filters to see your memories.' : user ? 'Save your first story, then choose memories to bring together in a newspaper.' : 'Sign in to revisit saved stories, or try making your first headline above.'}
+            {stories.length ? 'Try another headline or clear the filters to see your memories.' : user ? 'Save your first story, then choose memories to bring together in a newspaper.' : 'Sign in to revisit saved stories, or try making your first headline.'}
           </p>
-          {stories.length ? <Button onClick={() => { setSearch(''); setSectionFilter('all'); }}>Show all memories</Button> : <div className="library-empty-actions">{!user && <Link to="/login" className="dt-button dt-button--primary">Sign in to your library</Link>}<a href="#create-story" className={`dt-button ${user ? 'dt-button--primary' : 'dt-button--outline'}`}>Create your first story →</a></div>}
+          {stories.length ? <Button onClick={() => { setSearch(''); setSectionFilter('all'); }}>Show all memories</Button> : <div className="library-empty-actions">{!user && <Link to="/login" className="dt-button dt-button--primary">Sign in to your library</Link>}<Link to="/create" className={`dt-button ${user ? 'dt-button--primary' : 'dt-button--outline'}`}>Create your first story →</Link></div>}
         </div>
       )
       }

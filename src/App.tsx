@@ -1,19 +1,12 @@
-import { lazy, Suspense, useCallback, useRef, useState, type RefObject } from 'react';
-import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Link, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { Camera, Sparkles, Send, Lock, PencilLine } from 'lucide-react';
 import { Header } from './components/Header';
 import EventBuilder from './components/EventBuilder';
-import { StoryArchive } from './components/StoryArchive';
-import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { OnboardingBanner } from './components/OnboardingBanner';
 import { Button } from './components/ui/button';
-import {
-  type ArchiveItem,
-  updateStoryVisibility,
-  useStoryLibrary,
-} from './hooks/useStoryLibrary';
+import LibraryPage from './pages/LibraryPage';
 import Logout from './pages/Logout';
 import TemplatesPage from './pages/Templates';
 import PhotoGallery from './components/PhotoGallery';
@@ -43,44 +36,10 @@ function PageLoading() {
 
 function HomePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const {
-    stories,
-    isLoading,
-    errorMessage,
-    refreshStories: refreshArchive,
-    deleteStory,
-    loadMore,
-    hasMore,
-  } = useStoryLibrary(user?.id);
-  const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
-  // Anchor points for the guided flow
-  const builderRef = useRef<HTMLElement | null>(null);
-  const archiveRef = useRef<HTMLElement | null>(null);
-
-  const handleToggleShare = useCallback(
-    async (storyId: string, nextValue: boolean) => {
-      try {
-        await updateStoryVisibility(storyId, nextValue);
-        await refreshArchive();
-        toast.success(nextValue ? 'Story is now public.' : 'Story set to private.');
-      } catch (error) {
-        console.error('Failed to update visibility', error);
-        toast.error('Could not update sharing setting.');
-      }
-    },
-    [refreshArchive],
-  );
-
-  const scrollToSection = useCallback((ref: RefObject<HTMLElement | null>) => {
-    if (ref.current?.id) navigate(`/#${ref.current.id}`);
-    ref.current?.scrollIntoView({
-      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      block: 'start',
-    });
-  }, [navigate]);
-
-
+  const { hash } = useLocation();
+  // Preserve previously shared/bookmarked studio and library destinations.
+  if (hash === '#create-story') return <Navigate to="/create" replace />;
+  if (hash === '#my-stories' || hash === '#story-library') return <Navigate to="/library" replace />;
 
   return (
     <div className="app-shell">
@@ -98,13 +57,13 @@ function HomePage() {
               Turn the little moments into something you can keep. Your photos, an AI-written story, and a beautiful newspaper to print or share.
             </p>
             <div className="welcome-hero__actions">
-              <Button size="lg" onClick={() => scrollToSection(builderRef)}>
+              <Button size="lg" onClick={() => navigate('/create')}>
                 Create a story
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => scrollToSection(archiveRef)}
+                onClick={() => navigate('/library')}
               >
                 My stories
               </Button>
@@ -115,7 +74,7 @@ function HomePage() {
             <div className="welcome-hero__assurances"><span><Lock size={14} aria-hidden /> Private until you share</span><span><PencilLine size={14} aria-hidden /> Every word is yours to edit</span></div>
           </div>
 
-          <EditorialCover onCreate={() => scrollToSection(builderRef)} />
+          <EditorialCover onCreate={() => navigate('/create')} />
         </section>
 
         <Reveal>
@@ -144,33 +103,6 @@ function HomePage() {
           </div>
         </Reveal>
 
-        <OnboardingBanner />
-        <section id="create-story" ref={builderRef} className="creation-section">
-          <div className="section-label">
-            <span className="section-label__line" />
-            <span className="section-label__text">Create a Story</span>
-            <span className="section-label__line" />
-          </div>
-          <Reveal><EventBuilder onArchiveSaved={refreshArchive} /></Reveal>
-        </section>
-        <section id="my-stories" ref={archiveRef} className="archive-section">
-          <div className="section-label">
-            <span className="section-label__line" />
-            <span className="section-label__text">Your Stories</span>
-            <span className="section-label__line" />
-          </div>
-          <StoryArchive
-            stories={stories}
-            isLoading={isLoading}
-            errorMessage={errorMessage}
-            onPreview={setPreviewStory}
-            onRefresh={refreshArchive}
-            onToggleShare={handleToggleShare}
-            onDelete={deleteStory}
-            onLoadMore={loadMore}
-            hasMore={hasMore}
-          />
-        </section>
       </main>
 
       <footer className="site-footer">
@@ -181,6 +113,8 @@ function HomePage() {
           </div>
           <div className="site-footer__links">
             <Link to="/" className="site-footer__link">Home</Link>
+            <Link to="/create" className="site-footer__link">Create</Link>
+            <Link to="/library" className="site-footer__link">Library</Link>
             <Link to="/templates" className="site-footer__link">Templates</Link>
             <Link to="/gallery" className="site-footer__link">Gallery</Link>
             <Link to="/pricing" className="site-footer__link">Plans</Link>
@@ -194,21 +128,28 @@ function HomePage() {
         </div>
       </footer>
 
-      <StoryPreviewDialog
-        story={previewStory}
-        open={Boolean(previewStory)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPreviewStory(null);
-          }
-        }}
-      />
     </div>
   );
 }
 
+// Keep a visited studio mounted so exploring the app doesn't throw away photos
+// or edits. Hidden workspaces are excluded from layout, focus and accessibility.
+function CreateWorkspace({ active }: { active: boolean }) {
+  return <div className="app-shell studio-workspace" hidden={!active}>
+    <Header />
+    <main id="studio-content" tabIndex={-1} className="workspace-main">
+      <header className="workspace-heading"><p className="editorial-kicker">Your newsroom</p><h1>Create a story</h1><p>From a favorite photo to a front-page memory.</p></header>
+      <EventBuilder compactHeading />
+      <OnboardingBanner />
+    </main>
+  </div>;
+}
+
 export default function App() {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+  const [hasOpenedStudio, setHasOpenedStudio] = useState(pathname === '/create');
+  useEffect(() => { if (pathname === '/create') setHasOpenedStudio(true); }, [pathname]);
 
   if (REQUIRE_LOGIN && loading) {
     return (
@@ -251,10 +192,14 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
+      {(hasOpenedStudio || pathname === '/create') && <CreateWorkspace active={pathname === '/create'} />}
+      <div hidden={pathname === '/create'}>
       <RouteMotion>
         <Suspense fallback={<PageLoading />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/create" element={null} />
+          <Route path="/library" element={<LibraryPage />} />
           <Route path="/templates" element={<div className="app-shell"><Header /><TemplatesPage /></div>} />
           {IS_DEV ? (
             <Route
@@ -298,6 +243,7 @@ export default function App() {
         </Routes>
         </Suspense>
       </RouteMotion>
+      </div>
       <MobileNav />
     </AppErrorBoundary>
   );

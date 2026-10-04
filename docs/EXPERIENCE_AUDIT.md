@@ -2,6 +2,16 @@
 
 October 4, 2026 · branch `codex/experience-audit` · based on merged main `46ad31c`.
 
+## Navigation revision
+
+Following feedback that Create should not be a homepage scroll destination, the app now has dedicated `/create` and `/library` pages. Home contains the introduction and next-step links. Header, compact menu, and mobile dock share the same primary destinations: Home, Create, Library, Templates, Issues. Photo gallery and Plans are secondary destinations under More. Old `/#create-story`, `/#my-stories`, and `/#story-library` bookmarks redirect to their new pages.
+
+The studio mounts on its first visit and stays mounted but hidden when browsing other pages. Photos, descriptions, chosen templates, and edits survive in-app navigation; hidden content is excluded from layout, focus, and accessibility. Signed-in drafts are released on sign-out or account change, while an anonymous trial is kept when its creator signs in. A late save response cannot show a previous account's saved-story action. Reload/close prompts protect unfinished drafts; persistence across browser sessions is not implemented. Library data loads when the Library page opens, including after a confirmed save.
+
+Validation for this revision: 23 suites / 64 tests pass, production build/typecheck and whitespace checks pass. Browser checks cover separate desktop destinations, local photo/description retention through Templates and back, 393 px and 320 px mobile layouts with no horizontal overflow, and keyboard menu opening, Escape and restored focus. No production story data was changed. The initial JS bundle remains about 43% smaller than the pre-audit baseline. Existing bundle-size warning and development dependency/provider limitations remain.
+
+The sections below record the initial audit before this route restructuring.
+
 ## Scope and reference
 
 Reviewed the current homepage, navigation, creation components, saved-story library, edition entry points, and reader. Read the repository and motion-package READMEs. No AGENTS.md instructions were present. The user referenced a video and an anchor website, but neither link was included or found in the supplied package. Requested those links; exact reference matching remains pending. These changes continue the existing warm newsprint, navy/gold, layered cover, and floating navigation direction.
@@ -35,5 +45,5 @@ Reviewed the current homepage, navigation, creation components, saved-story libr
 
 - Need the video and anchor website URLs to compare composition, motion timing, typography, and interaction details against the actual references.
 - Existing development dependency advisories and generation provider quota issue remain as documented in the previous editorial review; dependency/configuration/security policies were not changed in this UX pass.
-- Drafts still live in the current studio tab; navigation away can discard unsaved drafts. Cross-route draft retention deserves a separate, carefully tested pass, including file/object-URL lifecycle and account boundaries.
-- Changes are local to this feature branch. No push to main, merge, or deployment was performed.
+- Drafts still live in the current studio tab. The navigation revision above now retains them across app pages and handles file/object-URL cleanup and account changes; browser-session persistence remains future work.
+- Changes are on the feature branch. No push to main, merge, or deployment was performed.

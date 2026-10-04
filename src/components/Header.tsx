@@ -1,7 +1,7 @@
 import { LogOut, User, Menu } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { Link, useNavigate, NavLink, useLocation } from 'react-router-dom';
-import { SectionLink } from './SectionLink';
+import { primaryNavigation, secondaryNavigation } from '../lib/navigation';
 import toast from 'react-hot-toast';
 import { Button } from './ui/button';
 import {
@@ -9,12 +9,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from './ui/dropdown-menu';
 import { useAuth } from '../providers/AuthProvider';
 
 export function Header() {
   const navigate = useNavigate();
-  const { pathname, hash } = useLocation();
+  const { pathname } = useLocation();
+  const contentId = pathname === '/' ? 'page-content' : pathname === '/create' ? 'studio-content' : pathname === '/library' ? 'library-content' : null;
   const { user, profile, signOut } = useAuth();
 
   const displayName = useMemo(() => {
@@ -48,7 +50,7 @@ export function Header() {
 
   return (
     <header className="editorial-header">
-      {pathname === '/' && <a className="skip-link" href="#page-content">Skip to content</a>}
+      {contentId && <a className="skip-link" href={`#${contentId}`}>Skip to content</a>}
       <div className="editorial-header__inner">
         <Link to="/" className="editorial-header__logo" aria-label="DigiTimes home">
           <span className="editorial-header__name">DIGITIMES</span>
@@ -58,20 +60,19 @@ export function Header() {
         </Link>
 
         <nav className="editorial-header__nav" aria-label="Main navigation">
-          <SectionLink section="create-story" className={`editorial-header__nav-link${pathname === '/' && hash === '#create-story' ? ' editorial-header__nav-link--active' : ''}`} aria-current={pathname === '/' && hash === '#create-story' ? 'location' : undefined}>Create</SectionLink>
-          <SectionLink section="my-stories" className={`editorial-header__nav-link${pathname === '/' && hash === '#my-stories' ? ' editorial-header__nav-link--active' : ''}`} aria-current={pathname === '/' && hash === '#my-stories' ? 'location' : undefined}>Library</SectionLink>
-          <NavLink to="/templates" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Templates</NavLink>
-          <NavLink to="/gallery" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Gallery</NavLink>
-          <NavLink to="/issues" className={({ isActive }) => `editorial-header__nav-link${isActive ? ' editorial-header__nav-link--active' : ''}`}>Issues</NavLink>
-          <NavLink to="/pricing" className={({ isActive }) => `editorial-header__nav-link${isActive ? ' editorial-header__nav-link--active' : ''}`}>Plans</NavLink>
+          {primaryNavigation.map(({ to, label }) => <NavLink key={to} to={to} end className={({ isActive }) => `editorial-header__nav-link${isActive ? ' editorial-header__nav-link--active' : ''}`}>{label}</NavLink>)}
         </nav>
 
         <div className="editorial-header__actions">
           <div className="editorial-header__mobile-menu">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" aria-label="Open navigation menu"><Menu size={20} aria-hidden /></Button></DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" aria-label="More navigation"><Menu size={20} aria-hidden /><span className="editorial-header__menu-label">More</span></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {[['/', 'Home'], ['/#create-story', 'Create a story'], ['/#my-stories', 'Story library'], ['/templates', 'Templates'], ['/gallery', 'Photo gallery'], ['/issues', 'Saved issues'], ['/pricing', 'Plans']].map(([to, label]) => <DropdownMenuItem key={to} onSelect={() => navigate(to)}>{label}</DropdownMenuItem>)}
+                <div className="navigation-menu__primary">
+                  {primaryNavigation.map(({ to, label }) => <DropdownMenuItem key={to} onSelect={() => navigate(to)}>{label}</DropdownMenuItem>)}
+                  <DropdownMenuSeparator />
+                </div>
+                {secondaryNavigation.map(({ to, label }) => <DropdownMenuItem key={to} onSelect={() => navigate(to)}>{label}</DropdownMenuItem>)}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -99,11 +100,7 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/login">
-              <Button size="sm" className="editorial-header__signin">
-                Sign In
-              </Button>
-            </Link>
+            <Link to="/login" className="dt-button dt-button--primary dt-button--sm editorial-header__signin">Sign In</Link>
           )}
         </div>
       </div>
