@@ -1,11 +1,5 @@
 // Service worker registration for DigiTimes PWA.
-// CRA (react-scripts 5) uses Workbox under the hood and generates
-// the service-worker.js file during `npm run build`.
-//
-// Benefits:
-// - Caches static assets so the app loads fast on repeat visits
-// - Enables offline/poor-connection resilience
-// - Required for iOS "Add to Home Screen" full-screen experience
+// Network-first shell caching; story, auth and photo API traffic is never cached.
 
 const isLocalhost = Boolean(
   window.location.hostname === 'localhost' ||
@@ -20,7 +14,7 @@ type Config = {
 
 export function register(config?: Config) {
   if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-    const publicUrl = new URL(process.env.PUBLIC_URL, window.location.href);
+    const publicUrl = new URL(process.env.PUBLIC_URL || '/', window.location.href);
     if (publicUrl.origin !== window.location.origin) {
       // Service worker won't work if PUBLIC_URL is on a different origin.
       return;

@@ -154,26 +154,8 @@ test('UploadPhoto uploads an image and surfaces the public URL', async () => {
   }
 });
 
-test('PhotoGallery lists public images', async () => {
-  const list = jest.fn().mockResolvedValue({
-    data: [{ name: 'demo.png' }],
-    error: null,
-  });
-  const from = jest.fn(() => ({
-    list,
-  }));
-
-  mockSupabase.storage.from = from;
-  mockGetSupabase.mockReturnValue(mockSupabase as any);
-
+test('PhotoGallery protects personal images when logged out', () => {
   render(<PhotoGallery />);
-
-  await waitFor(() => {
-    const img = screen.getByAltText('demo.png') as HTMLImageElement;
-    expect(img).toBeInTheDocument();
-    expect(img.src).toContain('/storage/v1/object/public/photos/anonymous%2Fdemo.png');
-  });
-
-  expect(from).toHaveBeenCalledWith('photos');
-  expect(list).toHaveBeenCalledWith('anonymous', expect.any(Object));
+  expect(screen.getByText('Please log in to view your story images.')).toBeInTheDocument();
+  expect(mockSupabase.storage.from).not.toHaveBeenCalled();
 });

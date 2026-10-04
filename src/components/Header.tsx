@@ -55,9 +55,11 @@ export function Header() {
         </Link>
 
         <nav className="editorial-header__nav" aria-label="Main navigation">
-          <NavLink to="/" end className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Home</NavLink>
+          <NavLink to="/" end className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Create</NavLink>
           <NavLink to="/templates" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Templates</NavLink>
           <NavLink to="/gallery" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Gallery</NavLink>
+          <NavLink to="/issues" className="editorial-header__nav-link">Issues</NavLink>
+          <NavLink to="/pricing" className="editorial-header__nav-link">Plans</NavLink>
         </nav>
 
         <div className="editorial-header__actions">

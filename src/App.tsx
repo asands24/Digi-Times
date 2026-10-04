@@ -24,9 +24,11 @@ import PublicStoryPage from './pages/PublicStoryPage';
 import { IssuesList } from './components/IssuesList';
 import NewspaperPage from './pages/NewspaperPage';
 import PrivacyPage from './pages/PrivacyPage';
+import PricingPage from './pages/PricingPage';
 import GuidelinesPage from './pages/GuidelinesPage';
 
-const DebugTemplates = lazy(() => import('./pages/DebugTemplates'));
+const DebugNewspaper = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugNewspaper')) : () => null;
+const DebugTemplates = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugTemplates')) : () => null;
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 function HomePage() {
@@ -74,7 +76,7 @@ function HomePage() {
           <div className="welcome-hero__content">
             <p className="welcome-hero__kicker">📰 DigiTimes</p>
             <h1 className="welcome-hero__title">
-              Your photo deserves a front page
+              The little moments are the big news.
             </h1>
             <p className="welcome-hero__subtitle">
               Upload any photo — a birthday, a school project, a family trip — and DigiTimes turns it into a
@@ -123,15 +125,15 @@ function HomePage() {
         </section>
 
         <OnboardingBanner />
-        <section ref={builderRef} className="creation-section">
+        <section id="create-story" ref={builderRef} className="creation-section">
           <div className="section-label">
             <span className="section-label__line" />
             <span className="section-label__text">Create a Story</span>
             <span className="section-label__line" />
           </div>
-          <EventBuilder />
+          <EventBuilder onArchiveSaved={refreshArchive} />
         </section>
-        <section ref={archiveRef} className="archive-section">
+        <section id="story-library" ref={archiveRef} className="archive-section">
           <div className="section-label">
             <span className="section-label__line" />
             <span className="section-label__text">Your Stories</span>
@@ -161,6 +163,7 @@ function HomePage() {
             <Link to="/" className="site-footer__link">Home</Link>
             <Link to="/templates" className="site-footer__link">Templates</Link>
             <Link to="/gallery" className="site-footer__link">Gallery</Link>
+            <Link to="/pricing" className="site-footer__link">Plans</Link>
             <Link to="/privacy" className="site-footer__link">Privacy</Link>
             <Link to="/guidelines" className="site-footer__link">Guidelines</Link>
             <a href="mailto:asands44@gmail.com" className="site-footer__link">Contact</a>
@@ -214,6 +217,8 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/s/:slug" element={<PublicStoryPage />} />
+          <Route path="/edition" element={<NewspaperPage reader />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/guidelines" element={<GuidelinesPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
@@ -237,25 +242,28 @@ export default function App() {
             }
           />
         ) : null}
+        {IS_DEV && <Route path="/debug/newspaper" element={<Suspense fallback={null}><DebugNewspaper /></Suspense>} />}
         <Route path="/gallery" element={<PhotoGallery />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/s/:slug" element={<PublicStoryPage />} />
+          <Route path="/edition" element={<NewspaperPage reader />} />
         <Route
           path="/issues"
           element={
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="app-shell"><Header /><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <header className="mb-8">
                 <h1 className="text-3xl font-serif font-bold text-ink mb-2">My Newspaper Issues</h1>
                 <p className="text-ink-muted">View and reprint your saved editions.</p>
               </header>
               <IssuesList />
-            </div>
+            </div></div>
           }
         />
         <Route
           path="/newspaper" element={<NewspaperPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/guidelines" element={<GuidelinesPage />} />
         <Route
           path="/login"

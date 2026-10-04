@@ -16,6 +16,8 @@ import {
   buildBodyHtml,
   generateStoryFromPrompt,
 } from '../utils/storyGenerator';
+import { CreationSteps } from './CreationSteps';
+import { Link } from 'react-router-dom';
 import { StoryTemplate } from '../types/story';
 
 // Simple ID generator
@@ -34,7 +36,7 @@ const LOADING_MESSAGES = [
 
 
 
-function EventBuilder() {
+export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void } = {}) {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
@@ -43,6 +45,8 @@ function EventBuilder() {
   const { saveDraftToArchive } = useStoryLibrary();
   const { user } = useAuth();
 
+  const savingRef = useRef(false);
+  const [savedStoryId, setSavedStoryId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   // Helper to save draft to archive
@@ -85,7 +89,7 @@ function EventBuilder() {
     // Otherwise use global.
     // Note: In our simplified model, we mostly rely on global prompt being applied to entries.
     // But we keep this logic if we want per-story overrides later.
-    if (entry.prompt && entry.prompt !== global && entry.prompt.trim().length > 0) {
+    if (entry.status !== 'idle' && entry.prompt.trim().length > 0) {
       return entry.prompt;
     }
     return global.trim();
@@ -288,6 +292,17 @@ function EventBuilder() {
       ),
     [entries],
   );
+  const isGenerating = entries.some(entry => entry.status === 'generating');
+  useEffect(() => {
+    if (!isGenerating) return;
+    let index = 0;
+    const timer = window.setInterval(() => {
+      index = (index + 1) % LOADING_MESSAGES.length;
+      setEntries(prev => prev.map(entry => entry.status === 'generating' ? { ...entry, loadingLabel: LOADING_MESSAGES[index] } : entry));
+    }, 2400);
+    return () => window.clearInterval(timer);
+  }, [isGenerating]);
+
   const hasDraftWithArticle = useMemo(
     () => entries.some((entry) => Boolean(entry.article)),
     [entries],
@@ -300,7 +315,10 @@ function EventBuilder() {
   };
 
   const handleSaveEntry = (entry: StoryEntry) => {
-    if (!entry.article) return;
+    if (!entry.article || savingRef.current) return;
+    if (!user) { toast.error('Sign in to keep this memory. Your draft stays here while you sign in.'); return; }
+    if (!(entry.headlineDraft ?? entry.article.headline).trim() || !(entry.bodyDraft ?? toEditableBody(entry.article)).trim()) { toast.error('Add a headline and a little story before saving.'); return; }
+    savingRef.current = true;
 
     handleSaveToArchive({
       entry,
@@ -310,31 +328,35 @@ function EventBuilder() {
       bodyHtml: buildBodyHtml({ ...entry.article, body: parseBodyDraft(entry.bodyDraft, entry.article.body) }),
       prompt: entry.prompt,
     }).then((res) => {
-      if (res.error) {
-        toast.error('Failed to save story');
+      if (res.error || !res.story) {
+        toast.error(res.error?.message || 'We couldn’t confirm the save. Your draft is still here.');
       } else {
-        toast.success('Story saved to archive!');
+        toast.success('Memory saved to your story library!');
+        setSavedStoryId(res.story?.id ?? null);
         removeEntry(entry.id);
+        onArchiveSaved?.();
       }
-    });
+    }).finally(() => { savingRef.current = false; });
   };
 
   return (
-    <section className="bg-surface border border-accent-border rounded-xl shadow-soft p-4 md:p-8">
+    <section className="front-page-studio bg-surface border border-accent-border rounded-xl shadow-soft p-4 md:p-8">
       <header className="text-center mb-10 max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 text-accent-gold-dark font-sans text-sm uppercase tracking-widest mb-3 font-semibold">
           <Sparkles size={16} strokeWidth={2} />
           <span>Front Page Studio</span>
         </div>
-        <h1 className="font-display text-4xl md:text-5xl text-ink-black mb-4 leading-tight">
-          Build tomorrow’s front page.
-        </h1>
+        <h2 className="font-display text-4xl md:text-5xl text-ink-black mb-4 leading-tight">
+          Make a little moment headline news.
+        </h2>
         <p className="text-ink-soft text-lg leading-relaxed">
           Upload your photos and let our AI Editor draft the story.
           Review the headlines, tweak the copy, and publish to your archive.
         </p>
       </header>
 
+      <CreationSteps current={uploadProgress !== null ? 4 : hasDraftWithArticle ? 3 : isGenerating ? 2 : hasEntries ? 1 : 0} />
+      {savedStoryId && <div className="memory-saved" role="status"><div><strong>Your memory is on the record.</strong><p>Next, give it a home in a family newspaper.</p></div><Link to={`/newspaper?ids=${savedStoryId}`}><Button>Add to Newspaper →</Button></Link><a href="#story-library">View library</a></div>}
       {/* STEP 1: UPLOAD */}
       <div className="mb-12">
         <PhotoUploader
@@ -347,7 +369,7 @@ function EventBuilder() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12">
 
           {/* STEP 2: REFINE (Prompt & Template) */}
-          {!hasDraftWithArticle && (
+          {!hasDraftWithArticle && !isGenerating && (
             <div className="grid md:grid-cols-2 gap-8 items-start">
               <div className="space-y-6">
                 <StoryPromptInput
@@ -358,7 +380,7 @@ function EventBuilder() {
                 />
 
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
-                  <strong>✨ Magic Tip:</strong> Leave the prompt blank and we'll write a surprise story for you!
+                  <strong>A note from the editor:</strong> Names, places, and one little detail make a story yours. Our AI uses your description; it doesn’t analyze the photo. A blank prompt creates an imaginative starter draft.
                 </div>
               </div>
 
@@ -373,7 +395,7 @@ function EventBuilder() {
           )}
 
           {/* ACTION: GENERATE */}
-          {!hasDraftWithArticle && (
+          {!hasDraftWithArticle && !isGenerating && (
             <div className="flex justify-center pt-4 border-t border-accent-border">
               <Button
                 size="lg"
@@ -387,17 +409,18 @@ function EventBuilder() {
           )}
 
           {/* STEP 3: REVIEW */}
-          {hasDraftWithArticle && (
+          {hasEntries && (
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-display text-ink">Editor's Desk</h2>
-                <Button variant="ghost" onClick={clearEntries} className="text-red-600 hover:bg-red-50 hover:text-red-700">
+                <Button variant="ghost" disabled={uploadProgress !== null} onClick={() => { if (window.confirm('Clear these unsaved drafts?')) clearEntries(); }} className="text-red-600 hover:bg-red-50 hover:text-red-700">
                   <Trash2 size={16} className="mr-2" />
                   Clear All
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {!user && <p className="studio-note">Try creating and editing freely. Sign in before saving; keep this tab open to retain your draft. <Link to="/login" target="_blank" rel="noopener noreferrer">Sign in in a new tab →</Link></p>}
+              <div className="review-grid">
                 {entries.map((entry) => (
                   <StoryReview
                     key={entry.id}
@@ -406,6 +429,9 @@ function EventBuilder() {
                     onRegenerate={generateStory}
                     onSave={handleSaveEntry}
                     isSaving={uploadProgress !== null}
+                    templateName={selectedTemplate?.title}
+                    canSave={Boolean(user)}
+                    onRemove={removeEntry}
                     toEditableBody={toEditableBody}
                   />
                 ))}

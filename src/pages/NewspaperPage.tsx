@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Printer, Save, Download, Calendar } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Printer, Save, Download, Calendar, Share2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
@@ -17,9 +18,10 @@ import { createIssue, fetchIssueById } from '../lib/storiesApi';
 import { useAuth } from '../providers/AuthProvider';
 import type { Database } from '../types/supabase';
 import toast from 'react-hot-toast';
-import { exportNewspaperToPDF } from '../lib/pdfExport';
-import { OnThisDayBox } from '../components/OnThisDayBox';
-import { sanitizeHtml } from '../utils/sanitizeHtml';
+import { exportNewspaperToPDF, waitForEditionImages } from '../lib/pdfExport';
+import { EditionPaper } from '../components/EditionPaper';
+import { layoutEdition, editionShareUrl, savedEditionSettings, type PaperSize } from '../lib/newspaperLayout';
+import { copyToClipboard } from '../utils/clipboard';
 import '../styles/newspaper-print.css';
 
 type StoryRow = Database['public']['Tables']['story_archives']['Row'];
@@ -41,27 +43,8 @@ function getPublicImage(path?: string | null) {
   return data?.publicUrl ?? null;
 }
 
-function sanitizeHtmlToText(value?: string | null) {
-  if (!value) {
-    return '';
-  }
-  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function buildPreview(story: StoryWithImage) {
-  const base = sanitizeHtmlToText(story.article) || story.prompt || '';
-  if (!base) {
-    return ['More details coming soon!'];
-  }
-  const sentences = base.split(/(?<=[.!?])\s+/).filter(Boolean);
-  const paragraphOne = sentences.slice(0, 2).join(' ');
-  const paragraphTwo = sentences.slice(2, 4).join(' ');
-  return [paragraphOne, paragraphTwo].filter(Boolean);
-}
-
-export default function NewspaperPage() {
+export default function NewspaperPage({ reader = false }: { reader?: boolean }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [stories, setStories] = useState<StoryWithImage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,14 +53,19 @@ export default function NewspaperPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [issueTitle, setIssueTitle] = useState('My Daily Edition');
+  const [issueTitle, setIssueTitle] = useState(() => new URLSearchParams(location.search).get('title')?.slice(0, 120) || 'My Daily Edition');
+  const [paper, setPaper] = useState<PaperSize>(() => new URLSearchParams(location.search).get('paper') === 'letter' ? 'letter' : 'a4');
+  const [shareOpen, setShareOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [editionDate, setEditionDate] = useState(() => {
+    const date = new URLSearchParams(location.search).get('date');
+    return date && /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date)) ? date : new Date().toISOString().slice(0, 10);
+  });
   const issueTitleRef = useRef<HTMLInputElement>(null);
+  const loadVersion = useRef(0);
+  const pendingSave = useRef<{ key: string; requestId: string } | null>(null);
 
-  // Check if "On This Day" feature is enabled via URL param
-  const showHistory = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get('showHistory') === 'true';
-  }, [location.search]);
+  const [showHistory, setShowHistory] = useState(() => new URLSearchParams(location.search).get('showHistory') !== 'false');
 
   const ids = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -85,13 +73,23 @@ export default function NewspaperPage() {
     if (!raw) {
       return [];
     }
-    return raw
+    return Array.from(new Set(raw
       .split(',')
       .map((value) => value.trim())
-      .filter((value) => UUID_MATCH.test(value));
+      .filter((value) => UUID_MATCH.test(value))));
+  }, [location.search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setIssueTitle(params.get('title')?.slice(0, 120) || 'My Daily Edition');
+    setPaper(params.get('paper') === 'letter' ? 'letter' : 'a4');
+    setShowHistory(params.get('showHistory') !== 'false');
+    const date = params.get('date');
+    setEditionDate(date && /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date)) ? date : new Date().toISOString().slice(0, 10));
   }, [location.search]);
 
   const loadStories = useCallback(async () => {
+    const requestVersion = ++loadVersion.current;
     let targetIds = ids;
     const params = new URLSearchParams(location.search);
     const issueId = params.get('issueId');
@@ -102,9 +100,11 @@ export default function NewspaperPage() {
 
     try {
       // If loading from an issue, fetch the issue first to get story IDs
-      if (issueId) {
+      if (issueId && !reader) {
+        if (!UUID_MATCH.test(issueId)) throw new Error('Invalid issue ID');
         if (process.env.NODE_ENV !== 'production') console.log('[NewspaperPage] 🔍 Fetching issue', issueId);
         const issue = await fetchIssueById(issueId);
+        if (requestVersion !== loadVersion.current) return;
 
         if (!issue) {
           setError('Issue not found or you do not have permission to view it.');
@@ -113,6 +113,11 @@ export default function NewspaperPage() {
           return;
         }
 
+        setIssueTitle(issue.title);
+        const settings = savedEditionSettings(issue.description);
+        setPaper(settings?.paper || 'a4');
+        setShowHistory(settings?.showHistory ?? true);
+        setEditionDate(settings?.date || issue.created_at.slice(0, 10));
         // Extract story IDs from the issue's stories, preserving order
         targetIds = issue.stories.map(s => s.id);
       }
@@ -129,7 +134,7 @@ export default function NewspaperPage() {
       // WORKAROUND: Use raw fetch because Supabase client hangs
       const idsParam = `(${targetIds.join(',')})`;
       const data = await supaRest<StoryRow[]>('GET',
-        `/rest/v1/story_archives?select=${encodeURIComponent(STORY_COLUMNS)}&id=in.${idsParam}`,
+        `/rest/v1/story_archives?select=${encodeURIComponent(STORY_COLUMNS)}&id=in.${idsParam}${reader ? '&is_public=eq.true' : ''}`,
         {
           headers: {
             'Prefer': 'count=none'
@@ -137,13 +142,14 @@ export default function NewspaperPage() {
         }
       );
 
+      if (requestVersion !== loadVersion.current) return;
       if (process.env.NODE_ENV !== 'production') console.log('[NewspaperPage] Raw fetch response', { count: data.length });
 
       const available = (data ?? []).filter((story: StoryRow) => {
         if (story.is_public) {
           return true;
         }
-        if (!user?.id) {
+        if (reader || !user?.id) {
           return false;
         }
         return story.created_by === user.id;
@@ -171,19 +177,31 @@ export default function NewspaperPage() {
 
       setStories(orderedStories);
     } catch (err) {
+      if (requestVersion !== loadVersion.current) return;
       console.error('[NewspaperPage] ❌ Failed to load stories', err);
       setError('Failed to load stories. Please try again.');
     } finally {
-      setLoading(false);
+      if (requestVersion === loadVersion.current) setLoading(false);
     }
-  }, [ids, location.search, user]);
+  }, [ids, location.search, user, reader]);
 
+  const invalidateLoad = useCallback(() => { loadVersion.current++; }, []);
   useEffect(() => {
     loadStories();
-  }, [loadStories]);
+    return invalidateLoad;
+  }, [loadStories, invalidateLoad]);
 
-  const handlePrint = () => {
-    window.print();
+  const editionOptions = useMemo(() => ({ title: issueTitle, paper, showHistory, date: editionDate }), [issueTitle, paper, showHistory, editionDate]);
+  const layout = useMemo(() => layoutEdition(stories, editionOptions), [stories, editionOptions]);
+  const handlePrint = async () => {
+    setIsPrinting(true);
+    try {
+      const element = document.getElementById('newspaper-content');
+      if (!element) return;
+      await waitForEditionImages(element);
+      window.print();
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Unable to prepare the edition.'); }
+    finally { setIsPrinting(false); }
   };
 
   const handleSaveIssue = () => {
@@ -199,11 +217,16 @@ export default function NewspaperPage() {
     setSaveDialogOpen(false);
     setIsSaving(true);
     try {
+      const key = JSON.stringify({ title: issueTitle.trim(), ids: stories.map(story => story.id), paper, showHistory, editionDate });
+      if (pendingSave.current?.key !== key) pendingSave.current = { key, requestId: crypto.randomUUID() };
       await createIssue({
+        requestId: pendingSave.current.requestId,
         title: issueTitle.trim(),
         storyIds: stories.map(s => s.id),
         userId: user.id,
+        description: JSON.stringify({ type: 'digitimes-edition', version: 1, paper, showHistory, date: editionDate }),
       });
+      pendingSave.current = null;
       toast.success('Issue saved successfully!');
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') console.error('Failed to save issue', err);
@@ -218,7 +241,7 @@ export default function NewspaperPage() {
     const toastId = toast.loading('Generating PDF...');
 
     try {
-      await exportNewspaperToPDF('newspaper-content', {
+      await exportNewspaperToPDF(layout, {
         onProgress: (progress) => {
           if (progress === 100) {
             toast.success('PDF downloaded!', { id: toastId });
@@ -227,21 +250,13 @@ export default function NewspaperPage() {
       });
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') console.error('Failed to generate PDF', err);
-      toast.error('Failed to generate PDF. Please try again.', { id: toastId });
+      toast.error(err instanceof Error ? err.message : 'Failed to generate PDF. Please try again.', { id: toastId, duration: 6000 });
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const handleToggleHistory = () => {
-    const params = new URLSearchParams(location.search);
-    if (showHistory) {
-      params.delete('showHistory');
-    } else {
-      params.set('showHistory', 'true');
-    }
-    navigate({ search: params.toString() }, { replace: true });
-  };
+  const handleToggleHistory = () => setShowHistory(value => !value);
 
   if (loading) {
     return (
@@ -283,9 +298,7 @@ export default function NewspaperPage() {
     );
   }
 
-  const mainStory = stories[0];
-  const sideStories = stories.slice(1, 3);
-  const bottomStories = stories.slice(3);
+
 
   return (
     <div className="newspaper-page">
@@ -297,131 +310,58 @@ export default function NewspaperPage() {
           {notice && <span className="newspaper-notice">{notice}</span>}
         </div>
         <div className="newspaper-actions__right">
-          <Button
-            variant={showHistory ? 'default' : 'outline'}
-            onClick={handleToggleHistory}
-            size="sm"
-            title="Toggle 'On This Day in History' section"
-          >
-            <Calendar size={16} className="mr-2" />
-            {showHistory ? 'Hide History' : 'Show History'}
+          {!reader && <>
+          <Button variant={showHistory ? 'default' : 'outline'} onClick={handleToggleHistory} size="sm" aria-pressed={showHistory}>
+            <Calendar size={16} className="mr-2" />{showHistory ? 'Hide History' : 'Show History'}
           </Button>
-          <Button variant="outline" onClick={handleSaveIssue} disabled={isSaving}>
-            <Save size={16} className="mr-2" />
-            {isSaving ? 'Saving...' : 'Save Issue'}
-          </Button>
-          <Button onClick={handlePrint}>
+          <Button variant="outline" onClick={handleSaveIssue} disabled={isSaving}><Save size={16} /> {isSaving ? 'Saving...' : 'Save Issue'}</Button>
+          <Button variant="outline" onClick={() => setShareOpen(true)}><Share2 size={16} /> Share edition</Button>
+          </>}
+          <Button onClick={handlePrint} disabled={isPrinting || isDownloading}>
             <Printer size={16} className="mr-2" />
-            Print to PDF
+            {isPrinting ? 'Preparing...' : 'Print / Save PDF'}
           </Button>
-          <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading} size="sm">
+          <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading || isPrinting} size="sm">
             <Download size={16} className="mr-2" />
-            {isDownloading ? 'Exporting...' : 'Quick Export'}
+            {isDownloading ? 'Exporting...' : 'Download PDF'}
           </Button>
         </div>
       </header>
 
-      {/* PDF Export Instructions */}
-      <div className="newspaper-pdf-notice no-print">
-        <div className="newspaper-pdf-notice__heading">💡 PDF Export Options:</div>
-        <ul className="newspaper-pdf-notice__list">
-          <li><strong>Print to PDF</strong> (Recommended): Click the button above, then select "Save as PDF" in your browser's print dialog for the highest quality vector-based PDF.</li>
-          <li><strong>Quick Export</strong>: One-click download for convenient sharing. Good quality, larger file size.</li>
-        </ul>
-      </div>
-
-      <div className="newspaper-container" id="newspaper-content">
-        <header className="newspaper-header">
-          <div className="newspaper-meta">
-            <span>Vol. 1, No. 1</span>
-            <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-            <span>$1.00</span>
-          </div>
-          <div className="border-t-4 border-b border-ink-black my-2"></div>
-          <h1 className="newspaper-title font-headline text-6xl font-black tracking-tight text-ink-black uppercase">
-            DigiTimes
-          </h1>
-          <div className="border-t border-b-4 border-ink-black my-2"></div>
-          <div className="newspaper-tagline font-cheltenham italic text-sm">"Your Memories, Front Page News"</div>
-        </header>
-
-        <main className="newspaper-layout">
-          {/* Main Feature Story */}
-          {mainStory && (
-            <article className="newspaper-story newspaper-story--main">
-              {mainStory.imageUrl && (
-                <div className="newspaper-story__image-container">
-                  <img src={mainStory.imageUrl} alt={mainStory.title || 'Story image'} className="newspaper-story__image" />
-                  {mainStory.prompt && <figcaption className="newspaper-story__caption">{mainStory.prompt}</figcaption>}
-                </div>
-              )}
-              <div className="newspaper-story__content">
-                <h2 className="newspaper-story__headline">{mainStory.title || 'Untitled Feature'}</h2>
-                <div className="newspaper-story__byline">By DigiTimes Staff</div>
-                <div className="newspaper-story__body">
-                  {mainStory.article ? (
-                    // article is AI-generated/user-derived HTML; sanitize before injecting
-                    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(mainStory.article) }} />
-                  ) : (
-                    buildPreview(mainStory).map((p, i) => <p key={i}>{p}</p>)
-                  )}
-                </div>
-              </div>
-            </article>
-          )}
-
-          {/* Sidebar Stories */}
-          {sideStories.length > 0 && (
-            <aside className="newspaper-sidebar">
-              {sideStories.map((story) => (
-                <article key={story.id} className="newspaper-story newspaper-story--side">
-                  <h3 className="newspaper-story__headline">{story.title || 'Untitled Story'}</h3>
-                  {story.imageUrl && (
-                    <img src={story.imageUrl} alt={story.title || 'Story image'} className="newspaper-story__image" />
-                  )}
-                  <div className="newspaper-story__body">
-                    {buildPreview(story).map((p, i) => <p key={i}>{p}</p>)}
-                  </div>
-                </article>
-              ))}
-            </aside>
-          )}
-        </main>
-
-        {/* Bottom Stories Grid */}
-        {bottomStories.length > 0 && (
-          <section className="newspaper-bottom-grid">
-            {bottomStories.map((story) => (
-              <article key={story.id} className="newspaper-story newspaper-story--bottom">
-                <h3 className="newspaper-story__headline">{story.title || 'Untitled Story'}</h3>
-                <div className="newspaper-story__body">
-                  {buildPreview(story).map((p, i) => <p key={i}>{p}</p>)}
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
-
-        {/* On This Day in History - Optional */}
-        {showHistory && mainStory && (
-          <OnThisDayBox date={new Date(mainStory.created_at)} />
-        )}
-
-        <footer className="newspaper-footer">
-          <p>Printed with DigiTimes • Turn your memories into headlines.</p>
-        </footer>
-      </div>
+      <style>{`@media print { @page { size: ${paper === 'letter' ? 'letter' : 'A4'} portrait; margin: 0; } }`}</style>
+      <section className="issue-intro no-print">
+        <p className="editorial-kicker">{reader ? 'An edition shared with you' : 'Ready for the family fridge'}</p>
+        <h2>{reader ? issueTitle : 'Your memories, together at last.'}</h2>
+        <p>{stories.length} {stories.length === 1 ? 'story' : 'stories'} · {layout.pages.length} {layout.pages.length === 1 ? 'page' : 'pages'} · {paper === 'letter' ? 'US Letter' : 'A4'}. Every page below is the layout you will download or print.</p>
+        {!reader && <><label htmlFor="edition-name">Edition name</label><Input id="edition-name" maxLength={120} value={issueTitle} onChange={event => setIssueTitle(event.target.value)} />
+        <label htmlFor="paper-size">Paper size</label><select id="paper-size" value={paper} onChange={event => setPaper(event.target.value as PaperSize)}><option value="a4">A4 (210 × 297 mm)</option><option value="letter">US Letter (8.5 × 11 in)</option></select></>}
+        <p className="edition-help">Download PDF keeps text sharp and selectable. For other alphabets or emoji, use Print / Save PDF. In the print dialog, match the selected paper size, choose 100% scale and turn off browser headers and footers.</p>
+        <p className="edition-help">On a small screen, swipe across the paper to read the full page.</p>
+      </section>
+      <EditionPaper layout={layout} />
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent><DialogHeader><DialogTitle>Share this edition</DialogTitle><DialogDescription>Anyone with this link can read its public stories without signing in. Sharing does not change story privacy. Later edits to those stories will appear in the link; a downloaded PDF keeps today's copy.</DialogDescription></DialogHeader>
+          <p>{notice ? 'This edition is incomplete. Reload or choose an available set of stories before sharing.' : stories.some(story => !story.is_public) ? 'Make the private stories below public in your archive before copying an edition link. You can also send a downloaded PDF yourself.' : 'The link includes this title, story order, paper size, date and history setting.'}</p>
+          <ul className="edition-share-list">{stories.map(story => <li key={story.id}><span>{story.title || 'Untitled Story'}</span><strong>{story.is_public ? 'Public' : 'Private'}</strong></li>)}</ul>
+          <DialogFooter><Button variant="outline" onClick={() => setShareOpen(false)}>Close</Button><Button disabled={Boolean(notice) || stories.some(story => !story.is_public)} onClick={async () => {
+            const copied = await copyToClipboard(editionShareUrl(window.location.origin, stories.map(story => story.id), editionOptions));
+            if (copied) { toast.success('Edition link copied.'); setShareOpen(false); } else toast.error('Could not copy the edition link.');
+          }}>Copy edition link</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Save Issue Dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Newspaper Issue</DialogTitle>
+            <DialogDescription>Save the title, story selection, paper size, date and history setting to your library.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 py-2">
             <Label htmlFor="issue-title">Issue name</Label>
             <Input
               id="issue-title"
+              maxLength={120}
               ref={issueTitleRef}
               value={issueTitle}
               onChange={(e) => setIssueTitle(e.target.value)}

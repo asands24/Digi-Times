@@ -1,3 +1,4 @@
+import { escapeHtml } from './sanitizeHtml';
 interface StoryGeneratorOptions {
   prompt?: string;
   fileName?: string;
@@ -343,6 +344,7 @@ export const generateArticle = (
       .split(' ')
       .slice(0, 6)
       .join(' ')
+      .replace(/(?:\s+(?:on|at|in|with|and|the|a|an|to|for|of|by|from))+$/i, '')
       .trim() || fallbackSubject,
   );
   const subjectLower = subject.toLowerCase();
@@ -379,6 +381,7 @@ export const generateArticle = (
     .replace('{subjectLower}', subjectLower)
     .replace('{tonal}', tonal);
 
+  const fillCopy = (text: string) => text.replace(/\{(subject|subjectLower|tonal)\}/g, (_, key: string) => ({ subject, subjectLower, tonal }[key] ?? ''));
   const article = {
     headline,
     subheadline: layoutPhrase
@@ -387,11 +390,11 @@ export const generateArticle = (
     byline,
     dateline,
     body: [
-      opener,
-      development,
-      layoutPhrase ? `${closing} ${layoutPhrase}`.trim() : closing,
+      fillCopy(opener),
+      fillCopy(development),
+      fillCopy(layoutPhrase ? `${closing} ${layoutPhrase}`.trim() : closing),
     ],
-    quote,
+    quote: fillCopy(quote),
     tags: palette.tags,
   };
 
@@ -406,25 +409,13 @@ export const generateArticle = (
 
 export type { GeneratedArticle };
 
-const buildLocalStoryText = (article: GeneratedArticle) =>
-  [
-    article.headline,
-    article.subheadline,
-    article.body.join('\n\n'),
-    article.quote,
-  ]
-    .map((part) => part?.trim())
-    .filter((part): part is string => Boolean(part && part.length > 0))
-    .join('\n\n');
-
-const LocalStoryGenerator = (prompt: string) => {
-  const article = generateArticle({
-    prompt,
-    fileName: prompt,
-    capturedAt: new Date(),
-  });
-  return buildLocalStoryText(article);
-};
+// When the AI service is unavailable, preserve the whole supplied moment rather
+// than presenting generic witnesses or a truncated subject as reported facts.
+const LocalStoryGenerator = (prompt: string) => [
+  `From the family album: “${prompt}”`,
+  'Some of the best family news happens in the little moments. This photograph gives that memory a place on the front page, ready to be shared and remembered.',
+  'Add the names, the place, and your favorite detail to make this keepsake truly yours. Years from now, even an ordinary day can be a story worth telling again.',
+].join('\n\n');
 
 export async function generateStoryWithOpenAI(prompt: string): Promise<string> {
   console.log('[StoryGenerator] 🤖 Calling OpenAI API...', {
@@ -522,5 +513,5 @@ export const parseBodyDraft = (draft: string | undefined, originalBody: string[]
 };
 
 export const buildBodyHtml = (article: GeneratedArticle): string => {
-  return article.body.map(p => `<p>${p}</p>`).join('');
+  return article.body.map(p => `<p>${escapeHtml(p)}</p>`).join('');
 };

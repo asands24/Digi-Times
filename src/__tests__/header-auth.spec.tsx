@@ -1,7 +1,9 @@
+jest.mock('../providers/AuthProvider', () => ({ useAuth: jest.fn() }));
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import toast from 'react-hot-toast';
+import { MemoryRouter } from 'react-router-dom';
 import { Header } from '../components/Header';
 import * as AuthProvider from '../providers/AuthProvider';
 
@@ -70,7 +72,7 @@ jest.mock('react-router-dom', () => ({
 }));
 
 const mockSignOut = jest.fn().mockResolvedValue({ error: null });
-const useAuthSpy = jest.spyOn(AuthProvider, 'useAuth');
+const useAuthSpy = AuthProvider.useAuth as jest.Mock;
 
 const mockUseNavigate = jest.requireMock('react-router-dom').useNavigate as jest.Mock;
 const mockNavigate = jest.fn();
@@ -117,7 +119,7 @@ describe('Header auth actions', () => {
 
   it('logs out via Supabase', async () => {
     const user = setupUser();
-    render(<Header />);
+    render(<MemoryRouter><Header /></MemoryRouter>);
 
     const trigger = screen.getByRole('button', { name: /open account menu/i });
     await user.click(trigger);
@@ -137,7 +139,7 @@ describe('Header auth actions', () => {
   it('surfaces sign-out failures to the user', async () => {
     mockSignOut.mockResolvedValueOnce({ error: new Error('network') });
     const user = setupUser();
-    render(<Header />);
+    render(<MemoryRouter><Header /></MemoryRouter>);
 
     const trigger = screen.getByRole('button', { name: /open account menu/i });
     await user.click(trigger);

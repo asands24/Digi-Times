@@ -1,102 +1,50 @@
-import { persistStory } from '../hooks/useStoryLibrary';
-
-jest.mock('../lib/supabaseClient', () => {
-  const mockSupabase = {
-    storage: {
-      from: jest.fn(),
-    },
-    from: jest.fn(),
-  };
-  return {
-    supabase: mockSupabase,
-    supabaseClient: mockSupabase,
-    getSupabase: jest.fn(() => mockSupabase),
-  };
+import { persistStory } from '../lib/persistStory';
+import { supaRest } from '../lib/supaRest';
+jest.mock('../lib/supaRest', () => ({ getAccessToken: () => 'test-token', supaRest: jest.fn() }));
+jest.mock('../lib/supabaseClient', () => ({ supabaseClient: { storage: { from: () => ({ getPublicUrl: (path: string) => ({ data: { publicUrl: `https://example.com/${path}` } }) }) } } }));
+const rest = supaRest as jest.Mock;
+const originalXHR = global.XMLHttpRequest;
+let request: any;
+beforeEach(() => {
+  rest.mockReset();
+  class UploadXHR {
+    upload = { onprogress: null as any };
+    status = 200;
+    responseText = '{}';
+    onload: any;
+    open = jest.fn();
+    setRequestHeader = jest.fn();
+    send = jest.fn(() => { this.upload.onprogress?.({ lengthComputable: true, loaded: 5, total: 10 }); this.onload(); });
+    constructor() { request = this; }
+  }
+  global.XMLHttpRequest = UploadXHR as any;
 });
-
-const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
-  supabase: {
-    storage: { from: jest.Mock };
-    from: jest.Mock;
-  };
-  getSupabase: jest.Mock;
-};
-
-const mockSupabase = supabaseModule.supabase;
-const mockGetSupabase = supabaseModule.getSupabase;
-
-describe('persistStory upload', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockGetSupabase.mockReturnValue(mockSupabase);
-    mockSupabase.storage.from.mockReset();
-    mockSupabase.from.mockReset();
-  });
-
-  it('uploads file to storage and inserts archive record', async () => {
-    const { getSupabase } = jest.requireMock('../lib/supabaseClient');
-    const supabase = getSupabase();
-    const storageFrom = supabase.storage.from as jest.Mock;
-    const tableFrom = supabase.from as jest.Mock;
-
-    const uploadMock = jest.fn().mockResolvedValue({
-      data: { path: 'photos/user-1/foo.png' },
-      error: null,
-    });
-    storageFrom.mockReturnValue({
-      upload: uploadMock,
-      getPublicUrl: jest.fn(() => ({
-        data: { publicUrl: 'https://example.com/photos/user-1/foo.png' },
-      })),
-    });
-    const selectMock = jest.fn().mockReturnThis();
-    const singleMock = jest.fn().mockResolvedValue({
-      data: {
-        id: 'story-1',
-        created_by: 'user-1',
-        title: 'Smoke Test',
-        article: '<p>Body</p>',
-        prompt: 'Prompt',
-        image_path: 'stories/user-1/foo.png',
-        template_id: 'tpl-1',
-        is_public: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      error: null,
-    });
-    tableFrom.mockReturnValue({
-      insert: jest.fn().mockReturnThis(),
-      select: selectMock,
-      single: singleMock,
-    });
-
-    const file = new File([new Uint8Array([1, 2, 3])], 'foo.png', {
-      type: 'image/png',
-    });
-
-    const result = await persistStory({
-      file,
-      meta: {
-        headline: 'Smoke Test',
-        bodyHtml: '<p>Body</p>',
-        prompt: 'Prompt',
-      },
-      templateId: 'tpl-1',
-      userId: 'user-1',
-    });
-
-    expect(result.filePath).toMatch(/^stories\/user-1\/.+foo\.png$/);
-    expect(result.story).toBeTruthy();
-    expect(result.story?.template_id).toBe('tpl-1');
-    expect(storageFrom).toHaveBeenCalledWith('photos');
-    const uploadPath = uploadMock.mock.calls[0][0];
-    expect(uploadPath).toMatch(/^stories\/user-1\/\d+-foo\.png$/);
-    expect(uploadMock).toHaveBeenCalledWith(
-      uploadPath,
-      file,
-      expect.objectContaining({ upsert: false }),
-    );
-    expect(tableFrom).toHaveBeenCalledWith('story_archives');
-  });
+afterEach(() => { global.XMLHttpRequest = originalXHR; });
+it('uploads via authenticated XHR with progress then saves a private story over REST', async () => {
+  rest.mockImplementation(async (_method, _path, options) => [{ id: 'saved-1', ...JSON.parse(options.body) }]);
+  const file = new File(['image'], 'family photo.png', { type: 'image/png' });
+  const progress = jest.fn();
+  const result = await persistStory({ file, userId: 'user-1', templateId: 'template-1', meta: { headline: 'Family news', bodyHtml: '<p>A lovely day.</p>', prompt: 'Picnic' }, onProgress: progress });
+  expect(request.open).toHaveBeenCalledWith('POST', expect.stringContaining('/storage/v1/object/photos/stories/user-1/'));
+  expect(request.setRequestHeader).toHaveBeenCalledWith('Authorization', 'Bearer test-token');
+  expect(request.send).toHaveBeenCalledWith(file);
+  expect(progress).toHaveBeenCalledWith(50);
+  expect(rest).toHaveBeenCalledWith('POST', '/rest/v1/story_archives?select=*', expect.objectContaining({ body: expect.any(String) }));
+  expect(JSON.parse(rest.mock.calls[0][2].body)).toMatchObject({ is_public: false, template_id: 'template-1', created_by: 'user-1' });
+  expect(result.story.imageUrl).toContain('stories/user-1/');
+});
+it('does not write a story record when image upload fails', async () => {
+  const originalSend = global.XMLHttpRequest;
+  global.XMLHttpRequest = class {
+    upload = {};
+    status = 500;
+    responseText = 'failed';
+    onload: any;
+    open() {}
+    setRequestHeader() {}
+    send() { this.onload(); }
+  } as any;
+  await expect(persistStory({ file: new File(['x'], 'x.png'), userId: 'user-1', meta: { headline: 'Story', bodyHtml: '<p>Body</p>' } })).rejects.toThrow('Image upload failed');
+  expect(rest).not.toHaveBeenCalled();
+  global.XMLHttpRequest = originalSend;
 });

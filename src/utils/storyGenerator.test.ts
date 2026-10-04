@@ -1,4 +1,4 @@
-import { generateArticle } from './storyGenerator';
+import { generateArticle, generateStoryFromPrompt } from './storyGenerator';
 
 const baseOptions = {
   fileName: 'family-photo.jpg',
@@ -28,4 +28,14 @@ describe('generateArticle', () => {
     expect(article.tags).toContain('Celebrations');
     expect(article.body.length).toBeGreaterThanOrEqual(3);
   });
+});
+
+it('fills local fallback placeholders and returns article paragraphs without a duplicate headline', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = jest.fn().mockRejectedValue(new Error('Offline'));
+  try {
+    const body = await generateStoryFromPrompt('The family made pancakes together on a sunny Sunday morning.');
+    expect(body).not.toMatch(/\{(?:subject|subjectLower|tonal)\}/);
+    expect(body.split('\n\n')).toHaveLength(3);
+  } finally { global.fetch = originalFetch; }
 });

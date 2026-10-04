@@ -16,17 +16,18 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
         event.target.value = '';
     };
 
-    if (hasEntries) return null;
+
 
     return (
-        <div className="border-2 border-dashed border-accent-border rounded-xl p-8 text-center bg-paper-soft hover:bg-paper hover:border-accent-gold transition-colors cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}>
+        <div className="photo-dropzone border-2 border-dashed border-accent-border rounded-xl p-8 text-center bg-paper-soft hover:bg-paper hover:border-accent-gold transition-colors cursor-pointer"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => { event.preventDefault(); onFilesSelected(event.dataTransfer.files); }}>
             <div className="mb-6">
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-accent-gold">
                     <Upload size={32} strokeWidth={1.5} />
                 </div>
-                <h2 className="text-2xl font-display text-ink-black mb-2">Start your story</h2>
-                <p className="text-ink-muted">Select photos from your library to get started.</p>
+                <h2 className="text-2xl font-display text-ink-black mb-2">{hasEntries ? 'Add another memory' : 'Start with a moment you love'}</h2>
+                <p className="text-ink-muted">Choose a photo or drop it here. Birthdays, big adventures, little everyday joys.</p>
             </div>
 
             <div className="flex justify-center gap-4 mb-6" onClick={(e) => e.stopPropagation()}>
@@ -52,7 +53,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
             </div>
 
             <p className="text-sm text-ink-muted">
-                Tip: photos with people make the best stories.
+                Images up to 10 MB each. One photo becomes one story.
             </p>
 
             <input
@@ -60,6 +61,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
                 type="file"
                 accept="image/*"
                 multiple
+                aria-label="Upload story photos"
                 className="hidden"
                 onChange={onFileInputChange}
             />
@@ -68,6 +70,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
                 type="file"
                 accept="image/*"
                 capture="environment"
+                aria-label="Take a story photo"
                 className="hidden"
                 onChange={onFileInputChange}
             />

@@ -69,6 +69,18 @@ export async function fetchPublicStory(slug: string) {
     .then(rows => rows[0] || null);
 }
 
+/** Publish through the same path used by the archive; keep existing links stable. */
+export async function setStoryVisibility(id: string, isPublic: boolean): Promise<void> {
+  const payload: { is_public: boolean; public_slug?: string } = { is_public: isPublic };
+  if (isPublic) {
+    const current = await fetchStoryById(id);
+    if (!current) throw new Error('This story is no longer available.');
+    if (!current.public_slug) payload.public_slug = crypto.randomUUID();
+  }
+  const rows = await updateStory(id, payload);
+  if (!rows[0] || rows[0].id !== id || rows[0].is_public !== isPublic) throw new Error('Story sharing could not be updated.');
+}
+
 // --- Issue Management ---
 
 export interface IssueRow {
@@ -89,34 +101,15 @@ export interface IssueStoryRow {
 /**
  * Create a new newspaper issue.
  */
-export async function createIssue(payload: { title: string; description?: string; storyIds: string[]; userId: string }) {
-  // 1. Create the issue
-  const [issue] = await supaRest<IssueRow[]>('POST', '/rest/v1/issues', {
-    headers: { 'Prefer': 'return=representation' },
-    body: JSON.stringify({
-      title: payload.title,
-      description: payload.description,
-      created_by: payload.userId,
-    }),
+export async function createIssue(payload: { title: string; description?: string; storyIds: string[]; userId: string; requestId?: string }) {
+  const title = payload.title.trim();
+  if (!title || title.length > 120) throw new Error('Issue name must contain between 1 and 120 characters.');
+  if (!payload.storyIds.length || new Set(payload.storyIds).size !== payload.storyIds.length) throw new Error('Choose distinct stories before saving an issue.');
+  const data = await supaRest<IssueRow | IssueRow[]>('POST', '/rest/v1/rpc/create_issue_with_stories', {
+    body: JSON.stringify({ p_title: title, p_description: payload.description ?? null, p_story_ids: payload.storyIds, p_request_id: payload.requestId ?? crypto.randomUUID() }),
   });
-
-  if (!issue) throw new Error('Failed to create issue');
-
-  // 2. Link stories to the issue
-  const junctionPayload = payload.storyIds.map((storyId, index) => ({
-    issue_id: issue.id,
-    story_id: storyId,
-    position: index,
-  }));
-
-  await supaRest('POST', '/rest/v1/issue_stories', {
-    headers: {
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-    body: JSON.stringify(junctionPayload),
-  });
-
+  const issue = Array.isArray(data) ? data[0] : data;
+  if (!issue?.id || issue.created_by !== payload.userId) throw new Error('Your sign-in changed. Reopen this edition before saving.');
   return issue;
 }
 
@@ -163,4 +156,10 @@ export async function fetchIssueById(id: string) {
  */
 export async function deleteIssue(id: string) {
   return supaRest<void>('DELETE', `/rest/v1/issues?id=eq.${id}`);
+}
+
+/** Load full articles for an edition using the same REST transport and owner filter. */
+export async function fetchStoriesByIds(ids: string[], userId: string) {
+  if (!ids.length) return [];
+  return supaRest<StoryArchiveRow[]>('GET', `/rest/v1/story_archives?created_by=eq.${encodeURIComponent(userId)}&id=in.(${ids.map(encodeURIComponent).join(',')})&select=*`);
 }

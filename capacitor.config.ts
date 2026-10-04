@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appId: 'app.digitimes.ios',
   appName: 'DigiTimes',
 
-  // Points to the CRA build output. `npm run build` must run before `npx cap sync`.
+  // Points to the Vite build output. `npm run build` must run before `npx cap sync`.
   webDir: 'build',
 
   // Server config: in production, load the bundled build.

@@ -48,11 +48,11 @@ exports.handler = async (event) => {
 
   try {
     const story = await generateStory(prompt, context);
-    return jsonResponse(200, story);
+    return jsonResponse(200, { ...story, source: 'openai' });
   } catch (err) {
-    console.error('[generateStory] Falling back to local generator', err);
+    console.error('[generateStory] Falling back to local generator', failureReason(err));
     const fallback = buildLocalStory(prompt, context);
-    return jsonResponse(200, fallback);
+    return jsonResponse(200, { ...fallback, source: 'local', fallbackReason: failureReason(err) });
   }
 };
 
@@ -99,7 +99,7 @@ async function generateStory(prompt, context) {
         err?.message?.includes('does not exist');
       if (!isUnavailable) {
         // For other errors we still try the next model, but log first.
-        console.error(`[generateStory] model ${model} failed`, err);
+        console.error(`[generateStory] model ${model} failed`, failureReason(err));
       }
     }
   }
@@ -133,18 +133,26 @@ function parseStoryPayload(rawContent) {
 
 function buildLocalStory(prompt, context) {
   const focus = prompt || 'a cheerful neighborhood moment';
-  const place = context || 'the local community';
   const headline = `Bright News: ${capitalize(focus).slice(0, 80)}`;
   const paragraphs = [
-    `Young reporters gathered in ${place} to cover ${focus}, eager to share who was involved, what made it special, and why it matters to friends and family.`,
-    `Witnesses explained that the day stayed calm and friendly, with everyone pitching in to make sure the event felt welcoming and safe.`,
-    `Kids wrapped up their notes with smiles, promising to keep telling positive stories that celebrate curiosity, kindness, and teamwork.`,
+    focus,
+    'This memory is ready for its newspaper debut. Add the names, place and favorite details to make the story your own.',
   ];
 
   return {
     headline,
     article: paragraphs.join('\n\n'),
   };
+}
+
+// Report safe operational categories rather than SDK errors containing request details.
+function failureReason(error) {
+  if (error?.message === 'OPENAI_NOT_CONFIGURED') return 'not_configured';
+  if (error?.status === 401) return 'authentication';
+  if (error?.code === 'insufficient_quota' || error?.error?.code === 'insufficient_quota') return 'quota';
+  if (error?.status === 429) return 'rate_limit_or_quota';
+  if (error?.message === 'OPENAI_TIMEOUT') return 'timeout';
+  return 'provider_unavailable';
 }
 
 function capitalize(value) {
@@ -155,12 +163,13 @@ function capitalize(value) {
 }
 
 async function callWithTimeout(operation) {
-  return await Promise.race([
-    operation(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('OPENAI_TIMEOUT')), TIMEOUT_MS)
-    ),
-  ]);
+  let timer;
+  try {
+    return await Promise.race([
+      operation(),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('OPENAI_TIMEOUT')), TIMEOUT_MS); }),
+    ]);
+  } finally { clearTimeout(timer); }
 }
 
 async function callWithRetry(operation, retries = RATE_LIMIT_RETRIES) {
@@ -177,6 +186,8 @@ async function callWithRetry(operation, retries = RATE_LIMIT_RETRIES) {
 }
 
 function shouldRetry(err) {
+  // Repeating an exhausted-quota request cannot succeed and only delays the usable fallback.
+  if (failureReason(err) === 'quota') return false;
   const status = err?.status || err?.error?.status || err?.response?.status;
   const message = err?.message?.toLowerCase?.() ?? '';
   return status === 429 || message.includes('rate limit') || message.includes('timeout');

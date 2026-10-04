@@ -67,3 +67,5 @@ describe('templates local fallback', () => {
     });
   });
 });
+
+export {};

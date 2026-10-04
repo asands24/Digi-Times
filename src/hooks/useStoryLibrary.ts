@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabaseClient } from '../lib/supabaseClient';
 import { persistStory } from '../lib/persistStory';
-import { fetchStoriesForUser, updateStory, deleteStory as apiDeleteStory, fetchStoryById } from '../lib/storiesApi';
+import { fetchStoriesForUser, fetchStoriesByIds, setStoryVisibility, deleteStory as apiDeleteStory, fetchStoryById } from '../lib/storiesApi';
 import type { 
   ArchiveItem, 
   StoryArchiveRow,
@@ -68,33 +68,9 @@ export async function loadStoryDetails(storyId: string, userId: string): Promise
     timestamp: new Date().toISOString(),
   });
 
-  const { data, error } = await supabaseClient
-    .from('story_archives')
-    .select('id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public,public_slug')
-    .eq('id', storyId)
-    .eq('created_by', userId)
-    .single();
-
-  if (error) {
-    console.error('[StoryLibrary] ❌ Failed to load story details', {
-      error,
-      errorMessage: error.message,
-      errorCode: error.code,
-      storyId,
-    });
-    return null;
-  }
-
-  if (!data) {
-    console.warn('[StoryLibrary] ⚠️ Story not found', { storyId });
-    return null;
-  }
-
-  const item: ArchiveItem = { ...data };
-  if (data.image_path) {
-    const { data: pub } = supabaseClient.storage.from('photos').getPublicUrl(data.image_path);
-    item.imageUrl = pub?.publicUrl ?? null;
-  }
+  const data = await fetchStoryById(storyId);
+  if (!data || data.created_by !== userId) return null;
+  const item = toArchiveItems([data])[0];
 
   return item;
 }
@@ -113,55 +89,13 @@ export async function loadStoriesWithDetails(
     timestamp: new Date().toISOString(),
   });
 
-  const { data, error } = await supabaseClient
-    .from('story_archives')
-    .select('id,created_by,title,template_id,image_path,photo_id,created_at,updated_at,article,prompt,is_public,public_slug')
-    .eq('created_by', userId)
-    .in('id', storyIds);
-
-  if (error) {
-    console.error('[StoryLibrary] ❌ Failed to load stories with details', {
-      error,
-      errorMessage: error.message,
-      errorCode: error.code,
-    });
-    throw error;
-  }
-
-  const rows = (data ?? []) as StoryArchiveRow[];
-  return rows.map((row) => {
-    const item: ArchiveItem = { ...row };
-    if (row.image_path) {
-      const { data: pub } = supabaseClient.storage.from('photos').getPublicUrl(row.image_path);
-      item.imageUrl = pub?.publicUrl ?? null;
-    }
-    return item;
-  });
+  const rows = await fetchStoriesByIds(storyIds, userId);
+  const items = toArchiveItems(rows);
+  return storyIds.map(id => items.find(item => item.id === id)).filter((item): item is ArchiveItem => Boolean(item));
 }
 
 export async function updateStoryVisibility(id: string, nextValue: boolean): Promise<void> {
-  const payload: { is_public: boolean; public_slug?: string } = { is_public: nextValue };
-
-  // If making public, ensure we have a slug
-  if (nextValue) {
-    // Check if it already has one (we could fetch, but simpler to just try to update if null)
-    // Actually, we can just generate one client side if we want, or rely on the DB function if we used that.
-    // The plan said "Use a simple random string generator".
-    // We'll fetch the story first to see if it needs a slug, or just blindly update it if it's null?
-    // Safer to just generate one and let the DB ignore it if we only update if null?
-    // But standard update overwrites.
-    // Let's fetch first to be safe, or just generate one if we don't have it in the UI state?
-    // The UI state might not have the full row.
-    // Let's just generate a random one and send it. If it already has one, we might overwrite it?
-    // Wait, we don't want to change the slug if it exists.
-    // Let's fetch the current story to check.
-    const current = await fetchStoryById(id);
-    if (current && !current.public_slug) {
-      payload.public_slug = Math.random().toString(36).substring(2, 10);
-    }
-  }
-
-  await updateStory(id, payload);
+  await setStoryVisibility(id, nextValue);
 }
 
 export function useStoryLibrary(userId?: string | null) {

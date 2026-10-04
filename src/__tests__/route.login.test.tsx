@@ -17,6 +17,8 @@ jest.mock('../hooks/useStoryLibrary', () => ({
   }),
 }));
 
+jest.mock('../lib/supaRest', () => ({ supaRest: jest.fn().mockResolvedValue([{ id: '11111111-1111-4111-8111-111111111111', title: 'A public family memory', article: '<p>A day to remember.</p>', prompt: null, image_path: null, created_at: '2026-04-16T12:00:00Z', is_public: true, created_by: 'owner' }]) }));
+
 jest.mock('../lib/templates', () => ({
   fetchAllTemplates: jest.fn(),
   getLocalTemplates: jest.fn(),
@@ -42,6 +44,8 @@ const mockTemplate = {
 };
 
 beforeEach(() => {
+  jest.requireMock('../lib/supaRest').supaRest.mockResolvedValue([{ id: '11111111-1111-4111-8111-111111111111', title: 'A public family memory', article: '<p>A day to remember.</p>', prompt: null, image_path: null, created_at: '2026-04-16T12:00:00Z', is_public: true, created_by: 'owner' }]);
+  jest.requireMock('../hooks/useStoryLibrary').useStoryLibrary.mockReturnValue({ stories: [], isLoading: false, errorMessage: null, refreshStories: jest.fn(), saveDraftToArchive: jest.fn(), deleteStory: jest.fn(), loadMore: jest.fn(), hasMore: false });
   templatesModule.fetchAllTemplates.mockResolvedValue([mockTemplate]);
   templatesModule.getLocalTemplates.mockReturnValue([mockTemplate]);
   templatesModule.findLocalTemplate.mockReturnValue(mockTemplate);
@@ -80,6 +84,15 @@ describe('/login route', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('link', { name: /^Templates$/i })).toBeInTheDocument();
+    expect((await screen.findAllByRole('link', { name: /^Templates$/i })).length).toBeGreaterThan(0);
   });
+  it('lets signed-out readers open a shared edition when the app requires login', async () => {
+    process.env.REACT_APP_ACCESS_MODE = 'login';
+    useAuth.mockReturnValue({ user: null, loading: false });
+    const App = (await import('../App')).default;
+    render(<MemoryRouter initialEntries={['/edition?ids=11111111-1111-4111-8111-111111111111&title=Family%20Gazette']}><App /></MemoryRouter>);
+    expect(await screen.findByRole('heading', { name: 'Family Gazette' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /sign in/i })).not.toBeInTheDocument();
+  });
+
 });

@@ -1,167 +1,63 @@
-import { useEffect } from 'react';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getTemplateById } from '../lib/templates';
 import { loadStoryDetails, type ArchiveItem } from '../hooks/useStoryLibrary';
-import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
+import { sanitizeHtml, escapeHtml } from '../utils/sanitizeHtml';
 import { useAuth } from '../providers/AuthProvider';
+import { StoryPaper } from './StoryPaper';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 
-interface StoryPreviewDialogProps {
-  story: ArchiveItem | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-const applyTemplate = (template: string, replacements: Record<string, string>) => {
-  return Object.entries(replacements).reduce((compiled, [key, value]) => {
-    const pattern = new RegExp(`{{\\s*${key}\\s*}}`, 'gi');
-    return compiled.replace(pattern, value);
-  }, template);
-};
-
-const buildPreviewMarkup = (story: ArchiveItem, templateHtml: string) => {
-  const safeBody = sanitizeHtml(story.article ?? '');
-  const safeHeadline = escapeHtml(story.title ?? 'Preview');
-  const safeImage = story.imageUrl ? escapeHtml(story.imageUrl) : '';
-
-  const compiled = applyTemplate(templateHtml, {
-    headline: safeHeadline,
-    title: safeHeadline,
-    body: safeBody,
-    bodyHtml: safeBody,
-    article: safeBody,
-    image: safeImage,
-    imageUrl: safeImage,
-  });
-
-  return sanitizeHtml(compiled);
-};
-
-const openPreviewWindow = async (story: ArchiveItem) => {
-  if (!story.template_id) {
-    throw new Error('Template not assigned to this story.');
-  }
-
-  const template = await getTemplateById(story.template_id);
-  const win = window.open('', '_blank', 'noopener,noreferrer');
-  if (!win) {
-    throw new Error('Pop-up blocked. Allow pop-ups to preview the story.');
-  }
-
-  const safeBody = buildPreviewMarkup(story, template.html ?? '<article>{{bodyHtml}}</article>');
-  const doc = win.document;
-  const htmlEl =
-    doc.documentElement ??
-    doc.appendChild(doc.createElement('html')) ??
-    doc.documentElement;
-  const headEl =
-    doc.head ??
-    (() => {
-      const head = doc.createElement('head');
-      htmlEl.insertBefore(head, htmlEl.firstChild);
-      return head;
-    })();
-  const bodyEl =
-    doc.body ??
-    (() => {
-      const body = doc.createElement('body');
-      htmlEl.appendChild(body);
-      return body;
-    })();
-
-  headEl.innerHTML = '';
-  bodyEl.innerHTML = '';
-
-  doc.title = story.title ?? 'Preview';
-
-  const charsetMeta = doc.createElement('meta');
-  charsetMeta.setAttribute('charset', 'utf-8');
-  headEl.appendChild(charsetMeta);
-
-  const httpEquivMeta = doc.createElement('meta');
-  httpEquivMeta.setAttribute('http-equiv', 'X-UA-Compatible');
-  httpEquivMeta.setAttribute('content', 'IE=edge');
-  headEl.appendChild(httpEquivMeta);
-
-  const viewportMeta = doc.createElement('meta');
-  viewportMeta.name = 'viewport';
-  viewportMeta.content = 'width=device-width,initial-scale=1';
-  headEl.appendChild(viewportMeta);
-
-  if (template.css) {
-    const styleTag = doc.createElement('style');
-    styleTag.textContent = template.css;
-    headEl.appendChild(styleTag);
-  }
-
-  const root = doc.createElement('div');
-  root.id = 'root';
-  bodyEl.appendChild(root);
-
-  const article = doc.createElement('article');
-  // safeBody is produced by sanitizeHtml() (DOMPurify) above, so this innerHTML is safe.
-  article.innerHTML = safeBody;
-
-  if (story.imageUrl) {
-    const figures = article.querySelectorAll('img');
-    if (figures.length === 0) {
-      const img = doc.createElement('img');
-      img.src = story.imageUrl;
-      img.alt = '';
-      article.prepend(img);
-    }
-  }
-
-  root.appendChild(article);
-  return win;
-};
-
-export function StoryPreviewDialog({ story, open, onOpenChange }: StoryPreviewDialogProps) {
+export function StoryPreviewDialog({ story, open, onOpenChange }: { story: ArchiveItem | null; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { user } = useAuth();
-
+  const userId = user?.id;
+  const [fullStory, setFullStory] = useState<ArchiveItem | null>(null);
+  const [templateDocument, setTemplateDocument] = useState('');
+  const [templateName, setTemplateName] = useState('Family edition');
+  const [error, setError] = useState('');
+  const [mode, setMode] = useState<'paper' | 'template'>('paper');
   useEffect(() => {
-    if (!open || !story || !user) {
-      return;
-    }
-
+    if (!open || !story) return;
     let cancelled = false;
-
-    const preview = async () => {
+    setFullStory(null); setTemplateDocument(''); setError(''); setMode('paper'); setTemplateName('Family edition');
+    async function load() {
       try {
-        // Fetch full story details if article/prompt is missing
-        let fullStory = story;
-        if (!story.article && !story.prompt) {
-          console.log('[StoryPreviewDialog] Fetching full story details for preview...');
-          const details = await loadStoryDetails(story.id, user.id);
-          if (!details) {
-            throw new Error('Story not found. It may have been deleted.');
-          }
-          fullStory = details;
-        }
-
-        const win = await openPreviewWindow(fullStory);
-        if (!cancelled && win) {
-          win.focus();
-        }
-      } catch (error) {
-        console.error('Preview failed', error);
-        if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : 'Failed to open preview.');
-        }
-      } finally {
-        if (!cancelled) {
-          onOpenChange(false);
-        }
+        const details = !story!.article && !story!.prompt && userId ? await loadStoryDetails(story!.id, userId) : story;
+        if (!details) throw new Error('This memory could not be loaded. Try refreshing your library.');
+        if (cancelled) return;
+        setFullStory(details);
+        if (!details.template_id) return;
+        // Preserve custom templates in an isolated document, never apply their CSS to the app.
+        const template = await getTemplateById(details.template_id);
+        if (cancelled) return;
+        setTemplateName(template.title);
+        const replacements: Record<string, string> = {
+          headline: escapeHtml(details.title || 'Your story'), title: escapeHtml(details.title || 'Your story'),
+          body: sanitizeHtml(details.article || ''), bodyHtml: sanitizeHtml(details.article || ''), article: sanitizeHtml(details.article || ''),
+          image: escapeHtml(details.imageUrl || ''), imageUrl: escapeHtml(details.imageUrl || ''),
+          dateline: escapeHtml(new Date(details.created_at).toLocaleDateString()),
+        };
+        const compiled = template.html.replace(/{{\s*(\w+)\s*}}/g, (_, key) => replacements[key] ?? '');
+        const css = (template.css || '').replace(/<\/style/gi, '');
+        setTemplateDocument(`<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data: blob:; style-src 'unsafe-inline'; font-src 'none';"><style>body{margin:20px;background:#fffdf7;color:#212d26;font-family:Georgia,serif}img{max-width:100%;height:auto}${css}</style></head><body>${sanitizeHtml(compiled)}</body></html>`);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'We couldn’t load this preview.');
       }
-    };
-
-    void preview();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, onOpenChange, story, user]);
-
-  return null;
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [open, story, userId]);
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="story-preview-dialog">
+    <DialogHeader><DialogTitle>Your front-page memory</DialogTitle><DialogDescription>Read your story, explore its original template, or add it to a printable issue.</DialogDescription></DialogHeader>
+    <div className="story-review__tabs">
+      <Button size="sm" variant={mode === 'paper' ? 'default' : 'outline'} onClick={() => setMode('paper')}>Newspaper</Button>
+      {templateDocument && <Button size="sm" variant={mode === 'template' ? 'default' : 'outline'} onClick={() => setMode('template')}>Original template</Button>}
+      <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
+    </div>
+    {error && <p role="alert">{error}</p>}
+    {!fullStory && !error && <p role="status">Opening the family album…</p>}
+    {fullStory && (mode === 'template' ? <iframe title="Original story template" sandbox="" srcDoc={templateDocument} className="template-document" /> : <StoryPaper headline={fullStory.title || 'Your story'} body={fullStory.article || `<p>${escapeHtml(fullStory.prompt || '')}</p>`} date={fullStory.created_at} imageUrl={fullStory.imageUrl} templateName={templateName} />)}
+    {fullStory && <Link to={`/newspaper?ids=${fullStory.id}`} onClick={() => onOpenChange(false)}><Button>Add to Newspaper →</Button></Link>}
+  </DialogContent></Dialog>;
 }
-
 export default StoryPreviewDialog;

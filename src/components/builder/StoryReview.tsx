@@ -1,123 +1,59 @@
-import React from 'react';
-import { Loader2, RefreshCcw, Archive } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, RefreshCcw, Archive, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { GeneratedArticle } from '../../utils/storyGenerator';
+import { GeneratedArticle, buildBodyHtml, parseBodyDraft } from '../../utils/storyGenerator';
+import { StoryPaper } from '../StoryPaper';
 
-// We need to define or import StoryEntry type. 
-// For now, I'll redefine a subset interface to avoid circular deps or large refactors
-// In a real app, this should be in types/story.ts
 export interface StoryEntry {
-    id: string;
-    file: File;
-    previewUrl: string;
-    status: 'idle' | 'generating' | 'ready';
-    loadingLabel?: string;
-    headlineDraft?: string;
-    bodyDraft?: string;
-    article?: GeneratedArticle;
-    prompt: string;
+  id: string;
+  file: File;
+  previewUrl: string;
+  status: 'idle' | 'generating' | 'ready';
+  loadingLabel?: string;
+  headlineDraft?: string;
+  bodyDraft?: string;
+  article?: GeneratedArticle;
+  prompt: string;
 }
-
 interface StoryReviewProps {
-    entry: StoryEntry;
-    onUpdate: (id: string, updates: Partial<StoryEntry>) => void;
-    onRegenerate: (id: string) => void;
-    onSave: (entry: StoryEntry) => void;
-    isSaving: boolean;
-    toEditableBody: (article: GeneratedArticle) => string;
+  entry: StoryEntry;
+  onUpdate: (id: string, updates: Partial<StoryEntry>) => void;
+  onRegenerate: (id: string) => void;
+  onSave: (entry: StoryEntry) => void;
+  onRemove: (id: string) => void;
+  isSaving: boolean;
+  canSave: boolean;
+  templateName?: string;
+  toEditableBody: (article: GeneratedArticle) => string;
 }
-
-export function StoryReview({
-    entry,
-    onUpdate,
-    onRegenerate,
-    onSave,
-    isSaving,
-    toEditableBody
-}: StoryReviewProps) {
-
-    const editableArticle = entry.article;
-
-    return (
-        <article className="bg-white border border-accent-border rounded-xl overflow-hidden shadow-soft hover:shadow-hard transition-all duration-300 transform hover:-translate-y-1">
-            <div className="aspect-video bg-paper-soft relative overflow-hidden border-b border-accent-border">
-                <img
-                    src={entry.previewUrl}
-                    alt={entry.file.name}
-                    className="w-full h-full object-cover"
-                />
-            </div>
-
-            <div className="p-6">
-                {entry.status === 'generating' ? (
-                    <div className="py-12 text-center">
-                        <Loader2 className="animate-spin mx-auto mb-4 text-accent-gold" size={32} />
-                        <p className="text-lg font-display animate-pulse text-ink">
-                            {entry.loadingLabel || 'Writing your story...'}
-                        </p>
-                    </div>
-                ) : entry.status === 'ready' && editableArticle ? (
-                    <div className="story-article">
-                        <div className="mb-4">
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                                Ready to Publish
-                            </Badge>
-                        </div>
-
-                        <div className="space-y-4">
-                            <input
-                                className="w-full font-display text-2xl font-bold text-ink bg-transparent border-none p-0 focus:ring-0 placeholder-ink-muted/50"
-                                value={entry.headlineDraft ?? editableArticle.headline}
-                                onChange={(e) => onUpdate(entry.id, { headlineDraft: e.target.value })}
-                                placeholder="Headline"
-                            />
-                            <textarea
-                                className="w-full font-serif text-base leading-relaxed text-ink-soft bg-transparent border-none p-0 focus:ring-0 resize-none placeholder-ink-muted/50"
-                                value={entry.bodyDraft ?? toEditableBody(editableArticle)}
-                                onChange={(e) => onUpdate(entry.id, { bodyDraft: e.target.value })}
-                                rows={6}
-                                placeholder="Story body..."
-                            />
-                        </div>
-
-                        <div className="mt-6 pt-4 border-t border-accent-border flex justify-between items-center">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onRegenerate(entry.id)}
-                                className="text-ink-muted hover:text-ink"
-                            >
-                                <RefreshCcw size={14} className="mr-2" />
-                                Regenerate
-                            </Button>
-                            <Button
-                                size="sm"
-                                disabled={isSaving}
-                                className="min-w-[140px] bg-ink text-white hover:bg-ink-soft"
-                                onClick={() => onSave(entry)}
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Archive className="mr-2 h-4 w-4" />
-                                        Save Story
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-center py-8">
-                        <p className="mb-4 text-ink-muted">Ready to write?</p>
-                        <Button onClick={() => onRegenerate(entry.id)}>Generate</Button>
-                    </div>
-                )}
-            </div>
-        </article>
-    );
+export function StoryReview({ entry, onUpdate, onRegenerate, onSave, onRemove, isSaving, canSave, templateName, toEditableBody }: StoryReviewProps) {
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const article = entry.article;
+  return <article className="story-review">
+    <div className="story-review__toolbar">
+      <span>{entry.status === 'ready' ? 'Your editor’s desk' : entry.file.name}</span>
+      <Button variant="ghost" size="sm" disabled={isSaving} onClick={() => onRemove(entry.id)} aria-label={`Remove ${entry.file.name}`}><Trash2 size={16} /></Button>
+    </div>
+    {entry.status === 'ready' && article ? <>
+      <div className="story-review__tabs" role="group" aria-label="Story view">
+        <Button variant={mode === 'edit' ? 'default' : 'outline'} size="sm" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>Edit story</Button>
+        <Button variant={mode === 'preview' ? 'default' : 'outline'} size="sm" aria-pressed={mode === 'preview'} onClick={() => setMode('preview')}>Newspaper preview</Button>
+      </div>
+      {mode === 'preview' ? <StoryPaper headline={entry.headlineDraft ?? article.headline} body={buildBodyHtml({ ...article, body: parseBodyDraft(entry.bodyDraft, article.body) })} imageUrl={entry.previewUrl} templateName={templateName} byline={article.byline} /> : <div className="story-review__editor ink-reveal">
+        <img src={entry.previewUrl} alt={entry.file.name} className="upload-reveal" />
+        <p className="studio-note">Make it yours. Check names and details before saving.</p>
+        <label htmlFor={`headline-${entry.id}`}>Headline</label>
+        <textarea id={`headline-${entry.id}`} className="story-review__headline" value={entry.headlineDraft ?? article.headline} onChange={e => onUpdate(entry.id, { headlineDraft: e.target.value })} rows={2} />
+        <label htmlFor={`body-${entry.id}`}>The story</label>
+        <textarea id={`body-${entry.id}`} value={entry.bodyDraft ?? toEditableBody(article)} onChange={e => onUpdate(entry.id, { bodyDraft: e.target.value })} rows={9} />
+      </div>}
+      <div className="story-review__actions">
+        <Button variant="outline" size="sm" disabled={isSaving} onClick={() => { if (window.confirm('Write a fresh draft? This replaces your edits.')) onRegenerate(entry.id); }}><RefreshCcw size={14} /> Rewrite</Button>
+        <Button disabled={isSaving || !canSave} onClick={() => onSave(entry)}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}{isSaving ? 'Saving memory…' : 'Save Story'}</Button>
+      </div>
+    </> : <div className="story-review__waiting">
+      <img src={entry.previewUrl} alt={entry.file.name} className="upload-reveal" />
+      {entry.status === 'generating' ? <div role="status"><Loader2 className="animate-spin" size={26} /><p>{entry.loadingLabel || 'Drafting your headline…'}</p><small>There’s a front-page moment in every photo.</small></div> : <div><p>Your photo is ready. Tell us the moment above.</p><Button onClick={() => onRegenerate(entry.id)}>Generate article</Button></div>}
+    </div>}
+  </article>;
 }

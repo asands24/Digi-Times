@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import DOMPurify, { type Config } from 'dompurify';
 
 const DEFAULT_ALLOWED_TAGS = [
   'a',
@@ -41,7 +41,7 @@ export const escapeHtml = (value: string): string =>
 
 export const sanitizeHtml = (
   dirty: string,
-  options: DOMPurify.Config = {},
+  options: Config = {},
 ): string => {
   if (!dirty) {
     return '';
