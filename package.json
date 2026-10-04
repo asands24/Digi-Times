@@ -3,42 +3,40 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",
     "@capacitor/ios": "^8.3.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@supabase/supabase-js": "^2.38.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/dompurify": "^3.0.5",
     "date-fns": "^2.29.3",
     "dompurify": "^3.3.0",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.4",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.263.1",
     "openai": "^4.104.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.8.0",
-    "react-scripts": "5.0.1",
+    "react-router-dom": "^7.18.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "vite --host 127.0.0.1 --port 3000",
+    "build": "tsc --noEmit && vite build",
     "ios": "npm run build && npx cap sync ios && npx cap open ios",
     "cap:sync": "npm run build && npx cap sync",
     "cap:open:ios": "npx cap open ios",
-    "test": "react-scripts test",
-    "test:cov": "react-scripts test --coverage --watchAll=false",
+    "test": "node scripts/run-tests.cjs",
+    "test:cov": "node scripts/run-tests.cjs --coverage",
     "clean": "node scripts/cleanup.js",
     "env:check": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -e \"console.log('URL=', process.env.REACT_APP_SUPABASE_URL); console.log('KeyTail=', (process.env.REACT_APP_SUPABASE_ANON_KEY||'').slice(-10));\"",
     "env:init": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -r ts-node/register/transpile-only -e \"import('./scripts/_supabaseClient.ts').then(()=>console.log('✅ Supabase client init OK')).catch(e=>console.error(e.message));\"",
     "smoke:group": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -r ts-node/register/transpile-only scripts/smoke-create-group.ts",
     "smoke:archive": "DOTENV_CONFIG_PATH=.env.local node -r dotenv/config -r ts-node/register/transpile-only scripts/smoke-archive.ts",
     "healthz:local": "curl -sS http://localhost:8888/.netlify/functions/healthz || curl -sS http://localhost:3000/api/healthz",
-    "eject": "react-scripts eject"
+    "preview": "vite preview --host 127.0.0.1 --port 3000",
+    "typecheck": "tsc --noEmit",
+    "audit": "npm audit --audit-level=low",
+    "smoke:release": "node scripts/release-smoke.cjs"
   },
   "jest": {
     "collectCoverageFrom": [
@@ -53,13 +51,37 @@
         "functions": 30,
         "lines": 40
       }
+    },
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/setupTests.ts"
+    ],
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "resetMocks": true,
+    "transform": {
+      "^.+\\.[jt]sx?$": [
+        "@swc/jest",
+        {
+          "jsc": {
+            "parser": {
+              "syntax": "typescript",
+              "tsx": true
+            },
+            "transform": {
+              "react": {
+                "runtime": "automatic"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "\\.(css|less|scss)$": "<rootDir>/src/test/styleMock.cjs",
+      "\\.(jpg|jpeg|png|gif|svg|webp)$": "<rootDir>/src/test/fileMock.cjs"
     }
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
@@ -76,6 +98,7 @@
   "devDependencies": {
     "@swc/core": "^1.13.5",
     "@swc/jest": "^0.2.39",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/jest": "^30.0.0",
@@ -84,11 +107,25 @@
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.22",
     "baseline-browser-mapping": "^2.8.29",
-    "jest": "^27.5.1",
-    "jest-environment-jsdom": "^30.2.0",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.2",
-    "typescript": "^4.9.5"
+    "typescript": "^5.9.3",
+    "@capacitor/cli": "^8.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "vite": "^8.3.1",
+    "@vitejs/plugin-react": "^6.1.1",
+    "dotenv": "^17.2.3",
+    "@babel/core": "^7.29.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
   }
 }

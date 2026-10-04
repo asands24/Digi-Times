@@ -33,3 +33,5 @@ describe('templates_public view fetch', () => {
     expect(order).toHaveBeenCalledWith('title', { ascending: true });
   });
 });
+
+export {};

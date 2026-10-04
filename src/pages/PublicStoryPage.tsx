@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Newspaper, Share2, Loader2 } from 'lucide-react';
+import { Newspaper, Share2, Loader2, Printer } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { fetchPublicStory } from '../lib/storiesApi';
 import type { StoryArchiveRow } from '../types/story';
 import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
 import { copyToClipboard } from '../utils/clipboard';
+import { StoryPaper } from '../components/StoryPaper';
 import toast from 'react-hot-toast';
 
 const DEFAULT_TITLE = 'DigiTimes – Create Photo Newsletters with Friends';
@@ -86,10 +87,13 @@ export default function PublicStoryPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
-      if (!slug) return;
+      setIsLoading(true); setError(null); setStory(null);
+      if (!slug) { setIsLoading(false); return; }
       try {
         const data = await fetchPublicStory(slug);
+        if (cancelled) return;
         if (!data) {
           setError('Story not found or is private.');
         } else {
@@ -97,12 +101,13 @@ export default function PublicStoryPage() {
         }
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') console.error('Failed to load public story', err);
-        setError('Could not load story.');
+        if (!cancelled) setError('Could not load story.');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
     load();
+    return () => { cancelled = true; };
   }, [slug]);
 
   useEffect(() => {
@@ -196,13 +201,14 @@ export default function PublicStoryPage() {
 
   return (
     <div className="min-h-screen bg-paper font-serif">
-      <header className="border-b border-ink/10 bg-paper-soft/50 sticky top-0 z-10 backdrop-blur-sm">
+      <header className="no-print border-b border-ink/10 bg-paper-soft/50 sticky top-0 z-10 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-ink hover:text-ink-soft transition-colors">
             <Newspaper size={20} />
             <span className="font-display font-bold text-lg">DigiTimes</span>
           </Link>
           <div className="flex items-center gap-2">
+            <Link to={`/edition?${new URLSearchParams({ ids: story.id, date: story.created_at.slice(0, 10) })}`}><Button variant="ghost" size="sm"><Printer size={16} /> Print / Download</Button></Link>
             <Button variant="ghost" size="sm" onClick={handleShare}>
               <Share2 size={16} className="mr-2" />
               Share
@@ -255,47 +261,10 @@ export default function PublicStoryPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-12">
-        <article className="prose prose-lg prose-stone mx-auto">
-          <header className="mb-8 text-center">
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-ink mb-4 leading-tight">
-              {story.title || 'Untitled Story'}
-            </h1>
-            <time className="text-ink-muted text-sm font-sans uppercase tracking-wider">
-              {new Date(story.created_at).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </time>
-          </header>
-
-          {story.image_path && (
-            <figure className="mb-12 -mx-4 md:mx-0">
-              <img
-                src={`${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}`}
-                alt={story.title || 'Story image'}
-                className="w-full h-auto rounded-sm shadow-hard"
-              />
-              {story.prompt && (
-                <figcaption className="text-center text-sm text-ink-muted mt-4 italic font-sans">
-                  Prompt: {story.prompt}
-                </figcaption>
-              )}
-            </figure>
-          )}
-
-          <div
-            className="font-serif text-lg leading-relaxed text-ink-black"
-            dangerouslySetInnerHTML={{
-              // article is AI-generated/user-derived HTML; sanitize before injecting.
-              // The prompt fallback is escaped to plain text.
-              __html: sanitizeHtml(story.article || '') || `<p>${escapeHtml(story.prompt || '')}</p>`
-            }}
-          />
-        </article>
+        <StoryPaper headline={story.title || 'Your family story'} body={sanitizeHtml(story.article || '') || `<p>${escapeHtml(story.prompt || '')}</p>`} date={story.created_at} imageUrl={story.image_path ? `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}` : null} />
 
         {/* Conversion section */}
-        <footer className="mt-16 pt-10 border-t border-ink/10">
+        <footer className="no-print mt-16 pt-10 border-t border-ink/10">
           <div className="text-center bg-paper-soft rounded-lg px-6 py-10 border border-ink/8">
             <p className="text-3xl mb-3">📰</p>
             <h2 className="font-display text-2xl font-bold text-ink mb-2">
@@ -311,7 +280,7 @@ export default function PublicStoryPage() {
               </Button>
             </Link>
             <p className="text-ink-muted text-xs mt-4 font-sans">
-              Trusted by families, teachers, and storytellers everywhere.
+              For the moments your family will tell again and again.
             </p>
           </div>
         </footer>

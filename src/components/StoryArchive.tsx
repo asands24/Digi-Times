@@ -7,7 +7,7 @@ import {
   loadStoriesWithDetails,
   type ArchiveItem,
 } from '../hooks/useStoryLibrary';
-import { escapeHtml } from '../utils/sanitizeHtml';
+import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
 import { copyToClipboard } from '../utils/clipboard';
 import { useAuth } from '../providers/AuthProvider';
 import toast from 'react-hot-toast';
@@ -172,27 +172,33 @@ const openEditionPreview = async (storyIds: string[], userId: string) => {
     return;
   }
 
-  // Fetch full story details with article/prompt content
-  console.log('[StoryArchive] Loading full story details for export...');
-  const stories = await loadStoriesWithDetails(storyIds, userId);
-
-  if (stories.length === 0) {
-    toast.error('No stories found to export.');
-    return;
-  }
-
-  const win = window.open('', '_blank', 'noopener,noreferrer');
+  // Open during the click gesture so asynchronous REST loading cannot trigger popup blocking.
+  const win = window.open('', '_blank');
   if (!win) {
     toast.error('Pop-up blocked. Allow pop-ups to export edition.');
+    return;
+  }
+  win.opener = null;
+  win.document.title = 'Preparing your DigiTimes edition…';
+  let stories: ArchiveItem[];
+  try {
+    stories = await loadStoriesWithDetails(storyIds, userId);
+  } catch (error) {
+    win.close();
+    throw error;
+  }
+  if (stories.length === 0) {
+    win.close();
+    toast.error('No stories found to export.');
     return;
   }
   const doc = win.document;
   const articles = stories
     .map((story) => {
-      const articleHtml = buildArticleHtml(story);
+      const articleHtml = sanitizeHtml(buildArticleHtml(story));
       return `
         <article class="edition-story">
-          <h2>${story.title ?? 'Untitled story'}</h2>
+          <h2>${escapeHtml(story.title ?? 'Untitled story')}</h2>
           <div class="edition-story__meta">${formatTimestamp(story.created_at)}</div>
           <div class="edition-story__body">${articleHtml}</div>
         </article>
@@ -275,6 +281,8 @@ export function StoryArchive({
 }: StoryArchiveProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [search, setSearch] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
   const [sectionFilter, setSectionFilter] = useState<StorySection | 'all'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'length'>('newest');
@@ -295,20 +303,22 @@ export function StoryArchive({
     return bDate - aDate;
   });
   const filteredStories = sortedStories.filter((story) =>
-    sectionFilter === 'all' ? true : story.section === sectionFilter,
+    (sectionFilter === 'all' || story.section === sectionFilter) && `${story.title ?? ''} ${story.prompt ?? ''}`.toLowerCase().includes(search.toLowerCase()),
   );
   const isError = Boolean(errorMessage);
   const hasStories = filteredStories.length > 0;
   // Filter out sample stories and stories without titles for export
   const exportableStories = filteredStories.filter((story) => !story.isSample && story.title);
-  const canExportEdition = exportableStories.length > 0;
+  const selectedStories = selectedIds.map(id => decoratedStories.find(story => story.id === id)).filter((story): story is typeof decoratedStories[number] => Boolean(story && !story.isSample && story.title));
+  const editionStories = selectedStories.length ? selectedStories : exportableStories;
+  const canExportEdition = editionStories.length > 0;
   const showExportHint = !isLoading && !isError && !canExportEdition;
 
   const handleBuildNewspaper = () => {
-    const ids = exportableStories.map((story) => story.id).join(',');
+    const ids = editionStories.map((story) => story.id).join(',');
 
     // Check if any stories are private
-    const hasPrivateStories = exportableStories.some((story) => !story.is_public);
+    const hasPrivateStories = editionStories.some((story) => !story.is_public);
 
     if (hasPrivateStories) {
       toast('📰 Building newspaper... Tip: Set stories to "Public" if you want to share this with others!', {
@@ -321,13 +331,13 @@ export function StoryArchive({
   };
 
   const handleExportEdition = async () => {
-    if (!user || exportableStories.length === 0) {
+    if (!user || editionStories.length === 0) {
       return;
     }
 
     setExportLoading(true);
     try {
-      const storyIds = exportableStories.map((story) => story.id);
+      const storyIds = editionStories.map((story) => story.id);
       await openEditionPreview(storyIds, user.id);
     } catch (error) {
       console.error('[StoryArchive] Export failed', error);
@@ -341,12 +351,13 @@ export function StoryArchive({
     <section className="story-archive">
       <header className="story-archive__header">
         <div>
-          <div className="story-archive__eyebrow">Edition Archive</div>
-          <h2>Your curated front page</h2>
+          <div className="story-archive__eyebrow">The family story shelf</div>
+          <h2>A little library of big memories</h2>
           <p>
             Every saved story is kept here with its photo and article so you can
             edit, preview, and publish a polished newspaper spread.
           </p>
+          <label className="library-search">Find a memory<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search headlines and moments…" /></label>
           <div className="story-archive__filters">
             <div>
               <p className="story-archive__filter-label">Filter by section</p>
@@ -362,6 +373,7 @@ export function StoryArchive({
                     key={chip.value}
                     className={`story-archive__chip ${sectionFilter === chip.value ? 'is-active' : ''
                       }`}
+                    aria-pressed={sectionFilter === chip.value}
                     onClick={() => setSectionFilter(chip.value)}
                     type="button"
                   >
@@ -408,7 +420,7 @@ export function StoryArchive({
               disabled={!canExportEdition || isLoading}
             >
               <Newspaper size={16} strokeWidth={1.75} />
-              Build Newspaper
+              {selectedStories.length ? `Build Newspaper (${selectedStories.length})` : 'Build Newspaper'}
             </Button>
             <Button
               type="button"
@@ -425,9 +437,10 @@ export function StoryArchive({
         </div>
       </header>
 
-      {isLoading ? (
+      {selectedStories.length > 0 && <div className="issue-selection" role="status"><strong>{selectedStories.length} {selectedStories.length === 1 ? 'memory' : 'memories'} in your next edition</strong><span>The first selected story leads the front page.</span><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear selection</Button></div>}
+      {isLoading && !stories.length ? (
         <div className="story-archive__empty" role="status" aria-live="polite">
-          <p style={{ fontSize: '2rem', marginBottom: '1rem' }}>🗞️</p>
+          <div className="library-skeletons" aria-hidden="true">{[1, 2, 3].map(item => <div key={item} className="library-skeleton"><div /><span /><span /></div>)}</div>
           <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem' }}>
             Gathering your headlines...
             <span className="story-archive__loading-icon" aria-hidden="true">
@@ -458,6 +471,7 @@ export function StoryArchive({
                 key={story.id}
                 className="story-archive__card story-archive__card--front group hover:shadow-hard transition-all duration-300 hover:-translate-y-1"
               >
+                {!story.isSample && <label className="story-select"><input type="checkbox" checked={selectedIds.includes(story.id)} onChange={event => setSelectedIds(prev => event.target.checked ? [...prev, story.id] : prev.filter(id => id !== story.id))} /> Add to this issue<span className="story-select__privacy">{story.is_public ? 'Public' : 'Private'}</span></label>}
                 <div className="story-archive__front">
                   <div className="story-archive__front-masthead">
                     <div>
@@ -484,6 +498,7 @@ export function StoryArchive({
                         <img
                           src={story.imageUrl}
                           alt={story.title ?? 'Archived story image'}
+                          loading="lazy"
                           className="transition-transform duration-700 group-hover:scale-105"
                         />
                       ) : (
@@ -493,7 +508,7 @@ export function StoryArchive({
                     <div className="story-archive__front-text">
                       <p className="story-archive__excerpt">{getExcerpt(story)}</p>
                       <p className="story-archive__meta">
-                        ~{story.wordCount} words · Layout {story.template_id ?? 'unassigned'}
+                        {Math.max(1, Math.ceil(story.wordCount / 200))} min read · {story.is_public ? 'Shareable with loved ones' : 'Only in your library'}
                       </p>
                     </div>
                   </div>
@@ -563,7 +578,7 @@ export function StoryArchive({
                       }}
                       className="text-red-500 hover:text-red-600 hover:bg-red-50"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={16} /><span className="sr-only">Delete {story.title || 'story'}</span>
                     </Button>
                   </div>
                 </div>
@@ -578,7 +593,8 @@ export function StoryArchive({
                 disabled={isLoading}
                 className="min-w-[200px]"
               >
-                {isLoading ? (
+                {selectedStories.length > 0 && <div className="issue-selection" role="status"><strong>{selectedStories.length} {selectedStories.length === 1 ? 'memory' : 'memories'} in your next edition</strong><span>The first selected story leads the front page.</span><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear selection</Button></div>}
+      {isLoading && !stories.length ? (
                   <>
                     <RefreshCcw className="mr-2 h-4 w-4 animate-spin" />
                     Loading...
@@ -594,15 +610,14 @@ export function StoryArchive({
         <div className="story-archive__empty">
           <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📰✨</p>
           <p style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
-            Your newsroom is ready!
+            {stories.length ? 'No memories match just yet.' : 'Your first memory belongs here.'}
           </p>
           <p style={{ color: 'var(--ink-soft)', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
             Start creating stories from your photos and watch your personal newspaper come to life.
             Every memory deserves a headline!
           </p>
-          <Button type="button" variant="outline" onClick={onRefresh}>
-            Refresh archive
-          </Button>
+          {stories.length ? <Button onClick={() => { setSearch(''); setSectionFilter('all'); }}>Show all memories</Button> : <a href="#create-story"><Button>Create your first story →</Button></a>}
+          {!user && <p className="studio-note">Sign in to see the memories you’ve saved.</p>}
         </div>
       )
       }

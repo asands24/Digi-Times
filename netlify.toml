@@ -3,11 +3,9 @@
   command = "npm run build"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "22"
   # Note: REACT_APP_SUPABASE_ANON_KEY is intentionally public (it's the Supabase anon/public key)
-  # Emit the CRA webpack runtime as a separate file instead of an inline <script>,
-  # so the CSP script-src can use 'self' without 'unsafe-inline'.
-  INLINE_RUNTIME_CHUNK = "false"
+  # Vite emits external module scripts, compatible with script-src 'self'.
 
 [[redirects]]
   from = "/*"
@@ -15,19 +13,14 @@
   status = 200
 
 [[headers]]
-  for = "/static/*"
+  for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/*.js"
+  for = "/service-worker.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/*.css"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/manifest.json"
@@ -41,10 +34,10 @@
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    # script-src: 'self' only (no 'unsafe-inline') — works because INLINE_RUNTIME_CHUNK=false.
+    # Vite emits external scripts compatible with script-src 'self'.
     # connect-src: explicit Supabase REST/Storage/Auth (https) + Realtime (wss); 'self' covers the
     #   same-origin Netlify function at /.netlify/functions/generateStory.
-    # style-src still needs 'unsafe-inline' (Tailwind/CRA inject inline styles at runtime).
+    # style-src still needs 'unsafe-inline' (React components use inline styles).
     Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https://irxpqhxrylaxfdppnwra.supabase.co wss://irxpqhxrylaxfdppnwra.supabase.co; worker-src 'self' blob:;"
 
 [[edge_functions]]

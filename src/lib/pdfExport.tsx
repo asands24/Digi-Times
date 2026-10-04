@@ -1,87 +1,55 @@
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import type { EditionLayout } from './newspaperLayout';
 
-export interface ExportPDFOptions {
-  filename?: string;
-  onProgress?: (progress: number) => void;
+export interface ExportPDFOptions { filename?: string; onProgress?: (progress: number) => void; }
+
+export async function waitForEditionImages(element: HTMLElement): Promise<void> {
+  await document.fonts?.ready;
+  await Promise.all(Array.from(element.querySelectorAll('img')).map(image => new Promise<void>((resolve, reject) => {
+    const finish = () => { cleanup(); image.naturalWidth > 0 ? resolve() : reject(new Error('A photo could not be loaded. Please retry before exporting.')); };
+    const timer = window.setTimeout(() => { cleanup(); reject(new Error('A photo is taking too long to load. Please retry.')); }, 15000);
+    const cleanup = () => { window.clearTimeout(timer); image.removeEventListener('load', finish); image.removeEventListener('error', finish); };
+    if (image.complete) finish(); else { image.addEventListener('load', finish); image.addEventListener('error', finish); }
+  })));
 }
 
-/**
- * Exports a newspaper HTML element to a PDF file using html2canvas.
- * Captures the visible newspaper layout and converts it to PDF.
- */
-export async function exportNewspaperToPDF(
-  elementId: string = 'newspaper-content',
-  options: ExportPDFOptions = {}
-): Promise<void> {
-  const { filename = `DigiTimes-${new Date().toISOString().split('T')[0]}.pdf`, onProgress } = options;
+/** Export measured pages with real text; photos alone are raster images. */
+export async function exportNewspaperToPDF(layout: EditionLayout, options: ExportPDFOptions = {}): Promise<void> {
+  const element = document.getElementById('newspaper-content');
+  if (!element) throw new Error('Newspaper preview not found.');
+  options.onProgress?.(10);
+  await waitForEditionImages(element);
+  const pdf = createEditionPDF(layout, Array.from(element.querySelectorAll('img')).map(image => ({ url: image.getAttribute('src') || image.src, source: image, width: image.naturalWidth, height: image.naturalHeight })));
+  options.onProgress?.(90);
+  pdf.save(options.filename || `${layout.options.title.replace(/[^a-z0-9-]+/gi, '-').slice(0, 70) || 'DigiTimes'}.pdf`);
+  options.onProgress?.(100);
+}
 
-  try {
-    onProgress?.(10);
+export interface PDFPhoto { url: string; source: string | HTMLImageElement; width: number; height: number; }
 
-    const element = document.getElementById(elementId);
-    if (!element) {
-      throw new Error(`Element with id "${elementId}" not found.`);
+export function createEditionPDF(layout: EditionLayout, images: PDFPhoto[] = []): jsPDF {
+  const pdf = new jsPDF({ unit: 'pt', format: layout.options.paper, compress: true });
+  pdf.setProperties({ title: layout.options.title, author: 'DigiTimes', subject: 'Your family edition' });
+  for (let index = 0; index < layout.pages.length; index++) {
+    if (index) pdf.addPage(layout.options.paper);
+    pdf.setDrawColor(35, 32, 28);
+    pdf.line(36, index === 0 ? 116 : 90, layout.width - 36, index === 0 ? 116 : 90);
+    for (const block of layout.pages[index]) {
+      if (block.kind === 'text') {
+        // Other scripts use the browser's font coverage through Print / Save PDF.
+        if (/[^\u0020-\u00ff\u2013-\u2014\u2018-\u201d\u2022\u2026\u20ac]/.test(block.text)) {
+          throw new Error('This edition includes characters that need browser fonts. Use Print / Save PDF to keep them intact.');
+        }
+        pdf.setFont('times', block.bold ? 'bold' : 'normal'); pdf.setFontSize(block.size);
+        pdf.text(block.text, block.x, block.y + block.size, { baseline: 'alphabetic' });
+      } else {
+        const image = images.find(image => image.url === block.url);
+        if (!image) throw new Error('A photo could not be found. Please reload your edition.');
+        const ratio = Math.min(block.width / image.width, block.height / image.height);
+        const width = image.width * ratio, height = image.height * ratio;
+        pdf.addImage(image.source, block.x + (block.width - width) / 2, block.y + (block.height - height) / 2, width, height);
+      }
     }
-
-    onProgress?.(30);
-
-    // Capture at 4x scale for professional quality
-    const canvas = await html2canvas(element, {
-      scale: 4, // 4x for high quality
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      allowTaint: false,
-      imageTimeout: 0,
-      removeContainer: true,
-    });
-
-    onProgress?.(60);
-
-    // A4 dimensions in mm
-    const A4_WIDTH_MM = 210;
-    const A4_HEIGHT_MM = 297;
-
-    // Calculate scaling to fit A4 width
-    const imgWidth = A4_WIDTH_MM;
-    const imgHeight = (canvas.height * A4_WIDTH_MM) / canvas.width;
-
-    // Initialize PDF with consistent A4 settings
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-      compress: true,
-      precision: 2,
-    });
-
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    // Use high-quality JPEG compression (0.98 quality)
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
-
-    // Add first page
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-    heightLeft -= A4_HEIGHT_MM;
-
-    // Add additional pages if content exceeds one page
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage('a4', 'portrait');
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= A4_HEIGHT_MM;
-    }
-
-    onProgress?.(90);
-
-    // Save with consistent filename format
-    pdf.save(filename);
-
-    onProgress?.(100);
-  } catch (error) {
-    console.error('[pdfExport] Failed to generate PDF:', error);
-    throw error;
   }
+  return pdf;
 }

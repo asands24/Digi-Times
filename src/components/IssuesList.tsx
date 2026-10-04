@@ -5,21 +5,24 @@ import { Button } from './ui/button';
 import { fetchIssues, deleteIssue, type IssueRow } from '../lib/storiesApi';
 import { useAuth } from '../providers/AuthProvider';
 import toast from 'react-hot-toast';
+import { savedEditionSettings } from '../lib/newspaperLayout';
 
 export function IssuesList() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [issues, setIssues] = useState<IssueRow[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     const loadIssues = useCallback(async () => {
-        if (!user) return;
+        if (!user) { setLoading(false); setIssues([]); return; }
         try {
-            setLoading(true);
+            setLoading(true); setError(false);
             const data = await fetchIssues(user.id);
             setIssues(data);
         } catch (error) {
             console.error('Failed to load issues', error);
+            setError(true);
             toast.error('Could not load your newspaper issues.');
         } finally {
             setLoading(false);
@@ -43,16 +46,11 @@ export function IssuesList() {
     };
 
     const handleView = async (id: string) => {
-        // Navigate to newspaper view with this issue ID
-        // We need to update NewspaperPage to handle loading from an issue ID directly
-        // For now, we'll assume we can pass the issue ID or we need to fetch the stories first
-        // Let's update the route to support /newspaper/:issueId or query param
-        // Actually, the current NewspaperPage takes ?ids=...
-        // We should probably fetch the issue details here to get the story IDs, OR update NewspaperPage to accept ?issueId=...
-        // Let's update NewspaperPage to accept ?issueId=... in the next step.
         navigate(`/newspaper?issueId=${id}`);
     };
 
+    if (!user) return <div className="story-archive__empty"><h2>Your family editions live here.</h2><p>Sign in to revisit your saved newspapers.</p><Button onClick={() => navigate('/login')}>Sign in</Button></div>;
+    if (error) return <div className="story-archive__empty" role="alert"><p>We couldn’t open your editions.</p><Button onClick={loadIssues}>Try again</Button></div>;
     if (loading) {
         return <div className="p-8 text-center text-ink-muted">Loading issues...</div>;
     }
@@ -65,6 +63,7 @@ export function IssuesList() {
                 <p className="text-ink-muted mb-4">
                     Create a newspaper layout from your stories to save it here.
                 </p>
+                <Button onClick={() => navigate('/#story-library')}>Choose memories for an issue →</Button>
             </div>
         );
     }
@@ -77,7 +76,7 @@ export function IssuesList() {
                         <div className="bg-paper-darker p-2 rounded-md">
                             <Newspaper className="h-6 w-6 text-ink" />
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => handleView(issue.id)} title="View Issue">
                                 <Eye size={16} />
                             </Button>
@@ -87,7 +86,7 @@ export function IssuesList() {
                         </div>
                     </div>
                     <h3 className="font-serif font-bold text-lg text-ink mb-1 line-clamp-1">{issue.title}</h3>
-                    <p className="text-sm text-ink-muted mb-3 line-clamp-2">{issue.description || 'No description'}</p>
+                    <p className="text-sm text-ink-muted mb-3 line-clamp-2">{savedEditionSettings(issue.description) ? `${savedEditionSettings(issue.description)?.paper === 'letter' ? 'US Letter' : 'A4'} · A keepsake from the family newsroom` : issue.description || 'A keepsake from the family newsroom'}</p>
                     <div className="text-xs text-ink-muted uppercase tracking-wider">
                         {new Date(issue.created_at).toLocaleDateString()}
                     </div>

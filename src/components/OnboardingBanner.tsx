@@ -36,9 +36,9 @@ export function OnboardingBanner() {
         <div className="onboarding-banner__text">
           <h3>Welcome to DigiTimes!</h3>
           <ol className="onboarding-banner__steps">
-            <li>Write a story idea or prompt</li>
-            <li>Add a photo from your device or camera</li>
-            <li>Generate your kid-friendly article</li>
+            <li>Add a photo of your moment</li>
+            <li>Tell us who, where, and what made it special</li>
+            <li>Generate, preview, and save your article</li>
             <li>Build and print your newspaper</li>
           </ol>
         </div>

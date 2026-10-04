@@ -29,7 +29,7 @@ export function StoryPromptInput({ value, onChange, onApplyToAll, canApplyToAll 
     return (
         <section className="bg-surface p-6 rounded-xl border border-accent-border shadow-sm">
             <div className="flex justify-between items-center mb-3">
-                <label className="block text-sm font-medium uppercase tracking-wider text-ink-muted">
+                <label htmlFor="story-prompt" className="block text-sm font-medium uppercase tracking-wider text-ink-muted">
                     What's the Scoop?
                 </label>
                 <Button
@@ -44,15 +44,17 @@ export function StoryPromptInput({ value, onChange, onApplyToAll, canApplyToAll 
             </div>
 
             <textarea
+                id="story-prompt"
+                aria-describedby="story-prompt-help"
                 className="w-full p-4 rounded-lg border border-accent-border bg-yellow-50/50 focus:ring-2 focus:ring-accent-gold/20 focus:border-accent-gold transition-all font-serif text-lg leading-relaxed placeholder:text-ink-muted/40 resize-none"
-                placeholder="e.g. Halloween in Navy Yard with the kids..."
+                placeholder="e.g. Sunset picnic celebrating grandma's 80th birthday"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 rows={3}
             />
 
             <div className="flex justify-between items-start mt-2">
-                <p className="text-xs text-ink-muted">
+                <p id="story-prompt-help" className="text-xs text-ink-muted">
                     1–2 sentences is perfect.
                 </p>
 
