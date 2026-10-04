@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useRef, useState, type RefObject } from 'react';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { Camera, Sparkles, Send } from 'lucide-react';
 import { Header } from './components/Header';
 import EventBuilder from './components/EventBuilder';
 import { StoryArchive } from './components/StoryArchive';
@@ -24,11 +25,15 @@ import PublicStoryPage from './pages/PublicStoryPage';
 import { IssuesList } from './components/IssuesList';
 import NewspaperPage from './pages/NewspaperPage';
 import PrivacyPage from './pages/PrivacyPage';
-import PricingPage from './pages/PricingPage';
 import GuidelinesPage from './pages/GuidelinesPage';
+import PricingPage from './pages/PricingPage';
+import { Reveal, RouteMotion } from './components/Motion';
+import { MobileNav } from './components/MobileNav';
+import { EditorialCover } from './components/EditorialCover';
 
-const DebugNewspaper = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugNewspaper')) : () => null;
 const DebugTemplates = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugTemplates')) : () => null;
+const DebugNewspaper = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugNewspaper')) : () => null;
+const DebugMotion = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugMotion')) : () => null;
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 function HomePage() {
@@ -62,7 +67,10 @@ function HomePage() {
   );
 
   const scrollToSection = useCallback((ref: RefObject<HTMLElement | null>) => {
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    ref.current?.scrollIntoView({
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    });
   }, []);
 
 
@@ -74,24 +82,24 @@ function HomePage() {
         <section className="welcome-hero">
 
           <div className="welcome-hero__content">
-            <p className="welcome-hero__kicker">📰 DigiTimes</p>
+            <p className="welcome-hero__kicker">A home for your memories</p>
             <h1 className="welcome-hero__title">
-              The little moments are the big news.
+              Your life.
+              <em>Front-page worthy.</em>
             </h1>
             <p className="welcome-hero__subtitle">
-              Upload any photo — a birthday, a school project, a family trip — and DigiTimes turns it into a
-              real newspaper story in seconds. Print it, share the link, or bundle it into an issue to send to grandma.
+              Turn the little moments into something you can keep. Your photos, an AI-written story, and a beautiful newspaper to print or share.
             </p>
             <div className="welcome-hero__actions">
               <Button size="lg" onClick={() => scrollToSection(builderRef)}>
-                Make My Story — It's Free
+                Create a story
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 onClick={() => scrollToSection(archiveRef)}
               >
-                View My Stories
+                My stories
               </Button>
             </div>
             <p className="welcome-hero__hint">
@@ -99,30 +107,34 @@ function HomePage() {
             </p>
           </div>
 
+          <EditorialCover onCreate={() => scrollToSection(builderRef)} />
+        </section>
+
+        <Reveal>
           <div className="welcome-hero__pillars">
             <div className="welcome-hero__pillar">
-              <span className="welcome-hero__pillar-icon">📸</span>
+              <Camera className="welcome-hero__pillar-icon" size={23} aria-hidden />
               <div>
                 <h3>1. Upload a photo</h3>
                 <p>Any moment worth remembering — birthday, trip, milestone, everyday magic.</p>
               </div>
             </div>
             <div className="welcome-hero__pillar">
-              <span className="welcome-hero__pillar-icon">✨</span>
+              <Sparkles className="welcome-hero__pillar-icon" size={23} aria-hidden />
               <div>
                 <h3>2. AI writes the story</h3>
                 <p>A kid-friendly headline and article appears in seconds. Edit anything you like.</p>
               </div>
             </div>
             <div className="welcome-hero__pillar">
-              <span className="welcome-hero__pillar-icon">📬</span>
+              <Send className="welcome-hero__pillar-icon" size={23} aria-hidden />
               <div>
                 <h3>3. Print or share</h3>
                 <p>Download a print-ready newspaper, share a link, or bundle stories into an issue.</p>
               </div>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         <OnboardingBanner />
         <section id="create-story" ref={builderRef} className="creation-section">
@@ -131,9 +143,9 @@ function HomePage() {
             <span className="section-label__text">Create a Story</span>
             <span className="section-label__line" />
           </div>
-          <EventBuilder onArchiveSaved={refreshArchive} />
+          <Reveal><EventBuilder /></Reveal>
         </section>
-        <section id="story-library" ref={archiveRef} className="archive-section">
+        <section id="my-stories" ref={archiveRef} className="archive-section">
           <div className="section-label">
             <span className="section-label__line" />
             <span className="section-label__text">Your Stories</span>
@@ -229,48 +241,52 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/templates" element={<TemplatesPage />} />
-        {IS_DEV ? (
+      <RouteMotion>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/templates" element={<TemplatesPage />} />
+          {IS_DEV ? (
+            <Route
+              path="/debug/templates"
+              element={
+                <Suspense fallback={null}>
+                  <DebugTemplates />
+                </Suspense>
+              }
+            />
+          ) : null}
+          {IS_DEV && <Route path="/debug/newspaper" element={<Suspense fallback={null}><DebugNewspaper /></Suspense>} />}
+          {IS_DEV && <Route path="/debug/motion" element={<Suspense fallback={null}><DebugMotion /></Suspense>} />}
+          <Route path="/gallery" element={<PhotoGallery />} />
+          <Route path="/logout" element={<Logout />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/s/:slug" element={<PublicStoryPage />} />
           <Route
-            path="/debug/templates"
+            path="/issues"
             element={
-              <Suspense fallback={null}>
-                <DebugTemplates />
-              </Suspense>
+              <div className="app-shell"><Header /><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <header className="mb-8">
+                  <h1 className="text-3xl font-serif font-bold text-ink mb-2">My Newspaper Issues</h1>
+                  <p className="text-ink-muted">View and reprint your saved editions.</p>
+                </header>
+                <IssuesList />
+              </div></div>
             }
           />
-        ) : null}
-        {IS_DEV && <Route path="/debug/newspaper" element={<Suspense fallback={null}><DebugNewspaper /></Suspense>} />}
-        <Route path="/gallery" element={<PhotoGallery />} />
-        <Route path="/logout" element={<Logout />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/s/:slug" element={<PublicStoryPage />} />
+          <Route
+            path="/newspaper" element={<NewspaperPage />} />
           <Route path="/edition" element={<NewspaperPage reader />} />
-        <Route
-          path="/issues"
-          element={
-            <div className="app-shell"><Header /><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <header className="mb-8">
-                <h1 className="text-3xl font-serif font-bold text-ink mb-2">My Newspaper Issues</h1>
-                <p className="text-ink-muted">View and reprint your saved editions.</p>
-              </header>
-              <IssuesList />
-            </div></div>
-          }
-        />
-        <Route
-          path="/newspaper" element={<NewspaperPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/guidelines" element={<GuidelinesPage />} />
-        <Route
-          path="/login"
-          element={user ? <Navigate to="/" replace /> : <LoginPage />}
-        />
-        <Route path="*" element={<HomePage />} />
-      </Routes>
+          <Route path="/guidelines" element={<GuidelinesPage />} />
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/" replace /> : <LoginPage />}
+          />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </RouteMotion>
+      <MobileNav />
     </AppErrorBoundary>
   );
 }

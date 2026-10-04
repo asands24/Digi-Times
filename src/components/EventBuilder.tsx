@@ -370,7 +370,7 @@ export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void }
 
           {/* STEP 2: REFINE (Prompt & Template) */}
           {!hasDraftWithArticle && !isGenerating && (
-            <div className="grid md:grid-cols-2 gap-8 items-start">
+            <div className="studio-stage grid md:grid-cols-2 gap-8 items-start">
               <div className="space-y-6">
                 <StoryPromptInput
                   value={globalPrompt}
