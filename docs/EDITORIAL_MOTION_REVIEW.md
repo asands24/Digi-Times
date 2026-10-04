@@ -8,6 +8,8 @@ Existing application changes were snapshotted in commit `1168bc5` on `codex/digi
 
 GitHub rejected publication of the snapshot because the configured token lacks workflow scope for its new `.github/workflows/ci.yml`. The publishing base, `codex/digitimes-motion-base`, preserves the same application tree while excluding only that workflow. The draft PR targets this base to isolate motion from earlier work. The full snapshot and original motion commit remain on local preservation branches; the workflow also remains on disk. No remotely existing workflow was removed. Publishing the preserved workflow requires a credential with workflow permission.
 
+Both publishing branches were pushed successfully. Draft PR creation was refused by the GitHub connector (403, `Resource not accessible by integration`), and the available browser is signed out. No PR was created. The prepared comparison is https://github.com/asands24/Digi-Times/compare/codex/digitimes-motion-base...codex/editorial-motion?expand=1; create it as a draft against the selected base after signing in or granting the connector pull-request write access.
+
 Read the included patch README and repository README. No AGENTS.md instructions were found. Applied the supplied patch using Git three-way conflict handling, retaining the newer audited lockfile rather than its older lockfile edits. Resolved App, reader, creation/upload and test conflicts against the current implementation. Kept the public edition and plans routes, development-only export fixture, atomic issue saving, native text PDFs, private-story filtering, and existing print regressions.
 
 ## Final behavior
