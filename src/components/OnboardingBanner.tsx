@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Lightbulb } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -9,17 +9,15 @@ const STORAGE_KEY = 'digitimes_onboarding_dismissed';
  * Dismissible and stored in localStorage.
  */
 export function OnboardingBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const dismissed = localStorage.getItem(STORAGE_KEY);
-    if (!dismissed) {
-      setVisible(true);
-    }
-  }, []);
+  // Read before first paint so the banner doesn't shift hash-navigation targets.
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return !localStorage.getItem(STORAGE_KEY); }
+    catch { return true; }
+  });
 
   const handleDismiss = () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
+    try { localStorage.setItem(STORAGE_KEY, 'true'); } catch { /* Storage may be unavailable. */ }
     setVisible(false);
   };
 

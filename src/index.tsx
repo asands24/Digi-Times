@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './styles/base.css';
 import './index.css';
+import './styles/motion.css';
 import { AuthProvider } from './providers/AuthProvider';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 

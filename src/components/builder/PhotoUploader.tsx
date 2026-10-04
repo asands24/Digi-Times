@@ -19,7 +19,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
 
 
     return (
-        <div className="photo-dropzone border-2 border-dashed border-accent-border rounded-xl p-8 text-center bg-paper-soft hover:bg-paper hover:border-accent-gold transition-colors cursor-pointer"
+        <div className="photo-uploader photo-dropzone border-2 border-dashed border-accent-border rounded-xl p-8 text-center bg-paper-soft hover:bg-paper hover:border-accent-gold transition-colors cursor-pointer"
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => { event.preventDefault(); onFilesSelected(event.dataTransfer.files); }}>
             <div className="mb-6">

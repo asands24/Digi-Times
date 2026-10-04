@@ -1,3 +1,4 @@
+import { Reveal } from './Motion';
 import { useState } from 'react';
 import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -467,8 +468,8 @@ export function StoryArchive({
         <>
           <div className="story-archive__grid">
             {filteredStories.map((story) => (
+              <Reveal key={story.id}>
               <article
-                key={story.id}
                 className="story-archive__card story-archive__card--front group hover:shadow-hard transition-all duration-300 hover:-translate-y-1"
               >
                 {!story.isSample && <label className="story-select"><input type="checkbox" checked={selectedIds.includes(story.id)} onChange={event => setSelectedIds(prev => event.target.checked ? [...prev, story.id] : prev.filter(id => id !== story.id))} /> Add to this issue<span className="story-select__privacy">{story.is_public ? 'Public' : 'Private'}</span></label>}
@@ -583,6 +584,7 @@ export function StoryArchive({
                   </div>
                 </div>
               </article>
+              </Reveal>
             ))}
           </div>
           {hasMore && (
