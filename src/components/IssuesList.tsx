@@ -63,7 +63,7 @@ export function IssuesList() {
                 <p className="text-ink-muted mb-4">
                     Create a newspaper layout from your stories to save it here.
                 </p>
-                <Button onClick={() => navigate('/#story-library')}>Choose memories for an issue →</Button>
+                <Button onClick={() => navigate('/#my-stories')}>Choose memories for an issue →</Button>
             </div>
         );
     }

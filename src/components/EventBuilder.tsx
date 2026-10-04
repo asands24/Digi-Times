@@ -350,13 +350,12 @@ export function EventBuilder({ onArchiveSaved }: { onArchiveSaved?: () => void }
           Make a little moment headline news.
         </h2>
         <p className="text-ink-soft text-lg leading-relaxed">
-          Upload your photos and let our AI Editor draft the story.
-          Review the headlines, tweak the copy, and publish to your archive.
+          Add a photo and tell us the moment. We’ll draft the story; you make it yours.
         </p>
       </header>
 
-      <CreationSteps current={uploadProgress !== null ? 4 : hasDraftWithArticle ? 3 : isGenerating ? 2 : hasEntries ? 1 : 0} />
-      {savedStoryId && <div className="memory-saved" role="status"><div><strong>Your memory is on the record.</strong><p>Next, give it a home in a family newspaper.</p></div><Link to={`/newspaper?ids=${savedStoryId}`}><Button>Add to Newspaper →</Button></Link><a href="#story-library">View library</a></div>}
+      <CreationSteps current={uploadProgress !== null ? 4 : isGenerating ? 2 : hasDraftWithArticle ? 3 : hasEntries ? 1 : 0} />
+      {savedStoryId && <div className="memory-saved" role="status"><div><strong>Your memory is on the record.</strong><p>Next, give it a home in a family newspaper.</p></div><Link className="dt-button dt-button--primary" to={`/newspaper?ids=${savedStoryId}`}>Add to Newspaper →</Link><a href="#my-stories">View library</a></div>}
       {/* STEP 1: UPLOAD */}
       <div className="mb-12">
         <PhotoUploader

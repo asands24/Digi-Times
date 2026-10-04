@@ -19,18 +19,18 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
 
 
     return (
-        <div className="photo-uploader photo-dropzone border-2 border-dashed border-accent-border rounded-xl p-8 text-center bg-paper-soft hover:bg-paper hover:border-accent-gold transition-colors cursor-pointer"
+        <div className="photo-uploader photo-dropzone border-2 border-dashed border-accent-border rounded-xl p-8 text-center bg-paper-soft hover:bg-paper hover:border-accent-gold transition-colors"
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => { event.preventDefault(); onFilesSelected(event.dataTransfer.files); }}>
             <div className="mb-6">
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-accent-gold">
                     <Upload size={32} strokeWidth={1.5} />
                 </div>
-                <h2 className="text-2xl font-display text-ink-black mb-2">{hasEntries ? 'Add another memory' : 'Start with a moment you love'}</h2>
-                <p className="text-ink-muted">Choose a photo or drop it here. Birthdays, big adventures, little everyday joys.</p>
+                <h2 className="text-2xl font-display text-ink-black mb-2">{hasEntries ? 'Add another memory' : 'Start with a photo'}</h2>
+                <p className="text-ink-muted">Choose a photo, or drop it here.</p>
             </div>
 
-            <div className="flex justify-center gap-4 mb-6" onClick={(e) => e.stopPropagation()}>
+            <div className="photo-uploader__actions flex justify-center gap-4 mb-6" onClick={(e) => e.stopPropagation()}>
                 <Button
                     type="button"
                     size="lg"
