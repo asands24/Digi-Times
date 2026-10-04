@@ -1,19 +1,12 @@
-import { lazy, Suspense, useCallback, useRef, useState, type RefObject } from 'react';
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { Camera, Sparkles, Send } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Link, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import { Camera, Sparkles, Send, Lock, PencilLine } from 'lucide-react';
 import { Header } from './components/Header';
 import EventBuilder from './components/EventBuilder';
-import { StoryArchive } from './components/StoryArchive';
-import { StoryPreviewDialog } from './components/StoryPreviewDialog';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { OnboardingBanner } from './components/OnboardingBanner';
 import { Button } from './components/ui/button';
-import {
-  type ArchiveItem,
-  updateStoryVisibility,
-  useStoryLibrary,
-} from './hooks/useStoryLibrary';
+import LibraryPage from './pages/LibraryPage';
 import Logout from './pages/Logout';
 import TemplatesPage from './pages/Templates';
 import PhotoGallery from './components/PhotoGallery';
@@ -22,8 +15,6 @@ import LoginPage from './pages/LoginPage';
 import { REQUIRE_LOGIN } from './lib/config';
 import AuthCallback from './pages/AuthCallback';
 import PublicStoryPage from './pages/PublicStoryPage';
-import { IssuesList } from './components/IssuesList';
-import NewspaperPage from './pages/NewspaperPage';
 import PrivacyPage from './pages/PrivacyPage';
 import GuidelinesPage from './pages/GuidelinesPage';
 import PricingPage from './pages/PricingPage';
@@ -35,50 +26,25 @@ const DebugTemplates = process.env.NODE_ENV === 'development' ? lazy(() => impor
 const DebugNewspaper = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugNewspaper')) : () => null;
 const DebugMotion = process.env.NODE_ENV === 'development' ? lazy(() => import('./pages/DebugMotion')) : () => null;
 const IS_DEV = process.env.NODE_ENV === 'development';
+// Load the measured newspaper/PDF tools when someone opens an edition.
+const NewspaperPage = lazy(() => import('./pages/NewspaperPage'));
+const IssuesList = lazy(() => import('./components/IssuesList').then(module => ({ default: module.IssuesList })));
+
+function PageLoading() {
+  return <div className="route-loading" role="status"><span className="route-loading__mark" aria-hidden>📰</span><p>Opening your newsroom…</p></div>;
+}
 
 function HomePage() {
-  const { user } = useAuth();
-  const {
-    stories,
-    isLoading,
-    errorMessage,
-    refreshStories: refreshArchive,
-    deleteStory,
-    loadMore,
-    hasMore,
-  } = useStoryLibrary(user?.id);
-  const [previewStory, setPreviewStory] = useState<ArchiveItem | null>(null);
-  // Anchor points for the guided flow
-  const builderRef = useRef<HTMLElement | null>(null);
-  const archiveRef = useRef<HTMLElement | null>(null);
-
-  const handleToggleShare = useCallback(
-    async (storyId: string, nextValue: boolean) => {
-      try {
-        await updateStoryVisibility(storyId, nextValue);
-        await refreshArchive();
-        toast.success(nextValue ? 'Story is now public.' : 'Story set to private.');
-      } catch (error) {
-        console.error('Failed to update visibility', error);
-        toast.error('Could not update sharing setting.');
-      }
-    },
-    [refreshArchive],
-  );
-
-  const scrollToSection = useCallback((ref: RefObject<HTMLElement | null>) => {
-    ref.current?.scrollIntoView({
-      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      block: 'start',
-    });
-  }, []);
-
-
+  const navigate = useNavigate();
+  const { hash } = useLocation();
+  // Preserve previously shared/bookmarked studio and library destinations.
+  if (hash === '#create-story') return <Navigate to="/create" replace />;
+  if (hash === '#my-stories' || hash === '#story-library') return <Navigate to="/library" replace />;
 
   return (
     <div className="app-shell">
       <Header />
-      <main className="editorial-main">
+      <main id="page-content" tabIndex={-1} className="editorial-main">
         <section className="welcome-hero">
 
           <div className="welcome-hero__content">
@@ -91,23 +57,24 @@ function HomePage() {
               Turn the little moments into something you can keep. Your photos, an AI-written story, and a beautiful newspaper to print or share.
             </p>
             <div className="welcome-hero__actions">
-              <Button size="lg" onClick={() => scrollToSection(builderRef)}>
+              <Button size="lg" onClick={() => navigate('/create')}>
                 Create a story
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => scrollToSection(archiveRef)}
+                onClick={() => navigate('/library')}
               >
                 My stories
               </Button>
             </div>
             <p className="welcome-hero__hint">
-              No sign-up needed to try it. Stories save when you create an account.
+              Try a draft without signing in. Sign in when you’re ready to save.
             </p>
+            <div className="welcome-hero__assurances"><span><Lock size={14} aria-hidden /> Private until you share</span><span><PencilLine size={14} aria-hidden /> Every word is yours to edit</span></div>
           </div>
 
-          <EditorialCover onCreate={() => scrollToSection(builderRef)} />
+          <EditorialCover onCreate={() => navigate('/create')} />
         </section>
 
         <Reveal>
@@ -136,33 +103,6 @@ function HomePage() {
           </div>
         </Reveal>
 
-        <OnboardingBanner />
-        <section id="create-story" ref={builderRef} className="creation-section">
-          <div className="section-label">
-            <span className="section-label__line" />
-            <span className="section-label__text">Create a Story</span>
-            <span className="section-label__line" />
-          </div>
-          <Reveal><EventBuilder /></Reveal>
-        </section>
-        <section id="my-stories" ref={archiveRef} className="archive-section">
-          <div className="section-label">
-            <span className="section-label__line" />
-            <span className="section-label__text">Your Stories</span>
-            <span className="section-label__line" />
-          </div>
-          <StoryArchive
-            stories={stories}
-            isLoading={isLoading}
-            errorMessage={errorMessage}
-            onPreview={setPreviewStory}
-            onRefresh={refreshArchive}
-            onToggleShare={handleToggleShare}
-            onDelete={deleteStory}
-            onLoadMore={loadMore}
-            hasMore={hasMore}
-          />
-        </section>
       </main>
 
       <footer className="site-footer">
@@ -173,6 +113,8 @@ function HomePage() {
           </div>
           <div className="site-footer__links">
             <Link to="/" className="site-footer__link">Home</Link>
+            <Link to="/create" className="site-footer__link">Create</Link>
+            <Link to="/library" className="site-footer__link">Library</Link>
             <Link to="/templates" className="site-footer__link">Templates</Link>
             <Link to="/gallery" className="site-footer__link">Gallery</Link>
             <Link to="/pricing" className="site-footer__link">Plans</Link>
@@ -186,21 +128,28 @@ function HomePage() {
         </div>
       </footer>
 
-      <StoryPreviewDialog
-        story={previewStory}
-        open={Boolean(previewStory)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPreviewStory(null);
-          }
-        }}
-      />
     </div>
   );
 }
 
+// Keep a visited studio mounted so exploring the app doesn't throw away photos
+// or edits. Hidden workspaces are excluded from layout, focus and accessibility.
+function CreateWorkspace({ active }: { active: boolean }) {
+  return <div className="app-shell studio-workspace" hidden={!active}>
+    <Header />
+    <main id="studio-content" tabIndex={-1} className="workspace-main">
+      <header className="workspace-heading"><p className="editorial-kicker">Your newsroom</p><h1>Create a story</h1><p>From a favorite photo to a front-page memory.</p></header>
+      <EventBuilder compactHeading />
+      <OnboardingBanner />
+    </main>
+  </div>;
+}
+
 export default function App() {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+  const [hasOpenedStudio, setHasOpenedStudio] = useState(pathname === '/create');
+  useEffect(() => { if (pathname === '/create') setHasOpenedStudio(true); }, [pathname]);
 
   if (REQUIRE_LOGIN && loading) {
     return (
@@ -225,6 +174,7 @@ export default function App() {
   if (REQUIRE_LOGIN && !user) {
     return (
       <AppErrorBoundary>
+        <Suspense fallback={<PageLoading />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
@@ -235,16 +185,22 @@ export default function App() {
           <Route path="/guidelines" element={<GuidelinesPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        </Suspense>
       </AppErrorBoundary>
     );
   }
 
   return (
     <AppErrorBoundary>
+      {(hasOpenedStudio || pathname === '/create') && <CreateWorkspace active={pathname === '/create'} />}
+      <div hidden={pathname === '/create'}>
       <RouteMotion>
+        <Suspense fallback={<PageLoading />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/templates" element={<TemplatesPage />} />
+          <Route path="/create" element={null} />
+          <Route path="/library" element={<LibraryPage />} />
+          <Route path="/templates" element={<div className="app-shell"><Header /><TemplatesPage /></div>} />
           {IS_DEV ? (
             <Route
               path="/debug/templates"
@@ -257,7 +213,7 @@ export default function App() {
           ) : null}
           {IS_DEV && <Route path="/debug/newspaper" element={<Suspense fallback={null}><DebugNewspaper /></Suspense>} />}
           {IS_DEV && <Route path="/debug/motion" element={<Suspense fallback={null}><DebugMotion /></Suspense>} />}
-          <Route path="/gallery" element={<PhotoGallery />} />
+          <Route path="/gallery" element={<div className="app-shell"><Header /><PhotoGallery /></div>} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/s/:slug" element={<PublicStoryPage />} />
@@ -285,7 +241,9 @@ export default function App() {
           />
           <Route path="*" element={<HomePage />} />
         </Routes>
+        </Suspense>
       </RouteMotion>
+      </div>
       <MobileNav />
     </AppErrorBoundary>
   );

@@ -1,7 +1,7 @@
 import { Reveal } from './Motion';
 import { useState } from 'react';
 import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import {
@@ -358,6 +358,7 @@ export function StoryArchive({
             Every saved story is kept here with its photo and article so you can
             edit, preview, and publish a polished newspaper spread.
           </p>
+          {stories.length > 0 && <>
           <label className="library-search">Find a memory<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search headlines and moments…" /></label>
           <div className="story-archive__filters">
             <div>
@@ -398,8 +399,9 @@ export function StoryArchive({
               </select>
             </div>
           </div>
+          </>}
         </div>
-        <div className="story-archive__header-actions-wrap">
+        {user && <div className="story-archive__header-actions-wrap">
           <div className="story-archive__header-actions">
             <Button type="button" variant="outline" onClick={onRefresh} disabled={isLoading}>
               <RefreshCcw size={16} strokeWidth={1.75} />
@@ -414,6 +416,7 @@ export function StoryArchive({
               <Newspaper size={16} strokeWidth={1.75} />
               View Issues
             </Button>
+            {stories.length > 0 && <>
             <Button
               type="button"
               variant="outline"
@@ -431,11 +434,12 @@ export function StoryArchive({
               <ArchiveIcon size={16} strokeWidth={1.75} />
               {exportLoading ? 'Loading...' : 'Export edition'}
             </Button>
+            </>}
           </div>
-          {showExportHint ? (
-            <span className="story-archive__hint">Add a story above to enable export.</span>
+          {showExportHint && stories.length > 0 ? (
+            <span className="story-archive__hint">Create and save a story to enable export.</span>
           ) : null}
-        </div>
+        </div>}
       </header>
 
       {selectedStories.length > 0 && <div className="issue-selection" role="status"><strong>{selectedStories.length} {selectedStories.length === 1 ? 'memory' : 'memories'} in your next edition</strong><span>The first selected story leads the front page.</span><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear selection</Button></div>}
@@ -543,7 +547,8 @@ export function StoryArchive({
                           size="sm"
                           onClick={() => handleShareStory(story)}
                           className="text-ink-muted hover:text-ink"
-                          title="Copy Link"
+                          aria-label={`Share ${story.title || 'story'}`}
+                          title="Share story"
                         >
                           <Share2 size={16} />
                         </Button>
@@ -595,8 +600,7 @@ export function StoryArchive({
                 disabled={isLoading}
                 className="min-w-[200px]"
               >
-                {selectedStories.length > 0 && <div className="issue-selection" role="status"><strong>{selectedStories.length} {selectedStories.length === 1 ? 'memory' : 'memories'} in your next edition</strong><span>The first selected story leads the front page.</span><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear selection</Button></div>}
-      {isLoading && !stories.length ? (
+                {isLoading ? (
                   <>
                     <RefreshCcw className="mr-2 h-4 w-4 animate-spin" />
                     Loading...
@@ -612,14 +616,12 @@ export function StoryArchive({
         <div className="story-archive__empty">
           <p style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📰✨</p>
           <p style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', marginBottom: '0.5rem' }}>
-            {stories.length ? 'No memories match just yet.' : 'Your first memory belongs here.'}
+            {stories.length ? 'No memories match just yet.' : user ? 'Your first memory belongs here.' : 'A home for every story you keep.'}
           </p>
           <p style={{ color: 'var(--ink-soft)', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
-            Start creating stories from your photos and watch your personal newspaper come to life.
-            Every memory deserves a headline!
+            {stories.length ? 'Try another headline or clear the filters to see your memories.' : user ? 'Save your first story, then choose memories to bring together in a newspaper.' : 'Sign in to revisit saved stories, or try making your first headline.'}
           </p>
-          {stories.length ? <Button onClick={() => { setSearch(''); setSectionFilter('all'); }}>Show all memories</Button> : <a href="#create-story"><Button>Create your first story →</Button></a>}
-          {!user && <p className="studio-note">Sign in to see the memories you’ve saved.</p>}
+          {stories.length ? <Button onClick={() => { setSearch(''); setSectionFilter('all'); }}>Show all memories</Button> : <div className="library-empty-actions">{!user && <Link to="/login" className="dt-button dt-button--primary">Sign in to your library</Link>}<Link to="/create" className={`dt-button ${user ? 'dt-button--primary' : 'dt-button--outline'}`}>Create your first story →</Link></div>}
         </div>
       )
       }

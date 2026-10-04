@@ -1,6 +1,7 @@
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Menu } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
-import { Link, useNavigate, NavLink } from 'react-router-dom';
+import { Link, useNavigate, NavLink, useLocation } from 'react-router-dom';
+import { primaryNavigation, secondaryNavigation } from '../lib/navigation';
 import toast from 'react-hot-toast';
 import { Button } from './ui/button';
 import {
@@ -8,11 +9,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from './ui/dropdown-menu';
 import { useAuth } from '../providers/AuthProvider';
 
 export function Header() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const contentId = pathname === '/' ? 'page-content' : pathname === '/create' ? 'studio-content' : pathname === '/library' ? 'library-content' : null;
   const { user, profile, signOut } = useAuth();
 
   const displayName = useMemo(() => {
@@ -46,23 +50,32 @@ export function Header() {
 
   return (
     <header className="editorial-header">
+      {contentId && <a className="skip-link" href={`#${contentId}`}>Skip to content</a>}
       <div className="editorial-header__inner">
         <Link to="/" className="editorial-header__logo" aria-label="DigiTimes home">
           <span className="editorial-header__name">DIGITIMES</span>
           <span className="editorial-header__tagline">
-            Your Family Stories, Beautifully Preserved
+            The newspaper of your life
           </span>
         </Link>
 
         <nav className="editorial-header__nav" aria-label="Main navigation">
-          <NavLink to="/" end className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Create</NavLink>
-          <NavLink to="/templates" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Templates</NavLink>
-          <NavLink to="/gallery" className={({ isActive }) => isActive ? 'editorial-header__nav-link editorial-header__nav-link--active' : 'editorial-header__nav-link'}>Gallery</NavLink>
-          <NavLink to="/issues" className="editorial-header__nav-link">Issues</NavLink>
-          <NavLink to="/pricing" className="editorial-header__nav-link">Plans</NavLink>
+          {primaryNavigation.map(({ to, label }) => <NavLink key={to} to={to} end className={({ isActive }) => `editorial-header__nav-link${isActive ? ' editorial-header__nav-link--active' : ''}`}>{label}</NavLink>)}
         </nav>
 
         <div className="editorial-header__actions">
+          <div className="editorial-header__mobile-menu">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" aria-label="More navigation"><Menu size={20} aria-hidden /><span className="editorial-header__menu-label">More</span></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="navigation-menu__primary">
+                  {primaryNavigation.map(({ to, label }) => <DropdownMenuItem key={to} onSelect={() => navigate(to)}>{label}</DropdownMenuItem>)}
+                  <DropdownMenuSeparator />
+                </div>
+                {secondaryNavigation.map(({ to, label }) => <DropdownMenuItem key={to} onSelect={() => navigate(to)}>{label}</DropdownMenuItem>)}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -87,11 +100,7 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/login">
-              <Button size="sm" className="editorial-header__signin">
-                Sign In
-              </Button>
-            </Link>
+            <Link to="/login" className="dt-button dt-button--primary dt-button--sm editorial-header__signin">Sign In</Link>
           )}
         </div>
       </div>

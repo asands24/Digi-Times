@@ -27,8 +27,14 @@ export function Reveal({ children, className = '' }: { children: ReactNode; clas
 
 export function RouteMotion({ children }: { children: ReactNode }) {
   const { pathname, hash } = useLocation();
+  const previousPath = useRef(pathname);
   useEffect(() => {
-    if (!hash) return;
+    const changedPage = previousPath.current !== pathname;
+    previousPath.current = pathname;
+    if (!hash) {
+      if (changedPage) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      return;
+    }
     const frame = requestAnimationFrame(() => {
       document.getElementById(hash.slice(1))?.scrollIntoView({
         behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
