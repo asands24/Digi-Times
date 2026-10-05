@@ -8,6 +8,8 @@ import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
 import { copyToClipboard } from '../utils/clipboard';
 import { StoryPaper } from '../components/StoryPaper';
 import toast from 'react-hot-toast';
+import { getTemplateById } from '../lib/templates';
+import { buildPreviewDocument } from '../lib/templatePreview';
 
 const DEFAULT_TITLE = 'DigiTimes – Create Photo Newsletters with Friends';
 const DEFAULT_DESCRIPTION = 'Create beautiful photo newsletters with friends';
@@ -81,8 +83,19 @@ const applyDefaultMeta = () => {
 };
 
 export default function PublicStoryPage() {
+  const [readerView, setReaderView] = useState<'layout' | 'text'>('layout');
+  const [layout, setLayout] = useState<{ id: string; document: string } | null>(null);
   const { slug } = useParams<{ slug: string }>();
   const [story, setStory] = useState<StoryArchiveRow | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setLayout(null); setReaderView('layout');
+    if (story?.template_id) getTemplateById(story.template_id).then(template => {
+      if (!cancelled) setLayout({ id: story.id, document: buildPreviewDocument({ ...story, imageUrl: story.image_path ? `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}` : null }, template.html, template.css) });
+    }).catch(() => { /* Keep the readable fallback when a layout is unavailable. */ });
+    return () => { cancelled = true; };
+  }, [story]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -261,7 +274,12 @@ export default function PublicStoryPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-12">
-        <StoryPaper headline={story.title || 'Your family story'} body={sanitizeHtml(story.article || '') || `<p>${escapeHtml(story.prompt || '')}</p>`} date={story.created_at} imageUrl={story.image_path ? `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}` : null} />
+        {layout?.id === story.id && <div className="story-reader__tabs no-print" role="group" aria-label="Story view">
+          <Button variant={readerView === 'layout' ? 'default' : 'outline'} aria-pressed={readerView === 'layout'} onClick={() => setReaderView('layout')}>Selected layout</Button>
+          <Button variant={readerView === 'text' ? 'default' : 'outline'} aria-pressed={readerView === 'text'} onClick={() => setReaderView('text')}>Reading view</Button>
+        </div>}
+        {layout?.id === story.id && readerView === 'layout' && <iframe className="draft-template-preview no-print" title="Shared story layout" sandbox="" srcDoc={layout.document} />}
+        <div className={layout?.id === story.id && readerView === 'layout' ? 'shared-story-paper shared-story-paper--print-only' : 'shared-story-paper'}><StoryPaper headline={story.title || 'Your family story'} body={sanitizeHtml(story.article || '') || `<p>${escapeHtml(story.prompt || '')}</p>`} date={story.created_at} imageUrl={story.image_path ? `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}` : null} /></div>
 
         {/* Conversion section */}
         <footer className="no-print mt-16 pt-10 border-t border-ink/10">

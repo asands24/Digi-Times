@@ -17,7 +17,8 @@ import {
   generateStoryFromPrompt,
 } from '../utils/storyGenerator';
 import { CreationSteps } from './CreationSteps';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getTemplateById } from '../lib/templates';
 import { StoryTemplate } from '../types/story';
 
 // Simple ID generator
@@ -40,6 +41,25 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [choosingTemplate, setChoosingTemplate] = useState(false);
+  const [templateError, setTemplateError] = useState('');
+  const requestedTemplate = location.pathname === '/create' ? new URLSearchParams(location.search).get('template') : null;
+  useEffect(() => {
+    if (!requestedTemplate) return;
+    let cancelled = false;
+    setTemplateError('');
+    getTemplateById(requestedTemplate).then(template => {
+      if (!cancelled) { setSelectedTemplate(template); setChoosingTemplate(false); }
+    }).catch(() => { if (!cancelled) setTemplateError('That template could not be loaded. Choose a layout below to continue.'); });
+    return () => { cancelled = true; };
+  }, [requestedTemplate]);
+  const chooseTemplate = useCallback((template: StoryTemplate) => {
+    setSelectedTemplate(template); setChoosingTemplate(false); setTemplateError('');
+    // Consume the incoming selection so a later visit cannot replay an old choice.
+    if (requestedTemplate) navigate('/create', { replace: true });
+  }, [requestedTemplate, navigate]);
   const entryUrlsRef = useRef<string[]>([]);
 
   const { saveDraftToArchive } = useStoryLibrary();
@@ -379,6 +399,14 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
 
       <CreationSteps current={uploadProgress !== null ? 4 : isGenerating ? 2 : hasDraftWithArticle ? 3 : hasEntries ? 1 : 0} />
       {savedStoryId && <div className="memory-saved" role="status"><div><strong>Your memory is on the record.</strong><p>Next, give it a home in a family newspaper.</p></div><Link className="dt-button dt-button--primary" to={`/newspaper?ids=${savedStoryId}`}>Add to Newspaper →</Link><Link to="/library">View library</Link></div>}
+      <section className="studio-layout" aria-label="Story layout">
+        <div><span className="dt-eyebrow">YOUR STORY LAYOUT</span><h3>{selectedTemplate?.title || 'Choose your edition'}</h3><p>Change the design at any time. Your photos and writing stay in place.</p></div>
+        <Button variant="outline" disabled={uploadProgress !== null || isGenerating} aria-expanded={choosingTemplate} onClick={() => setChoosingTemplate(value => !value)}>{choosingTemplate ? 'Close layouts' : 'Change layout'}</Button>
+      </section>
+      {templateError && <p role="alert">{templateError}</p>}
+      <div hidden={!choosingTemplate && !templateError}>
+        <TemplatesGallery selectedTemplateId={selectedTemplate?.id ?? null} onSelect={chooseTemplate} autoSelectFirst={!requestedTemplate} />
+      </div>
       {/* STEP 1: UPLOAD */}
       <div className="mb-12">
         <PhotoUploader
@@ -392,7 +420,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
 
           {/* STEP 2: REFINE (Prompt & Template) */}
           {!hasDraftWithArticle && !isGenerating && (
-            <div className="studio-stage grid md:grid-cols-2 gap-8 items-start">
+            <div className="studio-stage">
               <div className="space-y-6">
                 <StoryPromptInput
                   value={globalPrompt}
@@ -406,13 +434,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-display text-ink">Choose a Style</h3>
-                <TemplatesGallery
-                  selectedTemplateId={selectedTemplate?.id ?? null}
-                  onSelect={setSelectedTemplate}
-                />
-              </div>
+
             </div>
           )}
 
@@ -451,7 +473,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
                     onRegenerate={generateStory}
                     onSave={handleSaveEntry}
                     isSaving={uploadProgress !== null}
-                    templateName={selectedTemplate?.title}
+                    template={selectedTemplate}
                     canSave={Boolean(user)}
                     onRemove={removeEntry}
                     toEditableBody={toEditableBody}

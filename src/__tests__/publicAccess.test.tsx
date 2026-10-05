@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Templates from '../pages/Templates';
@@ -94,7 +95,7 @@ test('Templates renders public rows from Supabase', async () => {
     },
   ] as any);
 
-  render(<Templates />);
+  render(<MemoryRouter><Templates /></MemoryRouter>);
 
   await waitFor(() => {
     expect(screen.getByText('Welcome Template')).toBeInTheDocument();
@@ -105,7 +106,7 @@ test('Templates renders public rows from Supabase', async () => {
 test('Templates shows an empty state when no templates resolve', async () => {
   mockFetchAllTemplates.mockResolvedValue([]);
 
-  render(<Templates />);
+  render(<MemoryRouter><Templates /></MemoryRouter>);
 
   await waitFor(() => {
     expect(screen.getByText(/No templates available right now/i)).toBeInTheDocument();

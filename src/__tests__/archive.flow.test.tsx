@@ -24,6 +24,7 @@ it('shows generation progress, previews edited copy, saves with template, and of
   const { container } = render(<MemoryRouter><EventBuilder onArchiveSaved={onSaved} /></MemoryRouter>);
   await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, new File(['image'], 'picnic.jpg', { type: 'image/jpeg' }));
   await userEvent.type(await screen.findByLabelText("What's the Scoop?"), 'Picnic with Grandma');
+  await userEvent.click(screen.getByRole('button', { name: 'Change layout' }));
   await userEvent.click(screen.getByText('Family layout'));
   await userEvent.click(await screen.findByRole('button', { name: 'Generate Stories' }));
   expect(screen.getByText(/Drafting|Interviewing|Checking|Calling|Developing|Setting/)).toBeInTheDocument();

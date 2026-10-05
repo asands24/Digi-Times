@@ -1,34 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TemplatesGallery from '../components/TemplatesGallery';
-import type { StoryTemplate } from '../types/story';
 
 export function TemplatesPage() {
-  const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
-
-  const handleSelect = useCallback((template: StoryTemplate) => {
-    setSelectedTemplate(template);
-  }, []);
-
-  return (
-    <main className="container" style={{ padding: '2.5rem 1rem' }}>
-      <div className="template-gallery template-gallery--page">
-        <header className="template-gallery__heading">
-          <div>
-            <h1 className="template-gallery__title">Public Templates</h1>
-            <p>
-              Explore featured newsroom layouts curated by DigiTimes editors. Pick a template to
-              inspire your next edition.
-            </p>
-          </div>
-        </header>
-        <TemplatesGallery
-          selectedTemplateId={selectedTemplate?.id ?? null}
-          onSelect={handleSelect}
-          autoSelectFirst={false}
-        />
-      </div>
-    </main>
-  );
+  const navigate = useNavigate();
+  return <main className="workspace-main template-catalog" id="templates-content" tabIndex={-1}>
+    <header className="workspace-heading"><span className="dt-eyebrow">THE DESIGN DESK</span><h1>A front page for every chapter.</h1><p>Preview a layout, make it yours, and turn your next memory into a story worth keeping.</p></header>
+    <TemplatesGallery selectedTemplateId={null} onSelect={template => navigate(`/create?template=${encodeURIComponent(template.id)}`)} autoSelectFirst={false} browse />
+  </main>;
 }
-
 export default TemplatesPage;

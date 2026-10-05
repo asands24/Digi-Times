@@ -10,7 +10,7 @@ Craft rich newspaper-style coverage from your everyday photos in minutes. Upload
 - **Story Archive** – Save generated features with their images to Supabase, edit visibility, and maintain a timestamped history.
 - **Share & Print** – Share individual stories via public links (`/read/:id`) or build a printable newspaper layout (`/newspaper`) with multiple stories.
 - **Production-Ready UX** – Comprehensive loading states, error handling, accessibility features, and first-time user onboarding.
-- **Public Template Gallery** – Browse shared templates at `/templates` with no authentication required.
+- **Public Template Gallery** – Search and preview layouts at `/templates`, then use a template in `/create` with no authentication required. Change layouts without losing edits; saved and shared stories retain the chosen layout. Combined newspapers use the separate print layout.
 - **Robust Supabase Integration** – Uses direct REST API calls for reliability and performance.
 
 ## Quick Start
@@ -36,7 +36,7 @@ DigiTimes follows a simple, delightful workflow designed for families:
 
 ## Public Pages
 
-- `/templates` – Lists the 50 most recent public templates (`is_public = true`) from Supabase.
+- `/templates` – Searchable built-in editorial layouts plus explicitly public templates (`is_public = true`) from Supabase, with preview and Use actions.
 - `/upload` – Anonymous uploader that writes images to the `photos` bucket under the `public/` prefix.
 - `/gallery` – Shows the authenticated user's story images (user-specific, requires login).
 - `/issues` – Manage your saved newspaper editions.

@@ -15,21 +15,23 @@ const supabaseModule = jest.requireMock('../lib/supabaseClient') as {
 };
 const supabaseMock = supabaseModule.supabaseClient;
 
-describe('templates_public view fetch', () => {
-  it('queries the public view sorted by title', async () => {
+describe('public template catalog', () => {
+  it('queries explicitly public rows and tolerates legacy columns', async () => {
     supabaseMock.from.mockReset();
 
     const order = jest.fn().mockResolvedValue({ data: [], error: null });
-    const select = jest.fn(() => ({ order }));
+    const eq = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ eq }));
     supabaseMock.from.mockReturnValue({ select });
 
     const { fetchAllTemplates } = require('../lib/templates') as typeof import('../lib/templates');
     await fetchAllTemplates();
 
-    expect(supabaseMock.from).toHaveBeenCalledWith('templates_public');
+    expect(supabaseMock.from).toHaveBeenCalledWith('templates');
     expect(select).toHaveBeenCalledWith(
-      'id, slug, title, description, html, css, is_system, owner, created_at',
+      '*',
     );
+    expect(eq).toHaveBeenCalledWith('is_public', true);
     expect(order).toHaveBeenCalledWith('title', { ascending: true });
   });
 });

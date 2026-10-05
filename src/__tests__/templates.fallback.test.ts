@@ -23,7 +23,8 @@ describe('templates local fallback', () => {
       data: null,
       error: new Error('missing view'),
     });
-    const select = jest.fn(() => ({ order }));
+    const eq = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ eq }));
     (supabase.from as jest.Mock).mockReturnValue({ select });
 
     const { fetchAllTemplates } = await import('../lib/templates');
@@ -49,14 +50,15 @@ describe('templates local fallback', () => {
       ],
       error: null,
     });
-    const select = jest.fn(() => ({ order }));
+    const eq = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ eq }));
     (supabase.from as jest.Mock).mockReturnValue({ select });
 
     const { fetchAllTemplates } = await import('../lib/templates');
     const rows = await fetchAllTemplates();
 
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
+    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.find(row => row.id === 'remote-1')).toMatchObject({
       id: 'remote-1',
       title: 'Remote Welcome',
       slug: 'remote-welcome',

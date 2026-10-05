@@ -2,6 +2,16 @@
 
 October 4, 2026 · branch `codex/experience-audit` · based on merged main `46ad31c`.
 
+## Template workflow revision — October 5, 2026
+
+The previous Templates page only highlighted cards and could not transfer a choice to the studio. Its backend query also failed against the deployed legacy schema (missing slug/html/css columns), while the old view included a private system draft. The catalog now queries explicitly public template rows, tolerates legacy fields, and keeps seven built-in editorial layouts available. Queries time out after ten seconds; catalog failures retain the local collection.
+
+Search, sandboxed sample previews, and explicit Use actions lead to `/create?template=…`. The persistent studio loads that choice, allows layout changes before upload and after generation, and keeps photo/text edits intact. Late catalog responses cannot replace a deliberate selection. Invalid links provide a recoverable chooser. One sanitized document renderer powers template previews, generated draft previews, saved readers, and shared story layouts; scripts remain prohibited by iframe sandbox and CSP. Accessible reading views remain available, and shared-page browser printing uses the full readable article. Combined newspapers retain their measured print/PDF layout, as stated in the chooser.
+
+Validation: 24 suites / 68 tests pass, including the selection → creation → edited preview → layout change → save journey, keyboard Escape/focus restoration, invalid links, late catalog responses, and saved-template reopening. Production build/typecheck and whitespace checks pass. Live Supabase checks confirm built-in template IDs persist, real photo upload/download, private access denial, public sharing/revocation, and atomic ordered edition saving/reopening; synthetic data is cleaned up. Existing Vite bundle-size warning remains.
+
+Visual desktop/mobile checks for this revision could not run. Browser access was first rejected by automatic approval review due to an account usage limit; on continuation, the preview error page was rejected because its protocol is blocked. No browser-policy workaround was attempted. Responsive/reduced-motion rules were reviewed in code; fresh visual verification remains pending.
+
 ## Navigation revision
 
 Following feedback that Create should not be a homepage scroll destination, the app now has dedicated `/create` and `/library` pages. Home contains the introduction and next-step links. Header, compact menu, and mobile dock share the same primary destinations: Home, Create, Library, Templates, Issues. Photo gallery and Plans are secondary destinations under More. Old `/#create-story`, `/#my-stories`, and `/#story-library` bookmarks redirect to their new pages.

@@ -3,6 +3,8 @@ import { Loader2, RefreshCcw, Archive, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { GeneratedArticle, buildBodyHtml, parseBodyDraft } from '../../utils/storyGenerator';
 import { StoryPaper } from '../StoryPaper';
+import type { StoryTemplate } from '../../types/story';
+import { buildPreviewDocument } from '../../lib/templatePreview';
 
 export interface StoryEntry {
   id: string;
@@ -23,10 +25,10 @@ interface StoryReviewProps {
   onRemove: (id: string) => void;
   isSaving: boolean;
   canSave: boolean;
-  templateName?: string;
+  template?: StoryTemplate | null;
   toEditableBody: (article: GeneratedArticle) => string;
 }
-export function StoryReview({ entry, onUpdate, onRegenerate, onSave, onRemove, isSaving, canSave, templateName, toEditableBody }: StoryReviewProps) {
+export function StoryReview({ entry, onUpdate, onRegenerate, onSave, onRemove, isSaving, canSave, template, toEditableBody }: StoryReviewProps) {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const article = entry.article;
   return <article className="story-review">
@@ -39,7 +41,7 @@ export function StoryReview({ entry, onUpdate, onRegenerate, onSave, onRemove, i
         <Button variant={mode === 'edit' ? 'default' : 'outline'} size="sm" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>Edit story</Button>
         <Button variant={mode === 'preview' ? 'default' : 'outline'} size="sm" aria-pressed={mode === 'preview'} onClick={() => setMode('preview')}>Newspaper preview</Button>
       </div>
-      {mode === 'preview' ? <StoryPaper headline={entry.headlineDraft ?? article.headline} body={buildBodyHtml({ ...article, body: parseBodyDraft(entry.bodyDraft, article.body) })} imageUrl={entry.previewUrl} templateName={templateName} byline={article.byline} /> : <div className="story-review__editor ink-reveal">
+      {mode === 'preview' ? template?.html ? <iframe className="draft-template-preview" title={`Draft preview: ${template.title}`} sandbox="" srcDoc={buildPreviewDocument({ title: entry.headlineDraft ?? article.headline, article: buildBodyHtml({ ...article, body: parseBodyDraft(entry.bodyDraft, article.body) }), imageUrl: entry.previewUrl, byline: article.byline }, template.html, template.css)} /> : <StoryPaper headline={entry.headlineDraft ?? article.headline} body={buildBodyHtml({ ...article, body: parseBodyDraft(entry.bodyDraft, article.body) })} imageUrl={entry.previewUrl} templateName={template?.title} byline={article.byline} /> : <div className="story-review__editor ink-reveal">
         <img src={entry.previewUrl} alt={entry.file.name} className="upload-reveal" />
         <p className="studio-note">Make it yours. Check names and details before saving.</p>
         <label htmlFor={`headline-${entry.id}`}>Headline</label>
