@@ -6,10 +6,10 @@ import EventBuilder from '../components/EventBuilder';
 jest.mock('../providers/AuthProvider', () => ({ useAuth: jest.fn() }));
 jest.mock('../hooks/useStoryLibrary', () => ({ useStoryLibrary: jest.fn() }));
 jest.mock('../components/TemplatesGallery', () => ({ TemplatesGallery: ({ onSelect }: any) => <button onClick={() => onSelect({ id: 'template-123', title: 'Family', slug: 'family' })}>Family layout</button> }));
-jest.mock('../utils/storyGenerator', () => ({ ...jest.requireActual('../utils/storyGenerator'), generateStoryFromPrompt: jest.fn() }));
+jest.mock('../utils/storyGenerator', () => ({ ...jest.requireActual('../utils/storyGenerator'), generateGroundedStory: jest.fn() }));
 const save = jest.fn();
 const auth = jest.requireMock('../providers/AuthProvider').useAuth;
-const generator = jest.requireMock('../utils/storyGenerator').generateStoryFromPrompt;
+const generator = jest.requireMock('../utils/storyGenerator').generateGroundedStory;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -24,10 +24,11 @@ it('shows generation progress, previews edited copy, saves with template, and of
   const { container } = render(<MemoryRouter><EventBuilder onArchiveSaved={onSaved} /></MemoryRouter>);
   await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, new File(['image'], 'picnic.jpg', { type: 'image/jpeg' }));
   await userEvent.type(await screen.findByLabelText("What's the Scoop?"), 'Picnic with Grandma');
+  await userEvent.click(screen.getByRole('button', { name: 'Change layout' }));
   await userEvent.click(screen.getByText('Family layout'));
   await userEvent.click(await screen.findByRole('button', { name: 'Generate Stories' }));
   expect(screen.getByText(/Drafting|Interviewing|Checking|Calling|Developing|Setting/)).toBeInTheDocument();
-  await act(async () => resolve('A lovely picnic.\n\nEveryone shared cake.'));
+  await act(async () => resolve({ headline: 'Picnic', article: 'A lovely picnic.\n\nEveryone shared cake.', source: 'openai', observations: [], unknowns: [] } as any));
   await userEvent.clear(screen.getByLabelText('Headline'));
   await userEvent.type(screen.getByLabelText('Headline'), 'Grandma makes the front page');
   await userEvent.click(screen.getByRole('button', { name: 'Newspaper preview' }));
@@ -41,7 +42,7 @@ it('shows generation progress, previews edited copy, saves with template, and of
 });
 it('keeps anonymous drafts editable while saving requires sign in', async () => {
   auth.mockReturnValue({ user: null });
-  generator.mockResolvedValue('Our family made pancakes.');
+  generator.mockResolvedValue({ headline: 'Pancakes', article: 'Our family made pancakes.', source: 'openai', observations: [], unknowns: [] });
   const { container } = render(<MemoryRouter><EventBuilder /></MemoryRouter>);
   await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, new File(['image'], 'breakfast.jpg', { type: 'image/jpeg' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Generate Stories' }));

@@ -211,6 +211,7 @@ export function useStoryLibrary(userId?: string | null) {
 
       const draftPayload = {
         file: entry.file,
+        files: entry.files,
         meta: {
           headline,
           bodyHtml,
@@ -221,10 +222,6 @@ export function useStoryLibrary(userId?: string | null) {
         onProgress,
       };
 
-      console.log('[Archive] Draft payload before persist', {
-        headline,
-        prompt,
-      });
 
       try {
         const result = await persistStory(draftPayload);

@@ -36,6 +36,9 @@ async function cleanup() {
  session = await required('/auth/v1/token?grant_type=password','POST',{email:process.env.SMOKE_TEST_EMAIL,password:process.env.SMOKE_TEST_PASSWORD},false);
  assert(session.access_token && session.user?.id, 'Test-account sign-in failed.');
  console.log('PASS: test-account sign-in.');
+ const templates = await required('/rest/v1/templates?select=*&is_public=eq.true&order=title.asc',undefined,undefined,false);
+ assert(templates.every(row => row.is_public === true), 'Catalog returned a private template.');
+ console.log('PASS: legacy template catalog loads and excludes private drafts.');
  if (options.has('--cleanup')) {
    const fixture=JSON.parse(fs.readFileSync(fixtureFile,'utf8'));
    assert.equal(fixture.ownerId, session.user.id, 'Fixture does not belong to this test account.');
@@ -60,9 +63,9 @@ async function cleanup() {
    for (let index=0; index<2; index++) {
      const [story] = await required('/rest/v1/story_archives?select=*','POST',{
        created_by:session.user.id,title:index ? 'Release check: private birthday' : 'Release check: family picnic',
-       article:`<p>${articles[index]}</p>`,prompt:articles[index],image_path:photoPath,is_public:false,
+       article:`<p>${articles[index]}</p>`,prompt:articles[index],image_path:photoPath,is_public:false,template_id:'travel-adventures',
      },true,{Prefer:'return=representation'});
-     assert(story?.id,'Story insert returned no row.'); created.storyIds.push(story.id); stories.push(story);
+     assert(story?.id,'Story insert returned no row.'); assert.equal(story.template_id, 'travel-adventures', 'Selected template was not persisted.'); created.storyIds.push(story.id); stories.push(story);
    }
    for (const story of stories) assert.equal((await required(`/rest/v1/story_archives?id=eq.${story.id}&select=id`,undefined,undefined,false)).length,0,'Private story leaked anonymously.');
    console.log('PASS: new stories are private and anonymous API reads are denied.');

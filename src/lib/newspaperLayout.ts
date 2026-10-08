@@ -1,9 +1,10 @@
+import { storyPhotos, type PhotoStory } from './storyPhotos';
 import jsPDF from 'jspdf';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 import { getHistorySelection } from '../data/historicalEvents';
 
 export type PaperSize = 'a4' | 'letter';
-export interface EditionStory { id: string; title: string | null; article: string | null; prompt: string | null; imageUrl: string | null; created_at: string; }
+export interface EditionStory extends PhotoStory { id: string; title: string | null; article: string | null; prompt: string | null; imageUrl: string | null; created_at: string; }
 export interface EditionOptions { title: string; paper: PaperSize; showHistory: boolean; date: string; }
 export interface TextBlock { kind: 'text'; x: number; y: number; width: number; text: string; size: number; lineHeight: number; bold?: boolean; }
 export interface ImageBlock { kind: 'image'; x: number; y: number; width: number; height: number; url: string; alt: string; }
@@ -63,17 +64,28 @@ export function layoutEdition(stories: EditionStory[], options: EditionOptions):
   };
   const text = (value: string, size = 11.5, leading = 16, bold = false) => lines(value, size, bold).forEach(value => line(value, size, leading, bold));
   const writeStory = (story: EditionStory, history = false) => {
+    const photos = storyPhotos(story);
     const heading = story.title || 'Untitled Story';
     const headingLines = lines(heading, 20, true);
-    const initialHeight = Math.min(headingLines.length, 5) * 24 + (story.imageUrl ? 166 : 0) + 48;
+    const initialHeight = Math.min(headingLines.length, 5) * 24 + (photos.length ? 166 : 0) + 48;
     if (y > top() && y + initialHeight > bottom) nextColumn();
     text(heading, 20, 24, true);
     text(history ? 'LITTLE WONDERS FROM HISTORY' : new Date(story.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), 9, 14);
     y += 6;
-    if (story.imageUrl) {
-      if (y + 174 > bottom) nextColumn();
-      pages[page].push({ kind: 'image', x: x(), y, width: colWidth, height: 156, url: story.imageUrl, alt: heading });
-      y += 166;
+    // Place every photo, advancing columns/pages rather than dropping overflow.
+    // Portraits take a taller slot; paired landscapes share rows for larger sets.
+    for (let index = 0; index < photos.length;) {
+      const photo = photos[index];
+      const portrait = Boolean(photo.width && photo.height && photo.height > photo.width);
+      const paired = photos.length >= 4 && !portrait && index + 1 < photos.length && !(photos[index + 1].height! > photos[index + 1].width!);
+      const count = paired ? 2 : 1;
+      const slotWidth = paired ? (colWidth - 10) / 2 : colWidth;
+      const slotHeight = portrait ? Math.min(290, slotWidth * (photo.height! / photo.width!)) : paired ? 115 : 175;
+      if (y + slotHeight + 10 > bottom) { nextColumn(); text(`${heading} (photos continued)`, 10, 14, true); y += 6; }
+      for (let offset = 0; offset < count; offset++) {
+        pages[page].push({ kind: 'image', x: x() + offset * (slotWidth + 10), y, width: slotWidth, height: slotHeight, url: photos[index + offset].url, alt: `${heading} — photo ${index + offset + 1}` });
+      }
+      index += count; y += slotHeight + 10;
     }
     const paragraphs = articleParagraphs(story);
     paragraphs.forEach(paragraph => {

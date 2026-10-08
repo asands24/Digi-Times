@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { X, BookOpen } from 'lucide-react';
 import { getTemplateById } from '../lib/templates';
 import { loadStoryDetails, type ArchiveItem } from '../hooks/useStoryLibrary';
-import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
+import { escapeHtml } from '../utils/sanitizeHtml';
 import { useAuth } from '../providers/AuthProvider';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { Link } from 'react-router-dom';
+import { storyPhotos } from '../lib/storyPhotos';
 import { StoryPaper } from './StoryPaper';
 
 interface StoryPreviewDialogProps {
@@ -15,33 +16,8 @@ interface StoryPreviewDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function buildPreviewDocument(story: ArchiveItem, templateHtml: string, templateCss = '') {
-  const body = sanitizeHtml(story.article || `<p>${escapeHtml(story.prompt || 'This story is still drafting.')}</p>`);
-  const title = escapeHtml(story.title || 'Untitled story');
-  const image = escapeHtml(story.imageUrl || '');
-  const replacements: Record<string, string> = {
-    headline: title, title, body, bodyHtml: body, article: body, image, imageUrl: image,
-    dateline: escapeHtml(new Date(story.created_at).toLocaleDateString()),
-  };
-  // One pass prevents replacement values containing template syntax from being
-  // interpreted a second time. The entire result is sanitized as well.
-  const compiled = templateHtml.replace(/{{\s*(\w+)\s*}}/g, (match, key) => replacements[key] ?? match);
-  let markup = sanitizeHtml(compiled);
-  if (image && !/<img\b/i.test(markup)) {
-    markup = sanitizeHtml(`<img src="${image}" alt="" />${markup}`);
-  }
-  // Isolate template CSS from the app; the sandbox forbids script execution,
-  // forms, popups, and parent navigation. Also restrict document resources.
-  const css = templateCss.replace(/</g, '\\3c ');
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data: blob:; style-src 'unsafe-inline';">
-    <title>${title}</title><style>
-      *{box-sizing:border-box}body{margin:0;padding:24px;background:#fffdf8;color:#0b1d36;font-family:Georgia,serif;line-height:1.75;overflow-wrap:anywhere}
-      img{max-width:100%;height:auto;border-radius:12px}h1,h2{line-height:1.2}article{max-width:760px;margin:auto}
-      ${css}
-    </style></head><body>${markup}</body></html>`;
-}
+export { buildPreviewDocument } from '../lib/templatePreview';
+import { buildPreviewDocument } from '../lib/templatePreview';
 
 export function StoryPreviewDialog({ story: selectedStory, open, onOpenChange }: StoryPreviewDialogProps) {
   // Keep the last article mounted during Radix's exit animation.
@@ -52,13 +28,13 @@ export function StoryPreviewDialog({ story: selectedStory, open, onOpenChange }:
   const userId = user?.id;
   const [result, setResult] = useState<{ id: string; userId?: string; fullStory?: ArchiveItem; document?: string; templateName?: string; error?: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [mode, setMode] = useState<'paper' | 'template'>('paper');
+  const [mode, setMode] = useState<'paper' | 'template'>('template');
 
   useEffect(() => {
     if (!open || !story) return;
     let cancelled = false;
     setResult(null);
-    setMode('paper');
+    setMode('template');
     async function load() {
       try {
         let fullStory = story!;
@@ -111,7 +87,7 @@ export function StoryPreviewDialog({ story: selectedStory, open, onOpenChange }:
             {current.document && <Button size="sm" variant={mode === 'template' ? 'default' : 'outline'} aria-pressed={mode === 'template'} onClick={() => setMode('template')}>Original template</Button>}
           </div>
           {mode === 'template' && current.document ? <iframe className="story-reader__frame" title={`Newspaper preview: ${story?.title || 'Your story'}`} sandbox="" srcDoc={current.document} /> :
-            <div className="story-reader__paper"><StoryPaper headline={current.fullStory.title || 'Your story'} body={current.fullStory.article || `<p>${escapeHtml(current.fullStory.prompt || '')}</p>`} date={current.fullStory.created_at} imageUrl={current.fullStory.imageUrl} templateName={current.templateName || 'Family edition'} /></div>}
+            <div className="story-reader__paper"><StoryPaper headline={current.fullStory.title || 'Your story'} body={current.fullStory.article || `<p>${escapeHtml(current.fullStory.prompt || '')}</p>`} date={current.fullStory.created_at} imageUrl={current.fullStory.imageUrl} imageUrls={storyPhotos(current.fullStory)} templateName={current.templateName || 'Family edition'} /></div>}
         </> : !current?.error && (
           <div className="story-reader__status" role="status"><span className="reader-skeleton" aria-hidden /><p>Opening your front page…</p></div>
         )}

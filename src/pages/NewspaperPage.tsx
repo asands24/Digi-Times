@@ -15,6 +15,7 @@ import { Label } from '../components/ui/label';
 import { supabase } from '../lib/supabaseClient';
 import { supaRest } from '../lib/supaRest';
 import { createIssue, fetchIssueById } from '../lib/storiesApi';
+import { storyPhotos } from '../lib/storyPhotos';
 import { useAuth } from '../providers/AuthProvider';
 import type { Database } from '../types/supabase';
 import toast from 'react-hot-toast';
@@ -28,10 +29,11 @@ type StoryRow = Database['public']['Tables']['story_archives']['Row'];
 
 interface StoryWithImage extends StoryRow {
   imageUrl: string | null;
+  imageUrls: import('../lib/storyPhotos').StoryPhoto[];
 }
 
 const STORY_COLUMNS =
-  'id,title,article,prompt,image_path,photo_id,template_id,created_at,updated_at,is_public,created_by';
+  '*';
 const UUID_MATCH =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -51,6 +53,9 @@ export default function NewspaperPage({ reader = false }: { reader?: boolean }) 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageDimensions, setImageDimensions] = useState<Record<string, { width: number; height: number }>>({});
+  const [imageState, setImageState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [imageAttempt, setImageAttempt] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [issueTitle, setIssueTitle] = useState(() => new URLSearchParams(location.search).get('title')?.slice(0, 120) || 'My Daily Edition');
@@ -168,6 +173,7 @@ export default function NewspaperPage({ reader = false }: { reader?: boolean }) 
       const withImages = available.map((story: StoryRow) => ({
         ...story,
         imageUrl: getPublicImage(story.image_path),
+        imageUrls: storyPhotos(story),
       }));
 
       // Preserve the requested order
@@ -191,8 +197,27 @@ export default function NewspaperPage({ reader = false }: { reader?: boolean }) 
     return invalidateLoad;
   }, [loadStories, invalidateLoad]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const urls = Array.from(new Set(stories.flatMap(story => storyPhotos(story).map(photo => photo.url))));
+    setImageState(urls.length ? 'loading' : 'ready');
+    const cleanups: (() => void)[] = [];
+    Promise.all(urls.map(url => new Promise<{ url: string; width: number; height: number }>((resolve, reject) => {
+      const image = new Image();
+      const cleanup = () => { clearTimeout(timer); image.onload = null; image.onerror = null; };
+      const timer = setTimeout(() => { cleanup(); reject(new Error('Photo timed out')); }, 15000);
+      cleanups.push(cleanup);
+      image.onload = () => { cleanup(); image.naturalWidth && image.naturalHeight ? resolve({ url, width: image.naturalWidth, height: image.naturalHeight }) : reject(new Error('Photo unavailable')); };
+      image.onerror = () => { cleanup(); reject(new Error('Photo unavailable')); };
+      image.crossOrigin = 'anonymous'; image.src = url;
+    }))).then(photos => {
+      if (!cancelled) { setImageDimensions(Object.fromEntries(photos.map(photo => [photo.url, { width: photo.width, height: photo.height }]))); setImageState('ready'); }
+    }).catch(() => { if (!cancelled) setImageState('error'); });
+    return () => { cancelled = true; cleanups.forEach(cleanup => cleanup()); };
+  }, [stories, imageAttempt]);
+
   const editionOptions = useMemo(() => ({ title: issueTitle, paper, showHistory, date: editionDate }), [issueTitle, paper, showHistory, editionDate]);
-  const layout = useMemo(() => layoutEdition(stories, editionOptions), [stories, editionOptions]);
+  const layout = useMemo(() => layoutEdition(stories.map(story => ({ ...story, imageUrls: story.imageUrls.map(photo => ({ ...photo, ...imageDimensions[photo.url] })) })), editionOptions), [stories, editionOptions, imageDimensions]);
   const handlePrint = async () => {
     setIsPrinting(true);
     try {
@@ -317,11 +342,11 @@ export default function NewspaperPage({ reader = false }: { reader?: boolean }) 
           <Button variant="outline" onClick={handleSaveIssue} disabled={isSaving}><Save size={16} /> {isSaving ? 'Saving...' : 'Save Issue'}</Button>
           <Button variant="outline" onClick={() => setShareOpen(true)}><Share2 size={16} /> Share edition</Button>
           </>}
-          <Button onClick={handlePrint} disabled={isPrinting || isDownloading}>
+          <Button onClick={handlePrint} disabled={isPrinting || isDownloading || imageState !== 'ready'}>
             <Printer size={16} className="mr-2" />
             {isPrinting ? 'Preparing...' : 'Print / Save PDF'}
           </Button>
-          <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading || isPrinting} size="sm">
+          <Button variant="outline" onClick={handleDownloadPDF} disabled={isDownloading || isPrinting || imageState !== 'ready'} size="sm">
             <Download size={16} className="mr-2" />
             {isDownloading ? 'Exporting...' : 'Download PDF'}
           </Button>
@@ -338,7 +363,9 @@ export default function NewspaperPage({ reader = false }: { reader?: boolean }) 
         <p className="edition-help">Download PDF keeps text sharp and selectable. For other alphabets or emoji, use Print / Save PDF. In the print dialog, match the selected paper size, choose 100% scale and turn off browser headers and footers.</p>
         <p className="edition-help">On a small screen, swipe across the paper to read the full page.</p>
       </section>
-      <EditionPaper layout={layout} />
+      {imageState === 'loading' && <p className="no-print" role="status">Loading all edition photos before export…</p>}
+      {imageState === 'error' && <div className="no-print" role="alert"><p>A required photo failed to load. Export is paused so your newspaper will not omit it.</p><Button onClick={() => setImageAttempt(value => value + 1)}>Retry edition photos</Button></div>}
+      <EditionPaper key={imageAttempt} layout={layout} />
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
         <DialogContent><DialogHeader><DialogTitle>Share this edition</DialogTitle><DialogDescription>Anyone with this link can read its public stories without signing in. Sharing does not change story privacy. Later edits to those stories will appear in the link; a downloaded PDF keeps today's copy.</DialogDescription></DialogHeader>
           <p>{notice ? 'This edition is incomplete. Reload or choose an available set of stories before sharing.' : stories.some(story => !story.is_public) ? 'Make the private stories below public in your archive before copying an edition link. You can also send a downloaded PDF yourself.' : 'The link includes this title, story order, paper size, date and history setting.'}</p>

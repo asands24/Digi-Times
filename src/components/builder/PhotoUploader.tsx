@@ -53,13 +53,13 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
             </div>
 
             <p className="text-sm text-ink-muted">
-                Images up to 10 MB each. One photo becomes one story.
+                JPEG, PNG, WebP or GIF up to 10 MB each. Keep separate stories or combine photos before generating.
             </p>
 
             <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple
                 aria-label="Upload story photos"
                 className="hidden"
@@ -68,7 +68,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
             <input
                 ref={cameraInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 capture="environment"
                 aria-label="Take a story photo"
                 className="hidden"

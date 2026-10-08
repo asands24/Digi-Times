@@ -1,3 +1,4 @@
+import { validatePhoto, type StoredPhoto } from './storyPhotos';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { StorageError } from '@supabase/storage-js';
 import { supabaseClient } from './supabaseClient';
@@ -13,12 +14,14 @@ type StoryInsertPayload = {
   title: string;
   prompt: string | null;
   image_path: string;
+  images?: StoredPhoto[];
   template_id?: string | null;
   is_public?: boolean;
 };
 
 export type PersistStoryParams = {
   file: File;
+  files?: File[];
   meta: {
     headline: string;
     bodyHtml: string;
@@ -56,7 +59,7 @@ const sanitizeFileName = (value: string) =>
     .replace(/-+/g, '-');
 
 const buildImagePath = (userId: string, file: File) =>
-  `stories/${userId}/${Date.now()}-${sanitizeFileName(file.name)}`;
+  `stories/${userId}/${crypto.randomUUID()}-${sanitizeFileName(file.name)}`;
 
 type PersistStoryArgs = {
   supabase: SupabaseClient;
@@ -64,6 +67,8 @@ type PersistStoryArgs = {
   storyId?: string | null;
   payload: StoryInsertPayload;
 };
+
+const uploadedFiles = new WeakMap<File, Map<string, string>>();
 
 export async function persistStory(
   params: PersistStoryParams,
@@ -74,7 +79,11 @@ export async function persistStory(
   }
 
   const mode: PersistStoryMode = storyId ? 'update' : 'insert';
-  const filePath = buildImagePath(userId, file);
+  const files = params.files || [file];
+  if (!files.length || files.length > 20) throw new Error('Choose between 1 and 20 photos per story.');
+  files.forEach(validatePhoto);
+  const paths: string[] = [];
+  let filePath = '';
   const payload: StoryInsertPayload = {
     created_by: userId,
     article: meta.bodyHtml,
@@ -98,7 +107,11 @@ export async function persistStory(
 
   // Upload via XHR to avoid fetch/Supabase client hanging issues.
   // Token is sourced from localStorage first, then falls back to getSession with timeout.
-  const uploadStart = Date.now();
+  for (let index = 0; index < files.length; index++) {
+  const file = files[index];
+  const cached = uploadedFiles.get(file)?.get(userId);
+  filePath = cached || buildImagePath(userId, file);
+  if (cached) { paths.push(cached); onProgress?.(Math.round((index + 1) / files.length * 100)); continue; }
   let uploadError: StorageError | null = null;
 
   try {
@@ -135,7 +148,7 @@ export async function persistStory(
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && onProgress) {
-          onProgress(Math.round((e.loaded / e.total) * 100));
+          onProgress(Math.round((index + e.loaded / e.total) / files.length * 100));
         }
       };
 
@@ -143,7 +156,7 @@ export async function persistStory(
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(xhr.responseText);
         } else {
-          reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
+          reject(new Error(`Photo ${index + 1} upload failed (${xhr.status}). Your photos are kept; retry Save Story.`));
         }
       };
 
@@ -156,21 +169,12 @@ export async function persistStory(
     uploadError = { name: 'StorageError', message: String(err) } as StorageError;
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[persistStory] upload finished', {
-      durationMs: Date.now() - uploadStart,
-      hasError: Boolean(uploadError),
-    });
+  if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
+  const cache = uploadedFiles.get(file) || new Map<string, string>(); cache.set(userId, filePath); uploadedFiles.set(file, cache);
+  paths.push(filePath);
   }
-
-  if (uploadError) {
-    console.error('[persistStory] image upload failed', {
-      error: uploadError,
-      path: filePath,
-      userId,
-    });
-    throw new Error(`Image upload failed: ${uploadError.message}`);
-  }
+  payload.image_path = paths[0];
+  if (params.files) payload.images = paths.map(path => ({ path }));
 
   let savedRow: StoryArchiveRow;
   try {
@@ -222,8 +226,7 @@ const persistStoryRecord = async ({
 
     return data[0];
   } catch (error) {
-    console.error('[persistStory] Raw fetch failed', error);
-    throw new Error(`Database mutation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error('Story could not be saved. Your uploaded photos are preserved for retry. If multi-photo saving is not configured, apply the story photos migration.');
   }
 };
 

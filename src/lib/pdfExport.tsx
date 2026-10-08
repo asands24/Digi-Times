@@ -6,7 +6,7 @@ export interface ExportPDFOptions { filename?: string; onProgress?: (progress: n
 export async function waitForEditionImages(element: HTMLElement): Promise<void> {
   await document.fonts?.ready;
   await Promise.all(Array.from(element.querySelectorAll('img')).map(image => new Promise<void>((resolve, reject) => {
-    const finish = () => { cleanup(); image.naturalWidth > 0 ? resolve() : reject(new Error('A photo could not be loaded. Please retry before exporting.')); };
+    const finish = () => { cleanup(); image.naturalWidth > 0 && image.naturalHeight > 0 ? resolve() : reject(new Error('A photo could not be loaded. Please retry before exporting.')); };
     const timer = window.setTimeout(() => { cleanup(); reject(new Error('A photo is taking too long to load. Please retry.')); }, 15000);
     const cleanup = () => { window.clearTimeout(timer); image.removeEventListener('load', finish); image.removeEventListener('error', finish); };
     if (image.complete) finish(); else { image.addEventListener('load', finish); image.addEventListener('error', finish); }
@@ -45,6 +45,7 @@ export function createEditionPDF(layout: EditionLayout, images: PDFPhoto[] = [])
       } else {
         const image = images.find(image => image.url === block.url);
         if (!image) throw new Error('A photo could not be found. Please reload your edition.');
+        if (!(image.width > 0 && image.height > 0)) throw new Error('A photo has invalid dimensions. Retry before exporting.');
         const ratio = Math.min(block.width / image.width, block.height / image.height);
         const width = image.width * ratio, height = image.height * ratio;
         pdf.addImage(image.source, block.x + (block.width - width) / 2, block.y + (block.height - height) / 2, width, height);

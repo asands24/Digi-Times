@@ -7,17 +7,18 @@ import { useAuth } from '../providers/AuthProvider';
 import { TemplatesGallery } from './TemplatesGallery';
 import { PhotoUploader } from './builder/PhotoUploader';
 import { StoryPromptInput } from './builder/StoryPromptInput';
-import { StoryReview, StoryEntry } from './builder/StoryReview';
+import { StoryReview, StoryEntry, entryPhotos } from './builder/StoryReview';
 import {
   generateArticle,
   toStoryParagraphs,
   toEditableBody,
   parseBodyDraft,
   buildBodyHtml,
-  generateStoryFromPrompt,
+  generateGroundedStory,
 } from '../utils/storyGenerator';
 import { CreationSteps } from './CreationSteps';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getTemplateById } from '../lib/templates';
 import { StoryTemplate } from '../types/story';
 
 // Simple ID generator
@@ -27,7 +28,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const LOADING_MESSAGES = [
   'Drafting your headline…',
-  'Interviewing the witnesses…',
+  'Describing visible details…',
   'Checking the spelling…',
   'Calling the editor…',
   'Developing the photos…',
@@ -40,6 +41,25 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
   const [entries, setEntries] = useState<StoryEntry[]>([]);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [choosingTemplate, setChoosingTemplate] = useState(false);
+  const [templateError, setTemplateError] = useState('');
+  const requestedTemplate = location.pathname === '/create' ? new URLSearchParams(location.search).get('template') : null;
+  useEffect(() => {
+    if (!requestedTemplate) return;
+    let cancelled = false;
+    setTemplateError('');
+    getTemplateById(requestedTemplate).then(template => {
+      if (!cancelled) { setSelectedTemplate(template); setChoosingTemplate(false); }
+    }).catch(() => { if (!cancelled) setTemplateError('That template could not be loaded. Choose a layout below to continue.'); });
+    return () => { cancelled = true; };
+  }, [requestedTemplate]);
+  const chooseTemplate = useCallback((template: StoryTemplate) => {
+    setSelectedTemplate(template); setChoosingTemplate(false); setTemplateError('');
+    // Consume the incoming selection so a later visit cannot replay an old choice.
+    if (requestedTemplate) navigate('/create', { replace: true });
+  }, [requestedTemplate, navigate]);
   const entryUrlsRef = useRef<string[]>([]);
 
   const { saveDraftToArchive } = useStoryLibrary();
@@ -68,6 +88,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
         entry: {
           id: entry.id,
           file: entry.file,
+          files: entryPhotos(entry).filter(photo => photo.included).map(photo => photo.file),
           prompt: prompt,
           article: entry.article,
         },
@@ -92,7 +113,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
     // Otherwise use global.
     // Note: In our simplified model, we mostly rely on global prompt being applied to entries.
     // But we keep this logic if we want per-story overrides later.
-    if (entry.status !== 'idle' && entry.prompt.trim().length > 0) {
+    if (entry.prompt.trim().length > 0) {
       return entry.prompt;
     }
     return global.trim();
@@ -107,7 +128,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
 
       const processed = await Promise.all(
         files.map(async (file) => {
-          if (!file.type.startsWith('image/')) {
+          if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
             toast.error(`Unsupported file: ${file.name}`);
             return null;
           }
@@ -152,7 +173,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
   );
 
   useEffect(() => {
-    entryUrlsRef.current = entries.map((entry) => entry.previewUrl);
+    entryUrlsRef.current = entries.flatMap(entry => entryPhotos(entry).map(photo => photo.previewUrl));
   }, [entries]);
 
   useEffect(
@@ -166,7 +187,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
     setEntries((prev) => {
       const target = prev.find((entry) => entry.id === id);
       if (target) {
-        URL.revokeObjectURL(target.previewUrl);
+        entryPhotos(target).forEach(photo => URL.revokeObjectURL(photo.previewUrl));
       }
       return prev.filter((entry) => entry.id !== id);
     });
@@ -221,10 +242,10 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
 
       const effectivePrompt = getEffectivePrompt(target, globalPrompt);
 
-      // MAGIC: If no prompt, use a default "Magic" prompt
-      const magicPrompt = "A wonderful moment captured in time, worthy of the front page.";
-      const idea = effectivePrompt || magicPrompt;
-
+      const photos = entryPhotos(target).filter(photo => photo.included);
+      if (!photos.length) { toast.error('Include at least one photo.'); return; }
+      const idea = effectivePrompt;
+      const accountId = currentAccountRef.current;
       const entryIndex = Math.max(entries.findIndex((entry) => entry.id === id), 0);
       // We don't track generationId in the simplified type, but we can simulate it or add it back if needed.
       // For now, we just use a random loading label.
@@ -237,10 +258,9 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
               ...entry,
               prompt: idea,
               status: 'generating',
-              article: undefined,
+              generationError: undefined,
               loadingLabel,
-              headlineDraft: undefined,
-              bodyDraft: undefined,
+
             }
             : entry,
         ),
@@ -255,33 +275,16 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
       });
 
       const run = async () => {
-        let resolvedArticle = localArticle;
         try {
-          const storyText = await generateStoryFromPrompt(idea);
-          const paragraphs = toStoryParagraphs(storyText);
-          if (paragraphs.length > 0) {
-            resolvedArticle = {
-              ...localArticle,
-              body: paragraphs,
-            };
-          }
-        } catch (error) {
-          console.error('[DigiTimes] Story generation failed, using local article:', error);
+          const result = await generateGroundedStory(idea, photos.map(photo => photo.file));
+          if (currentAccountRef.current !== accountId) return;
+          const resolvedArticle = { ...localArticle, headline: result.headline, body: toStoryParagraphs(result.article) };
+          setEntries(prev => prev.map(entry => entry.id === id ? { ...entry, status: 'ready', article: resolvedArticle, headlineDraft: result.headline, bodyDraft: toEditableBody(resolvedArticle), grounding: { ...result, observations: result.observations.map(observation => ({ ...observation, index: entryPhotos(target).findIndex(original => original.file === photos[observation.index]?.file) })) }, generationError: undefined } : entry));
+        } catch {
+          if (currentAccountRef.current !== accountId) return;
+          setEntries(prev => prev.map(entry => entry.id === id ? { ...entry, status: entry.article ? 'ready' : 'idle', generationError: 'Photos could not be analyzed. Your photos, facts and edits are kept.' } : entry));
         }
 
-        setEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === id
-              ? {
-                ...entry,
-                status: 'ready',
-                article: resolvedArticle,
-                headlineDraft: resolvedArticle.headline,
-                bodyDraft: toEditableBody(resolvedArticle),
-              }
-              : entry,
-          ),
-        );
       };
 
       void run();
@@ -341,6 +344,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
     if (!user) { toast.error('Sign in to keep this memory. Your draft stays here while you sign in.'); return; }
     if (!(entry.headlineDraft ?? entry.article.headline).trim() || !(entry.bodyDraft ?? toEditableBody(entry.article)).trim()) { toast.error('Add a headline and a little story before saving.'); return; }
     savingRef.current = true;
+    updateEntry(entry.id, { saveError: undefined });
 
     handleSaveToArchive({
       entry,
@@ -352,7 +356,9 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
     }).then((res) => {
       if (currentAccountRef.current !== user.id) return;
       if (res.error || !res.story) {
-        toast.error(res.error?.message || 'We couldn’t confirm the save. Your draft is still here.');
+        const message = res.error?.message || 'We couldn’t confirm the save.';
+        updateEntry(entry.id, { saveError: message });
+        toast.error(message);
       } else {
         toast.success('Memory saved to your story library!');
         setSavedStoryId(res.story?.id ?? null);
@@ -379,6 +385,19 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
 
       <CreationSteps current={uploadProgress !== null ? 4 : isGenerating ? 2 : hasDraftWithArticle ? 3 : hasEntries ? 1 : 0} />
       {savedStoryId && <div className="memory-saved" role="status"><div><strong>Your memory is on the record.</strong><p>Next, give it a home in a family newspaper.</p></div><Link className="dt-button dt-button--primary" to={`/newspaper?ids=${savedStoryId}`}>Add to Newspaper →</Link><Link to="/library">View library</Link></div>}
+      <section className="studio-layout" aria-label="Story layout">
+        <div><span className="dt-eyebrow">YOUR STORY LAYOUT</span><h3>{selectedTemplate?.title || 'Choose your edition'}</h3><p>Change the design at any time. Your photos and writing stay in place.</p></div>
+        <Button variant="outline" disabled={uploadProgress !== null || isGenerating} aria-expanded={choosingTemplate} onClick={() => setChoosingTemplate(value => !value)}>{choosingTemplate ? 'Close layouts' : 'Change layout'}</Button>
+      </section>
+      {templateError && <p role="alert">{templateError}</p>}
+      <div hidden={!choosingTemplate && !templateError}>
+        <TemplatesGallery selectedTemplateId={selectedTemplate?.id ?? null} onSelect={chooseTemplate} autoSelectFirst={!requestedTemplate} />
+      </div>
+      {entries.length > 1 && !hasDraftWithArticle && !isGenerating && <Button variant="outline" onClick={() => {
+        const photos = entries.flatMap(entryPhotos);
+        if (photos.length > 20) { toast.error('Combine up to 20 photos per story.'); return; }
+        setEntries([{ ...entries[0], photos, prompt: globalPrompt || entries.map(entry => entry.prompt).filter(Boolean).join('\n') }]);
+      }}>Combine {entries.reduce((count, entry) => count + entryPhotos(entry).length, 0)} photos into one story</Button>}
       {/* STEP 1: UPLOAD */}
       <div className="mb-12">
         <PhotoUploader
@@ -392,7 +411,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
 
           {/* STEP 2: REFINE (Prompt & Template) */}
           {!hasDraftWithArticle && !isGenerating && (
-            <div className="studio-stage grid md:grid-cols-2 gap-8 items-start">
+            <div className="studio-stage">
               <div className="space-y-6">
                 <StoryPromptInput
                   value={globalPrompt}
@@ -402,17 +421,11 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
                 />
 
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
-                  <strong>A note from the editor:</strong> Names, places, and one little detail make a story yours. Our AI uses your description; it doesn’t analyze the photo. A blank prompt creates an imaginative starter draft.
+                  <strong>A note from the editor:</strong> Names, places, and one little detail make a story yours. AI first describes the included photos, then drafts from those observations and your confirmed facts. Unknown names, places and events are left for you to confirm.
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-display text-ink">Choose a Style</h3>
-                <TemplatesGallery
-                  selectedTemplateId={selectedTemplate?.id ?? null}
-                  onSelect={setSelectedTemplate}
-                />
-              </div>
+
             </div>
           )}
 
@@ -451,7 +464,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
                     onRegenerate={generateStory}
                     onSave={handleSaveEntry}
                     isSaving={uploadProgress !== null}
-                    templateName={selectedTemplate?.title}
+                    template={selectedTemplate}
                     canSave={Boolean(user)}
                     onRemove={removeEntry}
                     toEditableBody={toEditableBody}

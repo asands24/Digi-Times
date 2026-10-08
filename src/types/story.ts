@@ -47,6 +47,7 @@ export interface StoryArchive {
 export interface DraftEntry {
   id: string;
   file: File;
+  files?: File[];
   prompt: string;
   article?: GeneratedArticle;
 }
