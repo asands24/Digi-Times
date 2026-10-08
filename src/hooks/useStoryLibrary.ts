@@ -212,6 +212,7 @@ export function useStoryLibrary(userId?: string | null) {
       const draftPayload = {
         file: entry.file,
         files: entry.files,
+        sourcePaths: entry.sourcePaths,
         meta: {
           headline,
           bodyHtml,

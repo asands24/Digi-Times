@@ -1,14 +1,13 @@
 import { Reveal } from './Motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Archive as ArchiveIcon, Calendar, Eye, RefreshCcw, Share2, Newspaper, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import {
-  loadStoriesWithDetails,
   type ArchiveItem,
 } from '../hooks/useStoryLibrary';
-import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
+import { escapeHtml } from '../utils/sanitizeHtml';
 import { copyToClipboard } from '../utils/clipboard';
 import { useAuth } from '../providers/AuthProvider';
 import toast from 'react-hot-toast';
@@ -165,110 +164,6 @@ const getExcerpt = (story: ArchiveItem) => {
   return words.slice(0, 24).join(' ') + (words.length > 24 ? '…' : '');
 };
 
-const openEditionPreview = async (storyIds: string[], userId: string) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  if (storyIds.length === 0) {
-    return;
-  }
-
-  // Open during the click gesture so asynchronous REST loading cannot trigger popup blocking.
-  const win = window.open('', '_blank');
-  if (!win) {
-    toast.error('Pop-up blocked. Allow pop-ups to export edition.');
-    return;
-  }
-  win.opener = null;
-  win.document.title = 'Preparing your DigiTimes edition…';
-  let stories: ArchiveItem[];
-  try {
-    stories = await loadStoriesWithDetails(storyIds, userId);
-  } catch (error) {
-    win.close();
-    throw error;
-  }
-  if (stories.length === 0) {
-    win.close();
-    toast.error('No stories found to export.');
-    return;
-  }
-  const doc = win.document;
-  const articles = stories
-    .map((story) => {
-      const articleHtml = sanitizeHtml(buildArticleHtml(story));
-      return `
-        <article class="edition-story">
-          <h2>${escapeHtml(story.title ?? 'Untitled story')}</h2>
-          <div class="edition-story__meta">${formatTimestamp(story.created_at)}</div>
-          <div class="edition-story__body">${articleHtml}</div>
-        </article>
-      `;
-    })
-    .join('');
-  doc.open();
-  doc.write(`<!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8"/>
-        <title>DigiTimes Edition</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
-        <style>
-          body {
-            margin: 0;
-            padding: 2rem;
-            font-family: 'Libre Baskerville', serif;
-            background: #fdfaf2;
-            color: #2b241c;
-          }
-          .edition-grid {
-            display: grid;
-            gap: 2rem;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          }
-          h1 {
-            text-transform: uppercase;
-            font-family: 'Playfair Display', serif;
-            letter-spacing: 0.3em;
-            text-align: center;
-            margin-bottom: 2rem;
-          }
-          .edition-story {
-            border: 1px solid rgba(196, 165, 116, 0.6);
-            border-radius: 18px;
-            padding: 1.5rem;
-            background: linear-gradient(180deg, #fffdf8 0%, #f7ecd6 100%);
-            box-shadow: 0 18px 36px rgba(59, 48, 34, 0.08);
-          }
-          .edition-story h2 {
-            margin-top: 0;
-            font-family: 'Playfair Display', serif;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-          }
-          .edition-story__meta {
-            font-size: 0.8rem;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            margin-bottom: 1rem;
-            color: #7a6d5b;
-          }
-          .edition-story__body p {
-            line-height: 1.7;
-          }
-        </style>
-      </head>
-      <body>
-        <h1>DigiTimes Edition</h1>
-        <section class="edition-grid">${articles}</section>
-      </body>
-    </html>`);
-  doc.close();
-  win.focus();
-};
-
 export function StoryArchive({
   stories,
   isLoading,
@@ -284,8 +179,8 @@ export function StoryArchive({
   const { user } = useAuth();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState('');
-  const [exportLoading, setExportLoading] = useState(false);
   const [sectionFilter, setSectionFilter] = useState<StorySection | 'all'>('all');
+  useEffect(() => { setSelectedIds([]); }, [user?.id]);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'length'>('newest');
 
   const decoratedStories = stories.map(
@@ -308,9 +203,9 @@ export function StoryArchive({
   );
   const isError = Boolean(errorMessage);
   const hasStories = filteredStories.length > 0;
-  // Filter out sample stories and stories without titles for export
-  const exportableStories = filteredStories.filter((story) => !story.isSample && story.title);
-  const selectedStories = selectedIds.map(id => decoratedStories.find(story => story.id === id)).filter((story): story is typeof decoratedStories[number] => Boolean(story && !story.isSample && story.title));
+  // Saved memories can be reused even before a headline is added.
+  const exportableStories = filteredStories.filter((story) => !story.isSample);
+  const selectedStories = selectedIds.map(id => decoratedStories.find(story => story.id === id)).filter((story): story is typeof decoratedStories[number] => Boolean(story && !story.isSample));
   const editionStories = selectedStories.length ? selectedStories : exportableStories;
   const canExportEdition = editionStories.length > 0;
   const showExportHint = !isLoading && !isError && !canExportEdition;
@@ -331,21 +226,8 @@ export function StoryArchive({
     navigate(`/newspaper?ids=${ids}`);
   };
 
-  const handleExportEdition = async () => {
-    if (!user || editionStories.length === 0) {
-      return;
-    }
-
-    setExportLoading(true);
-    try {
-      const storyIds = editionStories.map((story) => story.id);
-      await openEditionPreview(storyIds, user.id);
-    } catch (error) {
-      console.error('[StoryArchive] Export failed', error);
-      toast.error('Failed to export edition. Please try again.');
-    } finally {
-      setExportLoading(false);
-    }
+  const handleExportEdition = () => {
+    if (user && editionStories.length) navigate(`/newspaper?ids=${editionStories.map(story => story.id).join(',')}`);
   };
 
   return (
@@ -355,8 +237,8 @@ export function StoryArchive({
           <div className="story-archive__eyebrow">The family story shelf</div>
           <h2>A little library of big memories</h2>
           <p>
-            Every saved story is kept here with its photo and article so you can
-            edit, preview, and publish a polished newspaper spread.
+            Your stories and photos can appear in as many issues as you like.
+            Select memories below, then preview and save your new issue. Nothing is moved or removed.
           </p>
           {stories.length > 0 && <>
           <label className="library-search">Find a memory<input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search headlines and moments…" /></label>
@@ -424,25 +306,26 @@ export function StoryArchive({
               disabled={!canExportEdition || isLoading}
             >
               <Newspaper size={16} strokeWidth={1.75} />
-              {selectedStories.length ? `Build Newspaper (${selectedStories.length})` : 'Build Newspaper'}
+              {selectedStories.length ? `Build Newspaper (${selectedStories.length})` : 'Build issue from shown stories'}
             </Button>
             <Button
               type="button"
               onClick={handleExportEdition}
-              disabled={!canExportEdition || exportLoading || isLoading}
+              disabled={!canExportEdition || isLoading}
             >
               <ArchiveIcon size={16} strokeWidth={1.75} />
-              {exportLoading ? 'Loading...' : 'Export edition'}
+              Preview & export
             </Button>
             </>}
           </div>
+          <Link to="/create" className="story-archive__hint">Want a fresh article? Choose saved photos in the studio →</Link>
           {showExportHint && stories.length > 0 ? (
             <span className="story-archive__hint">Create and save a story to enable export.</span>
           ) : null}
         </div>}
       </header>
 
-      {selectedStories.length > 0 && <div className="issue-selection" role="status"><strong>{selectedStories.length} {selectedStories.length === 1 ? 'memory' : 'memories'} in your next edition</strong><span>The first selected story leads the front page.</span><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear selection</Button></div>}
+      {selectedStories.length > 0 && <div className="issue-selection" role="status"><strong>{selectedStories.length} {selectedStories.length === 1 ? 'memory' : 'memories'} in your next edition</strong><span>The first selected story leads the front page. Selection stays as you search.</span><Button size="sm" onClick={handleBuildNewspaper}>Preview selected issue →</Button><Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear selection</Button></div>}
       {isLoading && !stories.length ? (
         <div className="story-archive__empty" role="status" aria-live="polite">
           <div className="library-skeletons" aria-hidden="true">{[1, 2, 3].map(item => <div key={item} className="library-skeleton"><div /><span /><span /></div>)}</div>
@@ -511,6 +394,7 @@ export function StoryArchive({
                       )}
                     </div>
                     <div className="story-archive__front-text">
+                      <p>{story.images?.length || (story.image_path || story.imageUrl ? 1 : 0)} saved photos · Reusable in new issues</p>
                       <p className="story-archive__excerpt">{getExcerpt(story)}</p>
                       <p className="story-archive__meta">
                         {Math.max(1, Math.ceil(story.wordCount / 200))} min read · {story.is_public ? 'Shareable with loved ones' : 'Only in your library'}

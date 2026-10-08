@@ -41,3 +41,18 @@ Rollback: redeploy the previous client/function versions. Keep the additive imag
 - Existing reduced-motion CSS covers the changed editor animation; new photo controls use native labels/checkboxes and buttons. Dedicated keyboard-only and physical-device acceptance checks remain outstanding.
 
 This branch also includes the previously committed template experience improvement (`87d4d4d`), which is not yet present on remote main.
+
+## Follow-up: reuse saved memories
+
+The studio previously offered only new uploads. Library checkboxes could reuse stories, but the next action was easy to miss. The separate library export shortcut used a text-only popup and omitted photos.
+
+- **Fresh article:** Create → Choose saved photos → select in desired order → Use photos. Existing confirmed facts accompany the photos; originals and saved stories remain intact. Combine photos as needed before generating. The picker loads saved story photos in pages and deduplicates repeated references; legacy single-photo stories are supported.
+- **Another issue with existing articles:** Library → Add to this issue → Preview selected issue → save under a new title. Selection order leads the front page, and search retains selections. Untitled saved stories can be included. Photos/stories can appear in multiple issues.
+- Saved originals are fetched for vision analysis, but saves reuse their original storage paths instead of uploading duplicates. Mixed saved/new photos keep their order. Account-scoped validation rejects another account's paths; the existing migration also checks stored ownership.
+- Import failures retain selection and all studio drafts. Cancelling aborts pending photo fetches; late results cannot add photos. Switching accounts closes the picker and releases drafts. Library links open a new tab when necessary to preserve existing drafts. Dialog Escape/focus restoration is covered by regression tests.
+- Library Preview & export now uses the same complete newspaper flow as issue creation, including photo loading, pagination and PDF export. No popup or text-only export remains.
+- Desktop (1280 px) and mobile (393 px) studio entry points were checked in-browser without outer overflow. The browser was signed out, so live authenticated library import/save was not exercised. Picker interaction, ordering, retries, cancellation, account changes and original-path persistence are tested with fixtures.
+
+No additional database migration or environment variable is needed for this follow-up beyond the multi-photo migration above. Raw storage objects not attached to saved stories are not shown by this picker.
+
+Follow-up validation: all 90 tests across 26 suites passed; the production build passed with the existing large-chunk warning. The new focus restoration test caught a real dialog-close focus issue, which was fixed using the studio trigger reference. Combining reused photos preserves distinct saved facts alongside the current story idea. Focused mixed-photo and grouping tests were rerun after that final adjustment.

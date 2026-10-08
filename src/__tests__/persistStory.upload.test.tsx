@@ -99,3 +99,19 @@ it('reports slow uploads without dropping the original file or writing incomplet
   expect(rest).not.toHaveBeenCalled();
   expect(file.name).toBe('slow.png');
 });
+
+it('reuses original saved photo paths without uploading duplicates', async () => {
+  const files = [new File(['photo'], 'saved.png', { type: 'image/png' }), new File(['photo'], 'new.png', { type: 'image/png' })];
+  rest.mockImplementation(async (_method, _path, options) => [{ id: 'new-story', ...JSON.parse(options.body) }]);
+  const result = await persistStory({ file: files[0], files, sourcePaths: ['stories/owner/original.png', undefined], userId: 'owner', meta: { headline: 'Fresh story', bodyHtml: '<p>Facts</p>' } });
+  expect(request.send).toHaveBeenCalledTimes(1);
+  expect(request.send).toHaveBeenCalledWith(files[1]);
+  expect(result.story.images?.[0].path).toBe('stories/owner/original.png');
+  expect(result.story.images?.[1].path).toContain('-new.png');
+});
+
+it('rejects saved references from another account before uploads or writes', async () => {
+  const file = new File(['photo'], 'saved.png', { type: 'image/png' });
+  await expect(persistStory({ file, files: [file], sourcePaths: ['stories/other/private.png'], userId: 'owner', meta: { headline: 'Story', bodyHtml: '<p>Facts</p>' } })).rejects.toThrow('current account');
+  expect(rest).not.toHaveBeenCalled();
+});
