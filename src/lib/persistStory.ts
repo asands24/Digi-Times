@@ -216,19 +216,29 @@ const persistStoryRecord = async ({
 
   const method = mode === 'update' ? 'PATCH' : 'POST';
 
-  try {
+  const write = async (record: StoryInsertPayload) => {
     const data = await supaRest<StoryArchiveRow[]>(method, path, {
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(record),
     });
-
-    if (!data || data.length === 0) {
-      throw new Error('Database mutation returned no data');
-    }
-
+    if (!Array.isArray(data) || !data.length) throw new Error('Save not confirmed');
     return data[0];
+  };
+  try {
+    return await write(payload);
   } catch (error) {
-    throw new Error('Story could not be saved. Your uploaded photos are preserved for retry. If multi-photo saving is not configured, apply the story photos migration.');
+    const message = error instanceof Error ? error.message : '';
+    // Only a confirmed missing-column rejection is safe to retry automatically:
+    // it cannot have inserted a row. Never retry an ambiguous network failure.
+    const missingImages = /(?:PGRST204|42703)/.test(message) && /images/.test(message);
+    if (missingImages && payload.images?.length === 1) {
+      const { images, ...legacy } = payload;
+      try { return await write(legacy); } catch { throw new Error('Save could not be confirmed. Your photos and edits are kept; retry saving.'); }
+    }
+    if (missingImages) throw new Error('Multi-photo saving needs a storage update. Your photos and edits are kept. Please contact the app owner, then retry saving.');
+    if (/log in again/.test(message)) throw new Error('Your session expired. Sign in again in another tab, then retry saving here. Your draft is kept.');
+    if (/Too many requests/.test(message)) throw new Error('Saving is busy. Wait a moment, then retry. Your draft is kept.');
+    throw new Error('Story could not be saved. Your uploaded photos are preserved for retry. Check your connection and try again.');
   }
 };
 

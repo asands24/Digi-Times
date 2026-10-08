@@ -66,6 +66,9 @@ it('sends actual image content to vision before writing from separate observatio
     expect(input.USER_FACTS).toBe('Sam took these photos.');
     expect(input.VISIBLE_OBSERVATIONS).toHaveLength(2);
     expect(create.mock.calls[1][0].messages[0].content).toContain('never invent');
+    expect(create.mock.calls[1][0].messages[0].content).toContain('epic, cinematic third-person narrator');
+    expect(create.mock.calls[1][0].messages[0].content).toContain('Do not infer destinations');
+    expect(create.mock.calls[0][0].messages[0].content).toContain('do not guess a destination');
     expect(result.observations[1].index).toBe(1);
     expect(result.unknowns).toEqual(['What occasion was this?']);
   } finally { if (previous === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previous; }

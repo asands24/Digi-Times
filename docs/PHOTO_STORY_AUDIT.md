@@ -56,3 +56,15 @@ The studio previously offered only new uploads. Library checkboxes could reuse s
 No additional database migration or environment variable is needed for this follow-up beyond the multi-photo migration above. Raw storage objects not attached to saved stories are not shown by this picker.
 
 Follow-up validation: all 90 tests across 26 suites passed; the production build passed with the existing large-chunk warning. The new focus restoration test caught a real dialog-close focus issue, which was fixed using the studio trigger reference. Combining reused photos preserves distinct saved facts alongside the current story idea. Focused mixed-photo and grouping tests were rerun after that final adjustment.
+
+## Follow-up: live save failure and narrator voice
+
+A read-only request for `story_archives.images` against the configured live database returned HTTP 400 / PostgreSQL `42703`: the column does not exist. The screenshot's generic error hid this concrete cause. No production rows were read or written during this check.
+
+Single-photo saves now retry using the existing `image_path` field only after a confirmed missing-images-column rejection (`PGRST204` or `42703`). That rejected request cannot have inserted a row; ambiguous network failures are never automatically retried. Multi-photo stories remain intact and blocked until the approved metadata migration is applied, rather than discarding images. Expired sessions and rate limits receive their own recovery instructions. Toasts are compact; detailed recovery stays beside the draft.
+
+The server draft prompt now requests an epic cinematic third-person narrator voice: evocative headline, vivid opening, rhythmic sentences, warm closing, and clearly figurative language. Grounding restrictions remain; no invented identities, events, danger, destinations, motivations or quotations. Vision observations are kept literal and the story-writing stage provides the narrator voice. The factual local fallback remains explicitly labelled when AI is unavailable.
+
+Required live fix: apply only `supabase/migrations/20261008_story_photos.sql`, after approval. Do not push all pending migrations as a shortcut. Then retry the retained draft and verify multi-photo saving with staging/designated test data. Code changes also require deployment approval; the current production app is not changed by pushing a PR.
+
+Current validation: 93 tests / 26 suites pass and production build passes. A public newspaper fixture was successfully analyzed by the live provider (one vision observation), followed by a narrator-style draft headed “A Tower of Tales: The Newspaper Chronicles.” This supersedes the earlier local quota failure for that configured test key; it is not a verification of private-photo accuracy or of the production deployment's separate environment. The migration remains unapplied. One pre-existing randomized loading-label test omitted “Describing”; its assertion now checks the accessible progress status and includes every current label.

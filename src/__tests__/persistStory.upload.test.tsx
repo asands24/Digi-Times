@@ -115,3 +115,32 @@ it('rejects saved references from another account before uploads or writes', asy
   await expect(persistStory({ file, files: [file], sourcePaths: ['stories/other/private.png'], userId: 'owner', meta: { headline: 'Story', bodyHtml: '<p>Facts</p>' } })).rejects.toThrow('current account');
   expect(rest).not.toHaveBeenCalled();
 });
+
+it('saves a single photo on a legacy database only after a confirmed missing-images rejection', async () => {
+  rest.mockRejectedValueOnce(new Error('Supabase REST error 400: {"code":"PGRST204","message":"images column missing"}'));
+  rest.mockImplementationOnce(async (_method, _path, options) => [{id:'legacy-save', ...JSON.parse(options.body)}]);
+  const file = new File(['photo'],'one.png',{type:'image/png'});
+  const result = await persistStory({file,files:[file],userId:'owner',meta:{headline:'Scene',bodyHtml:'<p>Facts</p>'}});
+  expect(rest).toHaveBeenCalledTimes(2);
+  const first = JSON.parse(rest.mock.calls[0][2].body), second = JSON.parse(rest.mock.calls[1][2].body);
+  expect(second.images).toBeUndefined();
+  expect(second.image_path).toBe(first.images[0].path);
+  expect(request.send).toHaveBeenCalledTimes(1);
+  expect(result.story.id).toBe('legacy-save');
+});
+
+it('never drops photos or retries an ambiguous database failure automatically', async () => {
+  const files = [new File(['photo'],'a.png',{type:'image/png'}),new File(['photo'],'b.png',{type:'image/png'})];
+  rest.mockRejectedValueOnce(new Error('Supabase REST error 400: {"code":"42703","message":"images column missing"}'));
+  await expect(persistStory({file:files[0],files,userId:'owner',meta:{headline:'Scene',bodyHtml:'<p>Facts</p>'}})).rejects.toThrow('storage update');
+  expect(rest).toHaveBeenCalledTimes(1);
+  rest.mockReset(); rest.mockRejectedValue(new Error('Network timeout'));
+  await expect(persistStory({file:files[0],files:[files[0]],userId:'owner',meta:{headline:'Scene',bodyHtml:'<p>Facts</p>'}})).rejects.toThrow('preserved for retry');
+  expect(rest).toHaveBeenCalledTimes(1);
+});
+
+it('identifies an expired session instead of suggesting a storage migration', async () => {
+  rest.mockRejectedValue(new Error('Please log in again to continue.'));
+  const file = new File(['photo'],'one.png',{type:'image/png'});
+  await expect(persistStory({file,userId:'owner',meta:{headline:'Scene',bodyHtml:'<p>Facts</p>'}})).rejects.toThrow('session expired');
+});

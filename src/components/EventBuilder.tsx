@@ -363,7 +363,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
       if (res.error || !res.story) {
         const message = res.error?.message || 'We couldn’t confirm the save.';
         updateEntry(entry.id, { saveError: message });
-        toast.error(message);
+        toast.error('Could not save this story. See the retry details below.');
       } else {
         toast.success('Memory saved to your story library!');
         setSavedStoryId(res.story?.id ?? null);
@@ -435,7 +435,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
                 />
 
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
-                  <strong>A note from the editor:</strong> Names, places, and one little detail make a story yours. AI first describes the included photos, then drafts from those observations and your confirmed facts. Unknown names, places and events are left for you to confirm.
+                  <strong>A note from the editor:</strong> Your real moment, told in an epic narrator voice. Names, places, and one little detail make it yours. AI first describes the included photos, then drafts from those observations and your confirmed facts. Unknown names, places and events are left for you to confirm.
                 </div>
               </div>
 

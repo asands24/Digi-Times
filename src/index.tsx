@@ -53,9 +53,10 @@ root.render(
               fontFamily: 'var(--font-sans)',
               fontSize: '0.85rem',
               fontWeight: 600,
-              letterSpacing: '0.18em',
-              padding: '1rem 1.5rem',
-              maxWidth: '440px',
+              letterSpacing: 'normal',
+              lineHeight: 1.5,
+              padding: '0.75rem 1rem',
+              maxWidth: 'min(440px, calc(100vw - 32px))',
             },
             success: {
               iconTheme: {
