@@ -1,3 +1,4 @@
+jest.mock('../lib/supaRest', () => ({ getAccessToken: () => 'test-token' }));
 import { generateArticle, generateStoryFromPrompt } from './storyGenerator';
 
 const baseOptions = {

@@ -60,11 +60,14 @@ it('releases signed-in drafts after an account switch', async () => {
   expect(screen.queryByLabelText("What's the Scoop?")).not.toBeInTheDocument();
 });
 
-it('retains an anonymous trial draft when its creator signs in', async () => {
+it('requires sign-in before opening the studio and returns after authentication', async () => {
   auth.mockReturnValue({ user: null, loading: false });
   const { container, rerender } = appAt('/create');
-  await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, new File(['image'], 'trial.jpg', { type: 'image/jpeg' }));
+  expect(await screen.findByRole('heading', { name: 'Sign in to create your stories' })).toBeVisible();
+  expect(screen.getByTestId('path')).toHaveTextContent('/login');
+  expect(container.querySelector('input[type="file"]')).toBeNull();
   auth.mockReturnValue({ user: { id: 'owner' }, loading: false });
   rerender(<MemoryRouter initialEntries={['/create']}><App /><Location /></MemoryRouter>);
-  expect(await screen.findByAltText('trial.jpg')).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Create a story' })).toBeVisible();
+  expect(screen.getByTestId('path')).toHaveTextContent('/create');
 });

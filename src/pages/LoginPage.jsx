@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { studioDestination } from '../lib/studioDestination'
+import { useEffect, useMemo, useState } from 'react'
 import { Camera, Mail } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -12,16 +14,20 @@ import toast from 'react-hot-toast'
 
 
 const LoginPage = () => {
-  const { signInWithMagicLink, loading } = useAuth()
+  const { user, signInWithMagicLink, loading } = useAuth()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const destination = studioDestination(new URLSearchParams(location.search).get('next'))
+  useEffect(() => { if (user) navigate(destination, { replace: true }) }, [user, destination, navigate])
 
   const samplePhotos = useMemo(() => getRandomPhotos(4), [])
 
   const handleSignIn = async (e) => {
     e.preventDefault()
     if (!email.trim()) return
-    const result = await signInWithMagicLink(email)
+    const result = await signInWithMagicLink(email, destination)
     if (!result?.error) {
       setSent(true)
       toast.success('Magic link sent! Check your inbox.')
@@ -31,64 +37,13 @@ const LoginPage = () => {
   return (
     <div className="login-page">
       <div className="login-page__wrapper">
-        <section className="login-page__story">
-          <Badge className="login-page__badge" variant="secondary">
-            Evening edition
-          </Badge>
-          <h1>Bring your family&rsquo;s stories to the front page.</h1>
-          <p>
-            DigiTimes turns camera roll moments into beautifully typeset spreads, ready to
-            share with everyone you love.
-          </p>
-          <div className="login-page__photos">
-            {samplePhotos.slice(0, 3).map((photo, index) => (
-              <figure
-                key={photo.id}
-                className={`login-page__photo login-page__photo--${index}`}
-              >
-                <img src={photo.thumbnail} alt={photo.alt} />
-                <figcaption>{photo.category}</figcaption>
-              </figure>
-            ))}
-          </div>
-          <p className="login-page__hint">
-            Featured photos rotate with every visit, so everyone gets their moment to shine.
-          </p>
-
-          <div className="login-page__features">
-            <h3 className="login-page__features-title">What You Can Do</h3>
-            <div className="login-page__features-grid">
-              <div className="login-page__feature">
-                <span className="login-page__feature-icon">📸</span>
-                <h4>Photo to Story</h4>
-                <p>Upload any photo and watch it transform into a newspaper-style article with AI-powered storytelling.</p>
-              </div>
-              <div className="login-page__feature">
-                <span className="login-page__feature-icon">✨</span>
-                <h4>Smart Generation</h4>
-                <p>Our AI creates kid-friendly, engaging stories that turn everyday moments into front-page news.</p>
-              </div>
-              <div className="login-page__feature">
-                <span className="login-page__feature-icon">📰</span>
-                <h4>Print &amp; Share</h4>
-                <p>Build beautiful newspaper layouts, save as PDF, and share memorable editions with family and friends.</p>
-              </div>
-              <div className="login-page__feature">
-                <span className="login-page__feature-icon">📦</span>
-                <h4>Archive &amp; Organize</h4>
-                <p>Keep all your stories in one place, organize by category, and create newspaper issues anytime.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <Card className="login-page__form-card">
           <CardHeader>
             <div className="login-page__icon">
               <Camera size={28} strokeWidth={1.8} />
             </div>
-            <h2>Sign in to DigiTimes</h2>
-            <p>No password needed — we'll email you a magic link to sign in instantly.</p>
+            <h2>Sign in to create your stories</h2>
+            <p>Sign in before generating articles. We’ll email you a magic link, then bring you back to the studio.</p>
           </CardHeader>
           <CardContent>
             {sent ? (
@@ -140,6 +95,58 @@ const LoginPage = () => {
             )}
           </CardContent>
         </Card>
+        <section className="login-page__story">
+          <Badge className="login-page__badge" variant="secondary">
+            Evening edition
+          </Badge>
+          <h1>Bring your family&rsquo;s stories to the front page.</h1>
+          <p>
+            DigiTimes turns camera roll moments into beautifully typeset spreads, ready to
+            share with everyone you love.
+          </p>
+          <div className="login-page__photos">
+            {samplePhotos.slice(0, 3).map((photo, index) => (
+              <figure
+                key={photo.id}
+                className={`login-page__photo login-page__photo--${index}`}
+              >
+                <img src={photo.thumbnail} alt={photo.alt} />
+                <figcaption>{photo.category}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <p className="login-page__hint">
+            Featured photos rotate with every visit, so everyone gets their moment to shine.
+          </p>
+
+          <div className="login-page__features">
+            <h3 className="login-page__features-title">What You Can Do</h3>
+            <div className="login-page__features-grid">
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">📸</span>
+                <h4>Photo to Story</h4>
+                <p>Upload any photo and watch it transform into a newspaper-style article with AI-powered storytelling.</p>
+              </div>
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">✨</span>
+                <h4>Smart Generation</h4>
+                <p>Our AI creates kid-friendly, engaging stories that turn everyday moments into front-page news.</p>
+              </div>
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">📰</span>
+                <h4>Print &amp; Share</h4>
+                <p>Build beautiful newspaper layouts, save as PDF, and share memorable editions with family and friends.</p>
+              </div>
+              <div className="login-page__feature">
+                <span className="login-page__feature-icon">📦</span>
+                <h4>Archive &amp; Organize</h4>
+                <p>Keep all your stories in one place, organize by category, and create newspaper issues anytime.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
       </div>
     </div>
   )

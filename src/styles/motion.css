@@ -319,3 +319,11 @@ body { background: var(--paper); }
 .saved-photo-picker__grid input{width:20px;height:20px;flex-shrink:0}
 .saved-photo-picker__grid label:focus-within{outline:2px solid var(--ink);outline-offset:2px}
 .saved-photo-picker__actions{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+
+.studio-next-step{padding:1rem 1.25rem;margin:1rem 0;border-left:3px solid var(--accent-gold);background:var(--paper-light);border-radius:0 12px 12px 0}
+.studio-next-step strong{font-family:var(--font-display);font-size:1.2rem}
+.studio-next-step p{margin:.4rem 0 0;line-height:1.6}
+.studio-save-bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1rem;margin-bottom:1.25rem;border:1px solid var(--accent-border);border-radius:12px;background:var(--paper-light)}
+.studio-save-bar>div{flex:1;min-width:min(100%,240px)}
+.studio-save-bar>p{flex-basis:100%;margin:0}
+.studio-save-bar button{min-height:44px}

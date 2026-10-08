@@ -1,3 +1,4 @@
+const { authorizeStoryGeneration } = require('./lib/storyAuth');
 const OpenAI = require('openai');
 const openai = process.env.OPENAI_API_KEY && new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 25000, maxRetries: 0 });
 const MODEL = 'gpt-4o-mini'; // Documented image-input support; API key stays server-side.
@@ -21,6 +22,8 @@ function fallback(facts, observations, error) {
 }
 exports.handler = async event => {
   if (event.httpMethod && event.httpMethod !== 'POST') return reply(405, { error: 'METHOD_NOT_ALLOWED' });
+  const authorizationStatus = await authorizeStoryGeneration(event);
+  if (authorizationStatus !== 200) return reply(authorizationStatus, { error: authorizationStatus === 401 ? 'SIGN_IN_REQUIRED' : 'AUTH_UNAVAILABLE' });
   if (!event.body || event.body.length > 5200000) return reply(400, { error: 'INVALID_BODY_SIZE' });
   let payload; try { payload = JSON.parse(event.body); } catch { return reply(400, { error: 'INVALID_JSON' }); }
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return reply(400, { error: 'INVALID_PAYLOAD' });
