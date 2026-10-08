@@ -258,6 +258,7 @@ export interface Database {
         title: Nullable<string>;
         prompt: Nullable<string>;
           article: Nullable<string>;
+          images?: { path: string; width?: number; height?: number }[];
           image_path: Nullable<string>;
           photo_id: Nullable<string>;
           template_id: Nullable<string>;
@@ -272,6 +273,7 @@ export interface Database {
           title?: Nullable<string>;
           prompt?: Nullable<string>;
           article?: Nullable<string>;
+          images?: { path: string; width?: number; height?: number }[];
           image_path?: Nullable<string>;
           photo_id?: Nullable<string>;
           template_id?: Nullable<string>;
@@ -286,6 +288,7 @@ export interface Database {
           title?: Nullable<string>;
           prompt?: Nullable<string>;
           article?: Nullable<string>;
+          images?: { path: string; width?: number; height?: number }[];
           image_path?: Nullable<string>;
           photo_id?: Nullable<string>;
           template_id?: Nullable<string>;

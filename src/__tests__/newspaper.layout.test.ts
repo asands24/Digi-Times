@@ -53,3 +53,13 @@ it('does not export missing photos or silently corrupt unsupported characters', 
   await expect(waitForEditionImages(element)).rejects.toThrow('photo could not be loaded');
   expect(() => createEditionPDF(layoutEdition([{ ...story, title: '東京' }], options))).toThrow('Print / Save PDF');
 });
+
+it('waits for a slow photo and reports a bounded load failure before export', async () => {
+  jest.useFakeTimers();
+  try {
+    const element = document.createElement('div');const image = document.createElement('img');element.append(image);
+    Object.defineProperty(image,'complete',{value:false});
+    const pending = expect(waitForEditionImages(element)).rejects.toThrow('taking too long');
+    await Promise.resolve();jest.advanceTimersByTime(15000);await pending;
+  } finally {jest.useRealTimers();}
+});

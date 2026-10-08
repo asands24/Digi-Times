@@ -7,6 +7,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { Link } from 'react-router-dom';
+import { storyPhotos } from '../lib/storyPhotos';
 import { StoryPaper } from './StoryPaper';
 
 interface StoryPreviewDialogProps {
@@ -86,7 +87,7 @@ export function StoryPreviewDialog({ story: selectedStory, open, onOpenChange }:
             {current.document && <Button size="sm" variant={mode === 'template' ? 'default' : 'outline'} aria-pressed={mode === 'template'} onClick={() => setMode('template')}>Original template</Button>}
           </div>
           {mode === 'template' && current.document ? <iframe className="story-reader__frame" title={`Newspaper preview: ${story?.title || 'Your story'}`} sandbox="" srcDoc={current.document} /> :
-            <div className="story-reader__paper"><StoryPaper headline={current.fullStory.title || 'Your story'} body={current.fullStory.article || `<p>${escapeHtml(current.fullStory.prompt || '')}</p>`} date={current.fullStory.created_at} imageUrl={current.fullStory.imageUrl} templateName={current.templateName || 'Family edition'} /></div>}
+            <div className="story-reader__paper"><StoryPaper headline={current.fullStory.title || 'Your story'} body={current.fullStory.article || `<p>${escapeHtml(current.fullStory.prompt || '')}</p>`} date={current.fullStory.created_at} imageUrl={current.fullStory.imageUrl} imageUrls={storyPhotos(current.fullStory)} templateName={current.templateName || 'Family edition'} /></div>}
         </> : !current?.error && (
           <div className="story-reader__status" role="status"><span className="reader-skeleton" aria-hidden /><p>Opening your front page…</p></div>
         )}

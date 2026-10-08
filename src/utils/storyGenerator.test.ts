@@ -19,14 +19,15 @@ describe('generateArticle', () => {
     expect(second).toEqual(first);
   });
 
-  it('selects celebration palette for party prompts', () => {
+  it('uses only user facts without fictional places or witnesses', () => {
     const article = generateArticle({
       ...baseOptions,
       prompt: 'Surprise anniversary party celebration',
     });
 
-    expect(article.tags).toContain('Celebrations');
-    expect(article.body.length).toBeGreaterThanOrEqual(3);
+    expect(article.body).toEqual(['Surprise anniversary party celebration']);
+    expect(article.quote).toBe('');
+    expect(article.dateline).not.toMatch(/Ballroom|Hall|Park/);
   });
 });
 
@@ -36,6 +37,6 @@ it('fills local fallback placeholders and returns article paragraphs without a d
   try {
     const body = await generateStoryFromPrompt('The family made pancakes together on a sunny Sunday morning.');
     expect(body).not.toMatch(/\{(?:subject|subjectLower|tonal)\}/);
-    expect(body.split('\n\n')).toHaveLength(3);
+    expect(body).toBe('The family made pancakes together on a sunny Sunday morning.');
   } finally { global.fetch = originalFetch; }
 });

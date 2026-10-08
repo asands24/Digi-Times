@@ -10,7 +10,7 @@ import { StoryPreviewDialog } from '../components/StoryPreviewDialog';
 jest.mock('../providers/AuthProvider', () => ({ useAuth: () => ({ user: { id: 'owner' } }) }));
 jest.mock('../hooks/useStoryLibrary', () => ({ useStoryLibrary: jest.fn(), loadStoryDetails: jest.fn() }));
 jest.mock('../lib/templates', () => ({ getLocalTemplates: jest.fn(), fetchAllTemplates: jest.fn(), getTemplateById: jest.fn() }));
-jest.mock('../utils/storyGenerator', () => ({ ...jest.requireActual('../utils/storyGenerator'), generateStoryFromPrompt: jest.fn() }));
+jest.mock('../utils/storyGenerator', () => ({ ...jest.requireActual('../utils/storyGenerator'), generateGroundedStory: jest.fn() }));
 const catalog = jest.requireMock('../lib/templates');
 const library = jest.requireMock('../hooks/useStoryLibrary');
 const save = jest.fn();
@@ -22,7 +22,7 @@ beforeEach(() => {
   catalog.getTemplateById.mockImplementation((id: string) => Promise.resolve(id === travel.id ? travel : family));
   library.useStoryLibrary.mockReturnValue({ saveDraftToArchive: save });
   save.mockResolvedValue({ story: { id: 'saved-story' }, error: null });
-  jest.requireMock('../utils/storyGenerator').generateStoryFromPrompt.mockResolvedValue('We found a quiet beach. Everyone enjoyed the sunshine.');
+  jest.requireMock('../utils/storyGenerator').generateGroundedStory.mockResolvedValue({ headline: 'Beach', article: 'We found a quiet beach. Everyone enjoyed the sunshine.', source: 'openai', observations: [], unknowns: [] });
 });
 
 it('searches, previews with keyboard dismissal, and uses a real template in Create', async () => {

@@ -1,11 +1,11 @@
 # DigiTimes Front Page Studio
 
-Craft rich newspaper-style coverage from your everyday photos in minutes. Upload an image, jot down the angle you want to highlight, and DigiTimes generates a headline, story, dateline, and pull quote worthy of the front page.
+Craft rich newspaper-style coverage from your everyday photos in minutes. Upload photos, add confirmed facts, and review a photo-grounded newspaper story before saving.
 
 ## Highlights
 
 - **Photo-to-Story Pipeline** – Drop in one or many images and receive fully written kid-friendly feature articles tuned to your prompt.
-- **Kid-Friendly AI Generation** – Uses OpenAI's cheapest models (o3-mini, gpt-4o-mini) with carefully crafted prompts to ensure appropriate, positive content for ages 7-12.
+- **Kid-Friendly AI Generation** – Uses server-side gpt-4o-mini vision analysis followed by a factual story draft. Users review visible observations and provide missing context.
 - **Editorial Tone Blends** – Smart heuristics adjust tone for celebrations, adventures, community events, or quiet spotlights.
 - **Story Archive** – Save generated features with their images to Supabase, edit visibility, and maintain a timestamped history.
 - **Share & Print** – Share individual stories via public links (`/read/:id`) or build a printable newspaper layout (`/newspaper`) with multiple stories.
@@ -79,29 +79,11 @@ Set these environment variables in `.env.local` (development) or Netlify (produc
 
 ## Story Generation Pipeline
 
-DigiTimes uses a cost-effective, kid-safe AI pipeline with automatic fallback:
+The editor calls `generateGroundedStory()` with confirmed facts and included photos. Resized image data is sent to the server; original uploads stay unchanged. The server uses gpt-4o-mini twice: first to describe visible details, then to draft a story from those observations and separately identified user facts. Missing context is returned as questions. Regeneration retains photos and confirmed facts.
 
-### Primary Path: OpenAI (Cheapest Models)
-- Generate/Regenerate actions in `src/components/EventBuilder.tsx` call `generateStoryFromPrompt()` from `src/utils/storyGenerator.ts`
-- This POSTs to `/.netlify/functions/generateStory`, a Netlify serverless function
-- The function tries models in order of cost-effectiveness: **o3-mini** → **gpt-4o-mini**
-- Each model receives a carefully crafted system prompt enforcing:
-  - **Kid-friendly tone** (ages 7-12)
-  - **Newspaper structure** (headline, 2-4 paragraphs, who/what/where/why)
-  - **Simple, positive language**
-  - **No scary, violent, or adult content**
-- Returns `{ headline, article }` JSON for the client to display
+If AI is unavailable, the editor labels the result as a factual starter draft, using only user facts and any successfully analyzed observations. It does not invent names, events or quotations. Users must review AI observations before saving.
 
-### Fallback Path: Local Generator
-- If OpenAI fails (network error, timeout, rate limit), the app automatically falls back to a local story generator
-- The fallback maintains the same kid-friendly tone and newspaper structure
-- Users see no disruption—generation continues seamlessly
-- Browser logs: `[DigiTimes] Story generation failed, using local article`
-
-### Configuration
-- **Production:** Set `OPENAI_API_KEY` in Netlify → Site settings → Environment variables
-- **Local Development:** Add `OPENAI_API_KEY` to `.env.local` for testing with Netlify CLI
-- **Cost Control:** The pipeline uses only the cheapest available OpenAI models to minimize API costs
+Set `OPENAI_API_KEY` only in the Netlify server environment (or server-local `.env.local`). Never use a frontend-prefixed API key. The account requires working quota. Apply `supabase/migrations/20261008_story_photos.sql` before deploying the multi-photo client. See [photo workflow audit](docs/PHOTO_STORY_AUDIT.md) for validation, limitations and rollback instructions.
 
 ## Public vs Private Stories
 

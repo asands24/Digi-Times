@@ -8,6 +8,7 @@ import { escapeHtml, sanitizeHtml } from '../utils/sanitizeHtml';
 import { copyToClipboard } from '../utils/clipboard';
 import { StoryPaper } from '../components/StoryPaper';
 import toast from 'react-hot-toast';
+import { storyPhotos } from '../lib/storyPhotos';
 import { getTemplateById } from '../lib/templates';
 import { buildPreviewDocument } from '../lib/templatePreview';
 
@@ -279,7 +280,7 @@ export default function PublicStoryPage() {
           <Button variant={readerView === 'text' ? 'default' : 'outline'} aria-pressed={readerView === 'text'} onClick={() => setReaderView('text')}>Reading view</Button>
         </div>}
         {layout?.id === story.id && readerView === 'layout' && <iframe className="draft-template-preview no-print" title="Shared story layout" sandbox="" srcDoc={layout.document} />}
-        <div className={layout?.id === story.id && readerView === 'layout' ? 'shared-story-paper shared-story-paper--print-only' : 'shared-story-paper'}><StoryPaper headline={story.title || 'Your family story'} body={sanitizeHtml(story.article || '') || `<p>${escapeHtml(story.prompt || '')}</p>`} date={story.created_at} imageUrl={story.image_path ? `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}` : null} /></div>
+        <div className={layout?.id === story.id && readerView === 'layout' ? 'shared-story-paper shared-story-paper--print-only' : 'shared-story-paper'}><StoryPaper headline={story.title || 'Your family story'} body={sanitizeHtml(story.article || '') || `<p>${escapeHtml(story.prompt || '')}</p>`} date={story.created_at} imageUrls={storyPhotos(story)} imageUrl={story.image_path ? `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/photos/${story.image_path}` : null} /></div>
 
         {/* Conversion section */}
         <footer className="no-print mt-16 pt-10 border-t border-ink/10">

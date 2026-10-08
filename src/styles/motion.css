@@ -297,3 +297,14 @@ body { background: var(--paper); }
 .shared-story-paper--print-only { display:none; }
 @media print { .shared-story-paper--print-only { display:block!important; } }
 @media (prefers-reduced-motion:reduce) { .template-card:hover { transform:none; } }
+.story-photo-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; padding:16px; }
+.story-photo-list figure { margin:0; min-width:0; }
+.story-photo-list img { width:100%; height:150px; object-fit:contain; background:#ede9df; }
+.story-photo-list label { display:flex; align-items:center; gap:8px; padding:10px 0; font-size:13px; }
+.story-facts { display:block; padding:16px; font-weight:600; }
+.story-facts textarea { display:block; width:100%; min-height:85px; padding:12px; margin-top:8px; border:1px solid #ccc; border-radius:8px; font-weight:400; }
+.story-grounding { margin:16px; padding:14px; background:#f4efe3; border-radius:8px; font-size:14px; }
+.story-grounding summary { cursor:pointer; font-weight:600; }
+.story-paper__photos { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; }
+.story-paper__photos img { object-fit:contain!important; height:auto!important; max-height:none!important; }
+.edition-photo { object-fit:contain!important; }

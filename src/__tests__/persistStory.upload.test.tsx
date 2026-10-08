@@ -1,3 +1,5 @@
+import { storyPhotos } from '../lib/storyPhotos';
+import { layoutEdition } from '../lib/newspaperLayout';
 import { persistStory } from '../lib/persistStory';
 import { supaRest } from '../lib/supaRest';
 jest.mock('../lib/supaRest', () => ({ getAccessToken: () => 'test-token', supaRest: jest.fn() }));
@@ -44,7 +46,56 @@ it('does not write a story record when image upload fails', async () => {
     setRequestHeader() {}
     send() { this.onload(); }
   } as any;
-  await expect(persistStory({ file: new File(['x'], 'x.png'), userId: 'user-1', meta: { headline: 'Story', bodyHtml: '<p>Body</p>' } })).rejects.toThrow('Image upload failed');
+  await expect(persistStory({ file: new File(['x'], 'x.png', { type: 'image/png' }), userId: 'user-1', meta: { headline: 'Story', bodyHtml: '<p>Body</p>' } })).rejects.toThrow('Image upload failed');
   expect(rest).not.toHaveBeenCalled();
   global.XMLHttpRequest = originalSend;
+});
+
+it('saves five ordered original paths and keeps successful uploads for a retry', async () => {
+  const files = Array.from({ length: 5 }, (_, i) => new File(['image'], `photo-${i}.png`, { type: 'image/png' }));
+  let uploadCount = 0;
+  let failAt = 2;
+  global.XMLHttpRequest = class {
+    upload = {}; status = 200; responseText = '{}'; onload: any;
+    open() {} setRequestHeader() {}
+    send() { this.status = uploadCount++ === failAt ? 500 : 200; this.onload(); }
+  } as any;
+  const params = { file: files[0], files, userId: 'owner', meta: { headline: 'Five photos', bodyHtml: '<p>Facts</p>' } };
+  await expect(persistStory(params)).rejects.toThrow('retry Save Story');
+  expect(rest).not.toHaveBeenCalled();
+  failAt = -1;
+  rest.mockImplementation(async (_method, _path, options) => [{ id: 'saved', ...JSON.parse(options.body) }]);
+  const result = await persistStory(params);
+  expect(uploadCount).toBe(6); // two successes reused; only failed/unattempted files uploaded.
+  expect(result.story.images?.map(photo => photo.path.split('-photo-')[1])).toEqual(['0.png', '1.png', '2.png', '3.png', '4.png']);
+  expect(result.story.image_path).toBe(result.story.images?.[0].path);
+  expect(new Set(result.story.images?.map(photo => photo.path)).size).toBe(5);
+  // Simulate the saved JSON returned on a fresh archive read, without blob URLs.
+  const reopened = JSON.parse(JSON.stringify(result.story));
+  const photos = storyPhotos(reopened);
+  const layout = layoutEdition([{ ...reopened, id: 'saved', title: 'Five photos', created_at: '2026-10-08', imageUrl: null }], { title: 'Saved edition', paper: 'letter', date: '2026-10-08', showHistory: false });
+  expect(layout.pages.flat().filter(block => block.kind === 'image').map(block => block.kind === 'image' ? block.url : '')).toEqual(photos.map(photo => photo.url));
+  expect(photos).toHaveLength(5);
+});
+
+it('retains uploaded paths if the database write fails and retries without uploading again', async () => {
+  const files = [new File(['photo'], 'once.png', { type: 'image/png' })];
+  rest.mockRejectedValueOnce(new Error('Database unavailable'));
+  const params = { file: files[0], files, userId: 'owner', meta: { headline: 'Photo', bodyHtml: '<p>Facts</p>' } };
+  await expect(persistStory(params)).rejects.toThrow('preserved for retry');
+  const firstPath = JSON.parse(rest.mock.calls[0][2].body).image_path;
+  rest.mockImplementation(async (_method, _path, options) => [{ id: 'saved', ...JSON.parse(options.body) }]);
+  await persistStory(params);
+  expect(request.send).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(rest.mock.calls[1][2].body).image_path).toBe(firstPath);
+});
+
+it('reports slow uploads without dropping the original file or writing incomplete photo lists', async () => {
+  global.XMLHttpRequest = class {
+    upload = {}; ontimeout: any; open() {} setRequestHeader() {} send() { this.ontimeout(); }
+  } as any;
+  const file = new File(['image'],'slow.png',{type:'image/png'});
+  await expect(persistStory({file,files:[file],userId:'owner',meta:{headline:'Slow photo',bodyHtml:'<p>Facts</p>'}})).rejects.toThrow('timed out');
+  expect(rest).not.toHaveBeenCalled();
+  expect(file.name).toBe('slow.png');
 });
