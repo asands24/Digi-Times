@@ -27,7 +27,7 @@ it('shows generation progress, previews edited copy, saves with template, and of
   await userEvent.click(screen.getByRole('button', { name: 'Change layout' }));
   await userEvent.click(screen.getByText('Family layout'));
   await userEvent.click(await screen.findByRole('button', { name: 'Generate Stories' }));
-  expect(screen.getByText(/Drafting|Interviewing|Checking|Calling|Developing|Setting/)).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent(/Drafting|Describing|Checking|Calling|Developing|Setting/);
   await act(async () => resolve({ headline: 'Picnic', article: 'A lovely picnic.\n\nEveryone shared cake.', source: 'openai', observations: [], unknowns: [] } as any));
   await userEvent.clear(screen.getByLabelText('Headline'));
   await userEvent.type(screen.getByLabelText('Headline'), 'Grandma makes the front page');
