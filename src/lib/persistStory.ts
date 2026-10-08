@@ -22,6 +22,7 @@ type StoryInsertPayload = {
 export type PersistStoryParams = {
   file: File;
   files?: File[];
+  sourcePaths?: (string | undefined)[];
   meta: {
     headline: string;
     bodyHtml: string;
@@ -82,6 +83,7 @@ export async function persistStory(
   const files = params.files || [file];
   if (!files.length || files.length > 20) throw new Error('Choose between 1 and 20 photos per story.');
   files.forEach(validatePhoto);
+  if (params.sourcePaths && (params.sourcePaths.length !== files.length || params.sourcePaths.some(path => path !== undefined && (!path.startsWith(`stories/${userId}/`) || path.includes('..'))))) throw new Error('Saved photos must belong to the current account.');
   const paths: string[] = [];
   let filePath = '';
   const payload: StoryInsertPayload = {
@@ -109,7 +111,7 @@ export async function persistStory(
   // Token is sourced from localStorage first, then falls back to getSession with timeout.
   for (let index = 0; index < files.length; index++) {
   const file = files[index];
-  const cached = uploadedFiles.get(file)?.get(userId);
+  const cached = params.sourcePaths?.[index] || uploadedFiles.get(file)?.get(userId);
   filePath = cached || buildImagePath(userId, file);
   if (cached) { paths.push(cached); onProgress?.(Math.round((index + 1) / files.length * 100)); continue; }
   let uploadError: StorageError | null = null;

@@ -48,6 +48,7 @@ export interface DraftEntry {
   id: string;
   file: File;
   files?: File[];
+  sourcePaths?: (string | undefined)[];
   prompt: string;
   article?: GeneratedArticle;
 }

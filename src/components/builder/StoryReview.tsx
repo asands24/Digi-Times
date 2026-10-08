@@ -9,7 +9,7 @@ import { buildPreviewDocument } from '../../lib/templatePreview';
 export interface StoryEntry {
   id: string;
   file: File;
-  photos?: { file: File; previewUrl: string; included: boolean }[];
+  photos?: { file: File; previewUrl: string; included: boolean; sourcePath?: string }[];
   generationError?: string;
   saveError?: string;
   grounding?: { source: string; observations: { index: number; description: string }[]; unknowns: string[] };
@@ -32,7 +32,7 @@ interface StoryReviewProps {
   template?: StoryTemplate | null;
   toEditableBody: (article: GeneratedArticle) => string;
 }
-export const entryPhotos = (entry: StoryEntry) => entry.photos || [{ file: entry.file, previewUrl: entry.previewUrl, included: true }];
+export const entryPhotos = (entry: StoryEntry): NonNullable<StoryEntry['photos']> => entry.photos || [{ file: entry.file, previewUrl: entry.previewUrl, included: true }];
 
 export function StoryReview({ entry, onUpdate, onRegenerate, onSave, onRemove, isSaving, canSave, template, toEditableBody }: StoryReviewProps) {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');

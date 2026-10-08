@@ -15,3 +15,18 @@ it('builds only selected memories, preserving selection order through filters', 
   await userEvent.click(await screen.findByRole('button', { name: 'Build Newspaper (2)' }));
   expect(await screen.findByText('?ids=two,one')).toBeInTheDocument();
 });
+
+it('allows an untitled saved story to be reused in another issue', async () => {
+  render(<MemoryRouter><StoryArchive stories={[makeStory('untitled', '')]} isLoading={false} onPreview={jest.fn()} onRefresh={jest.fn()} onToggleShare={jest.fn()} onDelete={jest.fn()} onLoadMore={jest.fn()} hasMore={false} /><Location /></MemoryRouter>);
+  await userEvent.click(screen.getByRole('checkbox', { name: /Add to this issue/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Preview selected issue →' }));
+  expect(await screen.findByText('?ids=untitled')).toBeInTheDocument();
+});
+
+it('routes library exports through the full photo-aware newspaper', async () => {
+  const popup = jest.spyOn(window, 'open');
+  render(<MemoryRouter><StoryArchive stories={[makeStory('saved', 'Saved memory')]} isLoading={false} onPreview={jest.fn()} onRefresh={jest.fn()} onToggleShare={jest.fn()} onDelete={jest.fn()} onLoadMore={jest.fn()} hasMore={false} /><Location /></MemoryRouter>);
+  await userEvent.click(screen.getByRole('button', { name: 'Preview & export' }));
+  expect(await screen.findByText('?ids=saved')).toBeInTheDocument();
+  expect(popup).not.toHaveBeenCalled(); popup.mockRestore();
+});

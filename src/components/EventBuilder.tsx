@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useStoryLibrary } from '../hooks/useStoryLibrary';
 import { useAuth } from '../providers/AuthProvider';
 import { TemplatesGallery } from './TemplatesGallery';
+import { SavedPhotoPicker, type ReusedPhoto } from './builder/SavedPhotoPicker';
 import { PhotoUploader } from './builder/PhotoUploader';
 import { StoryPromptInput } from './builder/StoryPromptInput';
 import { StoryReview, StoryEntry, entryPhotos } from './builder/StoryReview';
@@ -39,6 +40,7 @@ const LOADING_MESSAGES = [
 
 export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArchiveSaved?: () => void; compactHeading?: boolean } = {}) {
   const [entries, setEntries] = useState<StoryEntry[]>([]);
+  const [choosingPhotos, setChoosingPhotos] = useState(false);
   const [globalPrompt, setGlobalPrompt] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplate | null>(null);
   const location = useLocation();
@@ -60,6 +62,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
     // Consume the incoming selection so a later visit cannot replay an old choice.
     if (requestedTemplate) navigate('/create', { replace: true });
   }, [requestedTemplate, navigate]);
+  const savedPhotosTriggerRef = useRef<HTMLButtonElement>(null);
   const entryUrlsRef = useRef<string[]>([]);
 
   const { saveDraftToArchive } = useStoryLibrary();
@@ -89,6 +92,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
           id: entry.id,
           file: entry.file,
           files: entryPhotos(entry).filter(photo => photo.included).map(photo => photo.file),
+          sourcePaths: entryPhotos(entry).filter(photo => photo.included).map(photo => photo.sourcePath),
           prompt: prompt,
           article: entry.article,
         },
@@ -206,6 +210,7 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
       setGlobalPrompt('');
       setSelectedTemplate(null);
       setSavedStoryId(null);
+      setChoosingPhotos(false);
     }
     previousAccountRef.current = user?.id;
   }, [user?.id, clearEntries]);
@@ -396,8 +401,17 @@ export function EventBuilder({ onArchiveSaved, compactHeading = false }: { onArc
       {entries.length > 1 && !hasDraftWithArticle && !isGenerating && <Button variant="outline" onClick={() => {
         const photos = entries.flatMap(entryPhotos);
         if (photos.length > 20) { toast.error('Combine up to 20 photos per story.'); return; }
-        setEntries([{ ...entries[0], photos, prompt: globalPrompt || entries.map(entry => entry.prompt).filter(Boolean).join('\n') }]);
+        setEntries([{ ...entries[0], photos, prompt: Array.from(new Set([globalPrompt.trim(), ...entries.map(entry => entry.prompt.trim())].filter(Boolean))).join('\n') }]);
       }}>Combine {entries.reduce((count, entry) => count + entryPhotos(entry).length, 0)} photos into one story</Button>}
+      <section className="studio-photo-sources" aria-label="Choose photo source">
+        <div><h3>Already have photos here?</h3><p>Reuse saved photos for a fresh story, or choose saved stories to assemble another issue.</p></div>
+        {user ? <Button ref={savedPhotosTriggerRef} variant="outline" disabled={isGenerating || uploadProgress !== null} onClick={() => setChoosingPhotos(true)}>Choose saved photos</Button> : <Link to="/login">Sign in to reuse saved photos</Link>}
+        <Link to="/library" target={hasEntries ? "_blank" : undefined} rel="noopener noreferrer">Create an issue from saved stories →{hasEntries && <span className="sr-only"> (opens a new tab to keep your drafts)</span>}</Link>
+      </section>
+      {choosingPhotos && user && <SavedPhotoPicker key={user.id} userId={user.id} returnFocus={() => savedPhotosTriggerRef.current?.focus()} onClose={() => setChoosingPhotos(false)} onAdd={(photos: ReusedPhoto[]) => {
+        setEntries(previous => [...previous, ...photos.map(photo => ({ id: createId(), file: photo.file, previewUrl: photo.url, photos: [{ file: photo.file, previewUrl: photo.url, included: true, sourcePath: photo.path }], prompt: photo.facts || globalPrompt.trim(), status: 'idle' as const }))]);
+        toast.success('Saved photos added. Review the facts, then draft your new story.');
+      }} />}
       {/* STEP 1: UPLOAD */}
       <div className="mb-12">
         <PhotoUploader
