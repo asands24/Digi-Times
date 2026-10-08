@@ -68,3 +68,11 @@ The server draft prompt now requests an epic cinematic third-person narrator voi
 Required live fix: apply only `supabase/migrations/20261008_story_photos.sql`, after approval. Do not push all pending migrations as a shortcut. Then retry the retained draft and verify multi-photo saving with staging/designated test data. Code changes also require deployment approval; the current production app is not changed by pushing a PR.
 
 Current validation: 93 tests / 26 suites pass and production build passes. A public newspaper fixture was successfully analyzed by the live provider (one vision observation), followed by a narrator-style draft headed “A Tower of Tales: The Newspaper Chronicles.” This supersedes the earlier local quota failure for that configured test key; it is not a verification of private-photo accuracy or of the production deployment's separate environment. The migration remains unapplied. One pre-existing randomized loading-label test omitted “Describing”; its assertion now checks the accessible progress status and includes every current label.
+
+## Approved production migration — 2026-10-08
+
+After explicit user approval, only `20261008_story_photos.sql` was applied to the linked production project through the existing authenticated Supabase Management API. The CLI could not initialize its login role due to a database role permission error; no role permissions were changed to work around that failure.
+
+Verification: the non-null JSONB `images` column exists, `story_images_array` is validated, and the ownership-validation trigger is enabled. Row-level security remains enabled; the before/after fingerprint of existing story policies is identical. The app's actual REST request `story_archives?select=images&limit=0` now returns HTTP 200, replacing the previous 400/42703. No existing story content was read, no user story/photo was inserted or deleted for testing, and no application deployment or PR merge was performed. The SQL was manually applied through the query endpoint rather than a bulk CLI migration push; its guarded statements allow safe reapplication.
+
+The missing-column blocker is resolved. Retry retained drafts before closing or refreshing them. Live authenticated save/reload remains a user acceptance check. The narrator/client recovery code follows the usual separate PR/deployment process.
