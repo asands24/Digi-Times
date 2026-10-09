@@ -1,3 +1,4 @@
+import { studioDestination } from '../lib/studioDestination'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { getSupabase } from '../lib/supabaseClient'
 import toast from 'react-hot-toast'
@@ -16,11 +17,11 @@ const buildProfileSnapshot = (profileData = null, fallbackUser = null) => {
   }
 }
 
-const buildRedirectTo = () => {
+const buildRedirectTo = (next = "/create") => {
   if (typeof window === 'undefined') {
     return undefined
   }
-  return `${window.location.origin}/auth/callback`
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(studioDestination(next))}`
 }
 
 export const useAuth = () => {
@@ -207,7 +208,7 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldForceGuest])
 
-  const signInWithMagicLink = async (email) => {
+  const signInWithMagicLink = async (email, next = "/create") => {
     if (!supabase) {
       toast.error('Supabase is not configured')
       return { error: new Error('Supabase not configured') }
@@ -217,7 +218,7 @@ export const AuthProvider = ({ children }) => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: buildRedirectTo()
+          emailRedirectTo: buildRedirectTo(next)
         }
       })
 

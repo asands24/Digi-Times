@@ -4,7 +4,6 @@ import { Camera, Sparkles, Send, Lock, PencilLine } from 'lucide-react';
 import { Header } from './components/Header';
 import EventBuilder from './components/EventBuilder';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
-import { OnboardingBanner } from './components/OnboardingBanner';
 import { Button } from './components/ui/button';
 import LibraryPage from './pages/LibraryPage';
 import Logout from './pages/Logout';
@@ -69,7 +68,7 @@ function HomePage() {
               </Button>
             </div>
             <p className="welcome-hero__hint">
-              Try a draft without signing in. Sign in when you’re ready to save.
+              Sign in to turn your photos into stories and keep them in your library.
             </p>
             <div className="welcome-hero__assurances"><span><Lock size={14} aria-hidden /> Private until you share</span><span><PencilLine size={14} aria-hidden /> Every word is yours to edit</span></div>
           </div>
@@ -140,18 +139,17 @@ function CreateWorkspace({ active }: { active: boolean }) {
     <main id="studio-content" tabIndex={-1} className="workspace-main">
       <header className="workspace-heading"><p className="editorial-kicker">Your newsroom</p><h1>Create a story</h1><p>From a favorite photo to a front-page memory.</p></header>
       <EventBuilder compactHeading />
-      <OnboardingBanner />
     </main>
   </div>;
 }
 
 export default function App() {
   const { user, loading } = useAuth();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [hasOpenedStudio, setHasOpenedStudio] = useState(pathname === '/create');
   useEffect(() => { if (pathname === '/create') setHasOpenedStudio(true); }, [pathname]);
 
-  if (REQUIRE_LOGIN && loading) {
+  if (loading && !user && pathname !== '/login' && (REQUIRE_LOGIN || pathname === '/create')) {
     return (
       <div className="app-shell" style={{
         display: 'flex',
@@ -170,6 +168,8 @@ export default function App() {
       </div>
     );
   }
+
+  if (pathname === '/create' && !user) return <Navigate to={`/login?next=${encodeURIComponent(pathname + search)}`} replace />;
 
   if (REQUIRE_LOGIN && !user) {
     return (
@@ -192,7 +192,7 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      {(hasOpenedStudio || pathname === '/create') && <CreateWorkspace active={pathname === '/create'} />}
+      {user && (hasOpenedStudio || pathname === '/create') && <CreateWorkspace active={pathname === '/create'} />}
       <div hidden={pathname === '/create'}>
       <RouteMotion>
         <Suspense fallback={<PageLoading />}>
@@ -237,7 +237,7 @@ export default function App() {
           <Route path="/guidelines" element={<GuidelinesPage />} />
           <Route
             path="/login"
-            element={user ? <Navigate to="/" replace /> : <LoginPage />}
+            element={<LoginPage />}
           />
           <Route path="*" element={<HomePage />} />
         </Routes>

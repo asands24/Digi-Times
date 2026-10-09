@@ -10,7 +10,7 @@ type UseAuthReturn = {
   user: AuthUser | null;
   profile?: Record<string, unknown> | null;
   loading: boolean;
-  signInWithMagicLink: (email: string) => Promise<{ error: unknown }>;
+  signInWithMagicLink: (email: string, next?: string) => Promise<{ error: unknown }>;
   signInWithOAuth: (provider: string) => Promise<{ error: unknown }>;
   signOut: () => Promise<{ error: unknown }>;
   updateProfile: (updates: Record<string, unknown>) => Promise<{ error: unknown }>;

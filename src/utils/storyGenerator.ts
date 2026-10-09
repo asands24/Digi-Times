@@ -1,3 +1,4 @@
+import { getAccessToken } from '../lib/supaRest';
 import { visionPhoto } from '../lib/storyPhotos';
 import { escapeHtml } from './sanitizeHtml';
 interface StoryGeneratorOptions {
@@ -31,15 +32,21 @@ export interface GroundedStory {
   headline: string; article: string; observations: { index: number; description: string }[];
   unknowns: string[]; userFacts: string; source: 'openai' | 'local'; fallbackReason?: string;
 }
+export class StoryAuthenticationError extends Error {
+  constructor() { super('Sign in again in another tab, then retry here. Your photos and facts are kept.'); this.name = 'StoryAuthenticationError'; }
+}
 export async function generateGroundedStory(facts: string, files: File[] = []): Promise<GroundedStory> {
+  const token = getAccessToken();
+  if (!token) throw new StoryAuthenticationError();
   const images = await Promise.all(files.map(visionPhoto));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 60000);
   try {
     const response = await fetch('/.netlify/functions/generateStory', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, signal: controller.signal,
       body: JSON.stringify({ prompt: facts.trim(), images }),
     });
+    if (response.status === 401) throw new StoryAuthenticationError();
     if (!response.ok) throw new Error('Story service is unavailable. Your photos and facts are kept; retry generation.');
     const result = await response.json();
     if (typeof result.headline !== 'string' || typeof result.article !== 'string') throw new Error('Invalid story response. Try again.');
@@ -51,7 +58,7 @@ export async function generateStoryWithOpenAI(prompt: string): Promise<string> {
 export async function generateStoryFromPrompt(prompt: string): Promise<string> {
   if (!prompt.trim()) throw new Error('Prompt is empty');
   try { return await generateStoryWithOpenAI(prompt); }
-  catch { return prompt.trim(); }
+  catch (error) { if (error instanceof StoryAuthenticationError) throw error; return prompt.trim(); }
 }
 
 export const toStoryParagraphs = (text: string): string[] => {

@@ -1,3 +1,4 @@
+jest.mock('../../netlify/functions/lib/storyAuth', () => ({ authorizeStoryGeneration: async () => 200 }));
 jest.mock('openai', () => jest.fn());
 it('identifies the local fallback and preserves the supplied memory without invented reporting', async () => {
   const previous = process.env.OPENAI_API_KEY;

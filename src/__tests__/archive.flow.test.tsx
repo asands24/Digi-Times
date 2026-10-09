@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import EventBuilder from '../components/EventBuilder';
 
 jest.mock('../providers/AuthProvider', () => ({ useAuth: jest.fn() }));
@@ -40,13 +40,10 @@ it('shows generation progress, previews edited copy, saves with template, and of
   expect(onSaved).toHaveBeenCalled();
   expect(await screen.findByRole('link', { name: /Add to Newspaper/ })).toHaveAttribute('href', '/newspaper?ids=saved-1');
 });
-it('keeps anonymous drafts editable while saving requires sign in', async () => {
+it('sends signed-out visitors to sign in before selecting or generating photos', async () => {
   auth.mockReturnValue({ user: null });
-  generator.mockResolvedValue({ headline: 'Pancakes', article: 'Our family made pancakes.', source: 'openai', observations: [], unknowns: [] });
-  const { container } = render(<MemoryRouter><EventBuilder /></MemoryRouter>);
-  await userEvent.upload(container.querySelector('input[type="file"]') as HTMLInputElement, new File(['image'], 'breakfast.jpg', { type: 'image/jpeg' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Generate Stories' }));
-  expect(await screen.findByRole('button', { name: 'Save Story' })).toBeDisabled();
-  expect(screen.getByLabelText('The story')).toBeEnabled();
-  expect(save).not.toHaveBeenCalled();
+  render(<MemoryRouter initialEntries={['/create?template=family']}><Routes><Route path="/create" element={<EventBuilder />} /><Route path="/login" element={<h1>Sign in first</h1>} /></Routes></MemoryRouter>);
+  expect(await screen.findByRole('heading',{name:'Sign in first'})).toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Generate Stories'})).not.toBeInTheDocument();
+  expect(generator).not.toHaveBeenCalled(); expect(save).not.toHaveBeenCalled();
 });

@@ -1,3 +1,4 @@
+import { studioDestination } from '../lib/studioDestination';
 import { useEffect, useState, type JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -12,13 +13,15 @@ export default function AuthCallback(): JSX.Element {
 
     const finalizeAuth = async () => {
       try {
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        // The client detects and consumes the callback URL during initialization.
+        const { data, error } = await supabase.auth.getSession();
         if (error) {
           throw error;
         }
+        if (!data.session) throw new Error('Sign-in could not be completed. Please request a new link.');
         if (!active) return;
         setMessage('Signed in. Redirecting…');
-        redirectTimer = setTimeout(() => navigate('/', { replace: true }), 600);
+        redirectTimer = setTimeout(() => navigate(studioDestination(new URLSearchParams(window.location.search).get('next')), { replace: true }), 600);
       } catch (error: unknown) {
         if (!active) return;
         const msg =

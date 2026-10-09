@@ -5,14 +5,15 @@ import { Button } from '../ui/button';
 interface PhotoUploaderProps {
     onFilesSelected: (files: FileList | null) => void;
     hasEntries: boolean;
+    disabled?: boolean;
 }
 
-export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProps) {
+export function PhotoUploader({ onFilesSelected, hasEntries, disabled = false }: PhotoUploaderProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
     const onFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-        onFilesSelected(event.target.files);
+        if (!disabled) onFilesSelected(event.target.files);
         event.target.value = '';
     };
 
@@ -21,7 +22,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
     return (
         <div className="photo-uploader photo-dropzone border-2 border-dashed border-accent-border rounded-xl p-8 text-center bg-paper-soft hover:bg-paper hover:border-accent-gold transition-colors"
             onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => { event.preventDefault(); onFilesSelected(event.dataTransfer.files); }}>
+            onDrop={(event) => { event.preventDefault(); if (!disabled) onFilesSelected(event.dataTransfer.files); }}>
             <div className="mb-6">
                 <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-accent-gold">
                     <Upload size={32} strokeWidth={1.5} />
@@ -33,6 +34,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
             <div className="photo-uploader__actions flex justify-center gap-4 mb-6" onClick={(e) => e.stopPropagation()}>
                 <Button
                     type="button"
+                    disabled={disabled}
                     size="lg"
                     onClick={() => fileInputRef.current?.click()}
                     className="bg-ink text-white hover:bg-ink-soft"
@@ -42,6 +44,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
                 </Button>
                 <Button
                     type="button"
+                    disabled={disabled}
                     variant="outline"
                     size="lg"
                     onClick={() => cameraInputRef.current?.click()}
@@ -59,6 +62,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
             <input
                 ref={fileInputRef}
                 type="file"
+                disabled={disabled}
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple
                 aria-label="Upload story photos"
@@ -68,6 +72,7 @@ export function PhotoUploader({ onFilesSelected, hasEntries }: PhotoUploaderProp
             <input
                 ref={cameraInputRef}
                 type="file"
+                disabled={disabled}
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 capture="environment"
                 aria-label="Take a story photo"

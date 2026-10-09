@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Loader2, RefreshCcw, Archive, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -50,7 +51,7 @@ export function StoryReview({ entry, onUpdate, onRegenerate, onSave, onRemove, i
     </figure>)}</div>
     <label className="story-facts" htmlFor={`facts-${entry.id}`}>Confirmed facts for this story<textarea id={`facts-${entry.id}`} value={entry.prompt} disabled={entry.status === 'generating' || isSaving} onChange={event => onUpdate(entry.id, { prompt: event.target.value })} placeholder="Names, place, date, and what happened. Leave unknown details out." /></label>
     {entry.saveError && <p role="alert">{entry.saveError} Your photos and edits are kept. Use Retry save below.</p>}
-    {entry.generationError && <p role="alert">{entry.generationError} <Button onClick={() => onRegenerate(entry.id)}>Retry generation</Button></p>}
+    {entry.generationError && <p role="alert">{entry.generationError} <Button disabled={isSaving || entry.status === 'generating'} onClick={() => onRegenerate(entry.id)}>Retry generation</Button> <Link to="/login?next=%2Fcreate" target="_blank" rel="noopener noreferrer">Sign in again in a new tab</Link></p>}
     {entry.grounding && <details className="story-grounding"><summary>{entry.grounding.source === 'openai' ? 'Review photo observations and missing context' : 'AI unavailable — factual starter draft'}</summary>
       <h4>Visible descriptions (check before saving)</h4><ul>{entry.grounding.observations.map(photo => <li key={photo.index}>Photo {photo.index + 1}: {photo.description}</li>)}</ul>
       <h4>Questions for you</h4><ul>{entry.grounding.unknowns.map(question => <li key={question}>{question}</li>)}</ul><p>Add answers to Confirmed facts and regenerate. Your photos are retained.</p>
@@ -63,16 +64,16 @@ export function StoryReview({ entry, onUpdate, onRegenerate, onSave, onRemove, i
       {mode === 'preview' ? template?.html ? <iframe className="draft-template-preview" title={`Draft preview: ${template.title}`} sandbox="" srcDoc={buildPreviewDocument({ title: entry.headlineDraft ?? article.headline, article: buildBodyHtml({ ...article, body: parseBodyDraft(entry.bodyDraft, article.body) }), imageUrl: included[0]?.previewUrl, imageUrls: included.map(photo => ({ url: photo.previewUrl })), byline: article.byline }, template.html, template.css)} /> : <StoryPaper headline={entry.headlineDraft ?? article.headline} body={buildBodyHtml({ ...article, body: parseBodyDraft(entry.bodyDraft, article.body) })} imageUrl={included[0]?.previewUrl} imageUrls={included.map(photo => ({ url: photo.previewUrl }))} templateName={template?.title} byline={article.byline} /> : <div className="story-review__editor ink-reveal">
         <p className="studio-note">Make it yours. Check names and details before saving.</p>
         <label htmlFor={`headline-${entry.id}`}>Headline</label>
-        <textarea id={`headline-${entry.id}`} className="story-review__headline" value={entry.headlineDraft ?? article.headline} onChange={e => onUpdate(entry.id, { headlineDraft: e.target.value })} rows={2} />
+        <textarea id={`headline-${entry.id}`} className="story-review__headline" disabled={isSaving} value={entry.headlineDraft ?? article.headline} onChange={e => onUpdate(entry.id, { headlineDraft: e.target.value })} rows={2} />
         <label htmlFor={`body-${entry.id}`}>The story</label>
-        <textarea id={`body-${entry.id}`} value={entry.bodyDraft ?? toEditableBody(article)} onChange={e => onUpdate(entry.id, { bodyDraft: e.target.value })} rows={9} />
+        <textarea id={`body-${entry.id}`} disabled={isSaving} value={entry.bodyDraft ?? toEditableBody(article)} onChange={e => onUpdate(entry.id, { bodyDraft: e.target.value })} rows={9} />
       </div>}
       <div className="story-review__actions">
         <Button variant="outline" size="sm" disabled={isSaving} onClick={() => { if (window.confirm('Write a fresh draft? This replaces your edits.')) onRegenerate(entry.id); }}><RefreshCcw size={14} /> Rewrite</Button>
         <Button disabled={isSaving || !canSave || !included.length} onClick={() => onSave(entry)}>{isSaving ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}{isSaving ? 'Saving memory…' : entry.saveError ? 'Retry save' : 'Save Story'}</Button>
       </div>
     </> : <div className="story-review__waiting">
-      {entry.status === 'generating' ? <div role="status"><Loader2 className="animate-spin" size={26} /><p>{entry.loadingLabel || 'Drafting your headline…'}</p><small>There’s a front-page moment in every photo.</small></div> : <div><p>Your photo is ready. Tell us the moment above.</p><Button disabled={!included.length} onClick={() => onRegenerate(entry.id)}>Generate article</Button></div>}
+      {entry.status === 'generating' ? <div role="status"><Loader2 className="animate-spin" size={26} /><p>{entry.loadingLabel || 'Drafting your headline…'}</p><small>There’s a front-page moment in every photo.</small></div> : <div><p>Your photo is ready. Tell us the moment above.</p><Button disabled={isSaving || !included.length} onClick={() => onRegenerate(entry.id)}>Generate article</Button></div>}
     </div>}
   </article>;
 }
